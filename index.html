@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Professional Takeoff Tools — Web</title>
+<link rel="stylesheet" href="css/app.css">
+
+<!-- Installable to a home screen, and usable with no signal once cached. -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Takeoff">
+</head>
+<body>
+
+<div id="app" class="app">
+
+  <!-- ── menu bar ─────────────────────────────────────────────────────── -->
+  <div class="menubar" id="menubar">
+    <div class="brand">
+      <span class="brand-mark">PTT</span>
+      <span class="brand-name">Professional Takeoff Tools</span>
+    </div>
+
+    <nav class="menus" id="menus">
+      <div class="menu" data-menu="file">
+        <button class="menu-btn">File</button>
+        <div class="menu-pop">
+          <button data-act="new-project">New Project<kbd>Ctrl+N</kbd></button>
+          <button data-act="open-project">Open Project…<kbd>Ctrl+O</kbd></button>
+          <button data-act="import-pdf">Import PDF…<kbd>Ctrl+I</kbd></button>
+          <hr>
+          <button data-act="save">Save<kbd>Ctrl+S</kbd></button>
+          <button data-act="save-as">Save As…<kbd>Ctrl+Shift+S</kbd></button>
+          <hr>
+          <button data-act="project-info">Project Info…</button>
+          <button data-act="recent">Recent Projects…</button>
+          <hr>
+          <button data-act="close-project">Close Project</button>
+        </div>
+      </div>
+
+      <div class="menu" data-menu="edit">
+        <button class="menu-btn">Edit</button>
+        <div class="menu-pop">
+          <button data-act="undo">Undo<kbd>Ctrl+Z</kbd></button>
+          <button data-act="redo">Redo<kbd>Ctrl+Y</kbd></button>
+          <hr>
+          <button data-act="delete">Delete Selected<kbd>Del</kbd></button>
+          <button data-act="select-none">Deselect<kbd>Esc</kbd></button>
+          <hr>
+          <button data-act="settings">Settings…</button>
+        </div>
+      </div>
+
+      <div class="menu" data-menu="view">
+        <button class="menu-btn">View</button>
+        <div class="menu-pop">
+          <button data-act="zoom-fit">Fit to Window<kbd>F</kbd></button>
+          <button data-act="zoom-100">Actual Size<kbd>1</kbd></button>
+          <button data-act="zoom-width">Fit Width</button>
+          <hr>
+          <button data-act="toggle-thumbs">Sheets Panel</button>
+          <button data-act="toggle-items">Project Items Panel</button>
+          <button data-act="toggle-markup-bar">Markup Toolbar</button>
+          <button data-act="toggle-labels">Measurement Labels</button>
+          <hr>
+          <button data-act="marker-smaller">Smaller Markers<kbd>Ctrl+Shift+[</kbd></button>
+          <button data-act="marker-normal">Normal Markers<kbd>Ctrl+0</kbd></button>
+          <button data-act="marker-bigger">Bigger Markers<kbd>Ctrl+Shift+]</kbd></button>
+        </div>
+      </div>
+
+      <div class="menu" data-menu="sheets">
+        <button class="menu-btn">Sheets</button>
+        <div class="menu-pop">
+          <button data-act="add-blank">Add Blank Sheet…</button>
+          <button data-act="import-more">Add Pages from PDF…</button>
+          <hr>
+          <button data-act="review-labels">Review Sheet Numbers…</button>
+          <button data-act="set-scale">Set Sheet Scale…</button>
+          <hr>
+          <button data-act="delete-page">Delete This Sheet</button>
+        </div>
+      </div>
+
+      <div class="menu" data-menu="tools">
+        <button class="menu-btn">Tools</button>
+        <div class="menu-pop">
+          <button data-act="catalog">Materials Catalog…</button>
+          <button data-act="add-standalone">Add Item Not on a Sheet…</button>
+          <hr>
+          <button data-act="isolate">Isolate Selected</button>
+          <button data-act="exit-isolate">Show Everything</button>
+        </div>
+      </div>
+
+      <div class="menu" data-menu="reports">
+        <button class="menu-btn">Reports</button>
+        <div class="menu-pop">
+          <button data-act="report-center">Report Center…</button>
+          <hr>
+          <button data-act="export-csv">Export CSV…</button>
+          <button data-act="export-xlsx">Export Excel…</button>
+        </div>
+      </div>
+
+      <div class="menu" data-menu="help">
+        <button class="menu-btn">Help</button>
+        <div class="menu-pop">
+          <button data-act="shortcuts">Keyboard Shortcuts…</button>
+          <button data-act="about">About</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="menubar-right">
+      <span class="dirty-dot" id="dirtyDot" title="Unsaved changes" hidden>●</span>
+      <span class="proj-title" id="projTitle">No project open</span>
+    </div>
+  </div>
+
+  <!-- ── takeoff toolbar ──────────────────────────────────────────────── -->
+  <div class="toolbar" id="toolbar">
+    <div class="tool-group" id="toolButtons"></div>
+
+    <div class="tb-sep"></div>
+
+    <div class="tool-group">
+      <button class="tb-btn" data-act="zoom-out" title="Zoom out">−</button>
+      <span class="zoom-label" id="zoomLabel">100%</span>
+      <button class="tb-btn" data-act="zoom-in" title="Zoom in">+</button>
+      <button class="tb-btn" data-act="zoom-fit" title="Fit to window (F)">Fit</button>
+    </div>
+
+    <div class="tb-sep"></div>
+
+    <div class="tool-group">
+      <label class="tb-label">Scale</label>
+      <select id="scaleSelect" class="tb-select" title="The drawing scale of this sheet"></select>
+    </div>
+
+    <div class="tb-sep"></div>
+
+    <div class="tool-group">
+      <button class="tb-btn" data-act="undo" id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
+      <button class="tb-btn" data-act="redo" id="redoBtn" title="Redo (Ctrl+Y)">↷</button>
+    </div>
+
+    <div class="tb-spacer"></div>
+
+    <div class="tool-group">
+      <span class="page-of" id="pageOf"></span>
+      <button class="tb-btn" data-act="prev-page" title="Previous sheet">‹</button>
+      <button class="tb-btn" data-act="next-page" title="Next sheet">›</button>
+    </div>
+  </div>
+
+  <!-- ── markup toolbar ───────────────────────────────────────────────── -->
+  <div class="toolbar markup" id="markupBar">
+    <span class="tb-label">Markup</span>
+    <div class="tool-group" id="markupButtons"></div>
+
+    <div class="tb-sep"></div>
+    <span class="tb-label">Highlight</span>
+    <div class="tool-group" id="highlightColors"></div>
+
+    <div class="tb-sep"></div>
+    <span class="tb-label">Pen</span>
+    <div class="tool-group" id="penColors"></div>
+
+    <div class="tb-sep"></div>
+    <span class="tb-label">Width</span>
+    <input type="range" id="markupWidth" class="tb-range" min="1" max="40" step="1" value="14"
+           title="Stroke width, in sheet pixels">
+    <span class="tb-label" id="markupWidthOut">14</span>
+
+    <div class="tb-sep"></div>
+    <button class="tb-btn" data-act="toggle-markup" id="markupToggle"
+            title="Show or hide all markup">Markup on</button>
+    <button class="tb-btn" data-act="clear-markup"
+            title="Remove every highlight and pen stroke on this sheet">Clear sheet</button>
+  </div>
+
+  <!-- ── tool options bar (floats over the canvas) ────────────────────── -->
+  <div class="tool-opts" id="toolOpts" hidden></div>
+
+  <!-- ── main body ────────────────────────────────────────────────────── -->
+  <div class="body">
+
+    <aside class="thumbs" id="thumbsPanel">
+      <div class="panel-head">
+        <span class="panel-title">SHEETS</span>
+        <button class="icon-btn" data-act="thumb-compact" title="Compact list">▤</button>
+      </div>
+      <div class="thumb-list" id="thumbList"></div>
+    </aside>
+
+    <div class="grip" id="thumbGrip" data-target="thumbs"></div>
+
+    <main class="stage" id="stage">
+      <canvas id="canvas" tabindex="0"></canvas>
+      <div class="empty-state" id="emptyState">
+        <div class="es-card">
+          <h1>Professional Takeoff Tools</h1>
+          <p class="es-tag">Smart Takeoff. Better Estimates.</p>
+          <div class="es-actions">
+            <button class="es-btn primary" data-act="open-project">Open a .takeoff project</button>
+            <button class="es-btn" data-act="import-pdf">Start from a PDF</button>
+          </div>
+          <p class="es-hint">
+            Drop a <code>.takeoff</code> or <code>.pdf</code> file anywhere on this window.
+          </p>
+        </div>
+      </div>
+      <div class="drop-veil" id="dropVeil" hidden><span>Drop to open</span></div>
+    </main>
+
+    <!-- Dims the sheet while a drawer is open; tapping it closes the drawer. -->
+    <div class="scrim" id="scrim" hidden></div>
+
+    <!--
+      The bar at the foot of a phone or tablet. It carries the handful of
+      things that must never be more than one tap away, because the toolbars
+      above it scroll sideways on a narrow screen and anything can be off
+      the edge. It has two faces: the normal one, and — while a chain tool
+      is collecting points — Finish / Undo point / Cancel, which is the only
+      way to close a polyline without a keyboard.
+    -->
+    <div class="mbar" id="mobileBar" hidden>
+      <div class="mbar-main" id="mbarMain">
+        <button class="mbar-btn" data-act="toggle-thumbs"><b>▤</b>Sheets</button>
+        <button class="mbar-btn" data-act="prev-page"><b>‹</b>Prev</button>
+        <button class="mbar-btn" data-act="zoom-fit"><b>⛶</b><span id="mbarPage">Fit</span></button>
+        <button class="mbar-btn" data-act="next-page"><b>›</b>Next</button>
+        <button class="mbar-btn" data-act="toggle-items"><b>☰</b>Items</button>
+      </div>
+      <div class="mbar-chain" id="mbarChain" hidden>
+        <button class="mbar-btn ok"   data-act="chain-finish"><b>✓</b>Finish</button>
+        <button class="mbar-btn"      data-act="chain-undo"><b>⌫</b>Undo point</button>
+        <button class="mbar-btn warn" data-act="chain-cancel"><b>✕</b>Cancel</button>
+      </div>
+    </div>
+
+    <div class="grip" id="itemsGrip" data-target="items"></div>
+
+    <aside class="items" id="itemsPanel">
+      <div class="panel-head">
+        <span class="panel-title">PROJECT ITEMS</span>
+        <div class="cost-toggle" id="costToggle">
+          <button data-cost="all" class="on" title="Show labor and material items">ALL</button>
+          <button data-cost="labor" title="Labor estimate — labor items only">LAB</button>
+          <button data-cost="material" title="Material takeoff — material items only">MAT</button>
+        </div>
+        <button class="icon-btn" data-act="add-standalone"
+                title="Add an item that isn't drawn on a sheet — nails, glue, hardware, a labor line…">＋</button>
+      </div>
+      <div class="filter-bar">
+        <select id="floorFilter" class="tb-select sm"><option value="">All Floors</option></select>
+        <select id="groupFilter" class="tb-select sm"><option value="">All Groups</option></select>
+      </div>
+      <div class="item-list" id="itemList"></div>
+      <div class="items-foot" id="itemsFoot"></div>
+    </aside>
+
+  </div>
+
+  <!-- ── status bar ───────────────────────────────────────────────────── -->
+  <div class="statusbar">
+    <span class="status-text" id="statusText">Ready</span>
+    <span class="status-right">
+      <span id="scaleReadout"></span>
+      <span id="memReadout"></span>
+    </span>
+  </div>
+
+</div>
+
+<!-- progress overlay -->
+<div class="overlay" id="progress" hidden>
+  <div class="progress-card">
+    <div class="progress-label" id="progressLabel">Working…</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-sub" id="progressSub"></div>
+  </div>
+</div>
+
+<!-- dialog host -->
+<div class="overlay" id="modal" hidden></div>
+
+<!-- context menu host -->
+<div class="ctx-menu" id="ctxMenu" hidden></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

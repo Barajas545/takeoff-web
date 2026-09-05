@@ -1,0 +1,26 @@
+# ── never publish ─────────────────────────────────────────────────────────
+#
+# tests/ holds real project files from real jobs — a named client's whole
+# stamped plan set among them — and harnesses that point at the estimator's
+# own machine and project library. None of it belongs on a public repo.
+tests/
+
+# docs/spec/ is the desktop program specified back out of its source: the
+# file format, the measurement schema, the scale maths, the tool behaviour.
+# docs/PORTAL-EMBED.md describes internal company infrastructure.
+docs/
+
+# a local convenience that runs the dev server in tests/
+start.bat
+
+# ── ordinary noise ────────────────────────────────────────────────────────
+.claude/
+node_modules/
+*.tgz
+.DS_Store
+Thumbs.db
+*.takeoff
+*.pdfcache
+
+# the internal build notes stay local
+README.dev.md

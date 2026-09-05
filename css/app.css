@@ -1,0 +1,702 @@
+/* app.css — the dark shell, matching the desktop app's palette exactly.
+   Colours are lifted from the Qt stylesheets so the two builds read as one
+   program. Everything is a token, so the whole surface can be retinted for the
+   employee portal without touching a rule. */
+
+:root {
+  --canvas-bg: #1e1e1e;
+  --panel-bg: #141414;
+  --head-bg: #0d0d0d;
+  --filter-bg: #101010;
+  --bar-bg: #1b1b1b;
+  --chip-bg: #282828;
+  --btn-bg: #3d3d3d;
+  --btn-hover: #474747;
+  --btn-press: #2a2a2a;
+  --field-bg: #1c1c1c;
+
+  --border: #2a2a2a;
+  --border-soft: #252525;
+  --border-hard: #151515;
+
+  --text: #dedede;
+  --text-2: #d0d0d0;
+  --text-dim: #9a9a9a;
+  --text-faint: #606060;
+  --text-ghost: #383838;
+  --text-off: #484848;
+
+  --accent: #4772b3;
+  --accent-2: #4aa8d8;
+  --select: #28486e;
+  --row-a: #191919;
+  --row-b: #1e1e1e;
+
+  --labor: #8a6d2a;
+  --material: #2c5a8c;
+  --eye-on: #4aad52;
+  --eye-off: #d95555;
+  --materials: #a0a040;
+  --warn: #e0a050;
+  --err: #e08080;
+
+  --thumb-w: 190px;
+  --items-w: 300px;
+
+  --ui: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%; margin: 0;
+  /* No pull-to-refresh and no rubber-band on a phone: both fire mid-drag,
+     and the pointercancel that follows would strand a half-drawn stroke. */
+  overscroll-behavior: none;
+  background: var(--panel-bg);
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 12.5px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; }
+
+.app {
+  height: 100%;
+  /* dvh so Safari's collapsing bottom bar cannot cover the last row */
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  position: relative;
+}
+/* Without this every row is floored at its min-content width: the 772px
+   run of tool buttons dragged the canvas, the body and the status bar to
+   788px inside a 390px phone, and overflow:hidden threw the right half away. */
+.app > * { min-width: 0; }
+
+/* And every row is pinned, for the same reason the body's children are
+   pinned to their columns further down. `display: none` takes an element
+   out of the grid entirely, so hiding the markup row let auto-placement
+   slide the body up into an `auto` row — it measured 0 tall, because the
+   canvas inside it is absolutely positioned — and left the 1fr row empty.
+   The drawing vanished and the toolbars looked perfectly fine. */
+.menubar   { grid-row: 1; }
+#toolbar   { grid-row: 2; }
+#markupBar { grid-row: 3; }
+.body      { grid-row: 4; }
+.statusbar { grid-row: 5; }
+
+/* ── menu bar ─────────────────────────────────────────────────────────── */
+
+.menubar {
+  display: flex; align-items: center; gap: 14px;
+  height: 34px; padding: 0 10px;
+  background: var(--head-bg);
+  border-bottom: 1px solid var(--border-soft);
+  user-select: none;
+}
+
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand-mark {
+  font-weight: 800; font-size: 11px; letter-spacing: 1px;
+  color: #fff; background: var(--accent);
+  padding: 3px 6px; border-radius: 4px;
+}
+.brand-name { font-size: 11.5px; color: var(--text-faint); letter-spacing: .3px; }
+
+.menus { display: flex; gap: 1px; }
+.menu { position: relative; }
+.menu-btn {
+  background: none; border: 0; color: var(--text-2);
+  padding: 6px 10px; font-size: 12.5px; border-radius: 5px; cursor: pointer;
+}
+.menu-btn:hover, .menu.open .menu-btn { background: #232323; color: #fff; }
+
+.menu-pop {
+  position: absolute; top: 100%; left: 0; z-index: 60;
+  min-width: 230px; padding: 5px;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-hard);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.55);
+  display: none;
+}
+.menu.open .menu-pop { display: block; }
+.menu-pop button {
+  display: flex; justify-content: space-between; align-items: center; gap: 20px;
+  width: 100%; text-align: left;
+  background: none; border: 0; color: var(--text);
+  padding: 6px 9px; border-radius: 5px; font-size: 12.5px; cursor: pointer;
+}
+.menu-pop button:hover:not(:disabled) { background: var(--accent); color: #fff; }
+.menu-pop button:disabled { color: var(--text-ghost); cursor: default; }
+.menu-pop kbd {
+  font-family: var(--ui); font-size: 10.5px; color: var(--text-faint);
+}
+.menu-pop button:hover:not(:disabled) kbd { color: #cfe0ff; }
+.menu-pop hr { border: 0; border-top: 1px solid #333; margin: 4px 6px; }
+
+.menubar-right {
+  margin-left: auto; display: flex; align-items: center; gap: 8px;
+  font-size: 11.5px; color: var(--text-faint);
+}
+.proj-title { max-width: 32vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dirty-dot { color: var(--warn); font-size: 14px; line-height: 1; }
+
+/* ── toolbar ──────────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px; min-height: 40px;
+  background: var(--bar-bg);
+  border-bottom: 1px solid var(--border);
+  user-select: none; flex-wrap: wrap;
+}
+.tool-group { display: flex; align-items: center; gap: 3px; }
+.tb-sep { width: 1px; height: 22px; background: #333; margin: 0 4px; }
+.tb-spacer { flex: 1; }
+
+.tb-btn, .tool-btn {
+  background: var(--btn-bg); color: var(--text);
+  border: 1px solid var(--btn-press); border-radius: 4px;
+  padding: 5px 9px; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.tb-btn:hover, .tool-btn:hover { background: var(--btn-hover); }
+.tb-btn:active { background: var(--btn-press); }
+.tb-btn:disabled { opacity: .35; cursor: default; }
+.tool-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.tb-label { font-size: 11px; color: var(--text-faint); margin-right: 3px; }
+.tb-select, .tb-input {
+  background: var(--field-bg); color: var(--text);
+  border: 1px solid #303030; border-radius: 4px;
+  padding: 4px 6px; font-size: 12px; font-family: inherit;
+}
+.tb-select.sm, .tb-input.sm { padding: 3px 5px; font-size: 11.5px; }
+.tb-input { width: 120px; }
+.zoom-label {
+  min-width: 46px; text-align: center; font-size: 11.5px;
+  color: var(--text-dim); font-variant-numeric: tabular-nums;
+}
+.page-of { font-size: 11.5px; color: var(--text-dim); margin-right: 4px; }
+
+/* the markup row sits under the takeoff row and reads as a quieter band */
+.toolbar.markup {
+  min-height: 34px; padding: 4px 8px;
+  background: #171717; border-bottom: 1px solid var(--border);
+}
+.toolbar.markup .tool-btn { padding: 4px 8px; font-size: 11.5px; }
+.toolbar.markup[hidden] { display: none; }
+
+.swatch-btn {
+  width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
+  border: 1px solid var(--border-hard); padding: 0;
+}
+.swatch-btn:hover { border-color: #fff; }
+.swatch-btn.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+
+.tb-range { width: 96px; accent-color: var(--accent); }
+
+/* the floating per-tool options bar */
+.tool-opts {
+  position: absolute; z-index: 40;
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-hard); border-radius: 8px;
+  box-shadow: 0 6px 22px rgba(0,0,0,.5);
+}
+.tool-opts .tb-label { color: #bdbdbd; }
+
+/* ── body ─────────────────────────────────────────────────────────────── */
+
+.body {
+  display: grid;
+  grid-template-columns: var(--thumb-w) 4px 1fr 4px var(--items-w);
+  min-height: 0;
+  /* the drawers below are absolutely positioned against this box */
+  position: relative;
+}
+
+/* Every child is pinned to its own column.
+   Without this, hiding a panel with `display: none` takes it out of the grid
+   and auto-placement slides everything left — the canvas lands in the 0-width
+   first track and the drawing disappears. It cost a while to find, because the
+   toolbars above are not in this grid and looked perfectly fine. */
+.thumbs { grid-column: 1; }
+#thumbGrip { grid-column: 2; }
+.stage { grid-column: 3; }
+#itemsGrip { grid-column: 4; }
+.items { grid-column: 5; }
+.body.no-thumbs { grid-template-columns: 0 0 1fr 4px var(--items-w); }
+.body.no-items { grid-template-columns: var(--thumb-w) 4px 1fr 0 0; }
+.body.no-thumbs.no-items { grid-template-columns: 0 0 1fr 0 0; }
+
+.grip { background: var(--border); cursor: col-resize; }
+.grip:hover { background: var(--accent); }
+
+.panel-head {
+  display: flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 8px;
+  background: var(--head-bg);
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+.panel-title {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+  color: var(--text-faint);
+}
+.icon-btn {
+  margin-left: auto;
+  background: none; border: 0; color: var(--text-faint);
+  font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+}
+.icon-btn:hover { background: #232323; color: var(--text); }
+
+/* ── sheets panel ─────────────────────────────────────────────────────── */
+
+.thumbs, .items {
+  display: flex; flex-direction: column; min-height: 0; min-width: 0;
+  background: var(--panel-bg);
+  overflow: hidden;
+}
+.thumbs { border-right: 1px solid var(--border); }
+.items { border-left: 1px solid var(--border); }
+
+.thumb-list, .item-list { flex: 1; overflow-y: auto; overflow-x: hidden; }
+
+.thumb-list::-webkit-scrollbar, .item-list::-webkit-scrollbar { width: 8px; }
+.thumb-list::-webkit-scrollbar-thumb, .item-list::-webkit-scrollbar-thumb {
+  background: #3c3c3c; border-radius: 4px;
+}
+.thumb-list::-webkit-scrollbar-thumb:hover,
+.item-list::-webkit-scrollbar-thumb:hover { background: #505050; }
+
+.thumb {
+  padding: 6px 8px; cursor: pointer;
+  border-bottom: 1px solid #1c1c1c;
+}
+.thumb:hover { background: #1c1c1c; }
+.thumb.on { background: var(--select); }
+.thumb-img {
+  width: 100%; background: #0a0a0a; border: 1px solid #2c2c2c;
+  border-radius: 3px; display: block; min-height: 40px;
+}
+.thumb.on .thumb-img { border-color: #6a95cf; }
+.thumb-cap {
+  display: flex; align-items: baseline; gap: 6px; margin-top: 4px;
+}
+.thumb-no {
+  font-size: 11px; font-weight: 700; color: var(--text-2);
+  white-space: nowrap;
+}
+.thumb.on .thumb-no { color: #fff; }
+.thumb-name {
+  font-size: 10px; color: var(--text-faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.thumb-badge {
+  margin-left: auto; font-size: 9.5px; color: var(--accent-2);
+  background: #16283a; border-radius: 3px; padding: 1px 4px;
+}
+.thumbs.compact .thumb-img { display: none; }
+.thumbs.compact .thumb { padding: 4px 8px; }
+
+/* ── items panel ──────────────────────────────────────────────────────── */
+
+.cost-toggle { display: flex; gap: 2px; margin-left: 6px; }
+.cost-toggle button {
+  background: #232323; color: var(--text-faint);
+  border: 1px solid #2e2e2e; border-radius: 4px;
+  font-size: 9.5px; font-weight: 700; padding: 3px 6px; cursor: pointer;
+}
+.cost-toggle button.on { color: #fff; border-color: transparent; }
+.cost-toggle button[data-cost="all"].on { background: var(--accent); }
+.cost-toggle button[data-cost="labor"].on { background: var(--labor); }
+.cost-toggle button[data-cost="material"].on { background: var(--material); }
+
+.filter-bar {
+  display: flex; gap: 5px; padding: 4px 6px; height: 30px;
+  background: var(--filter-bg); flex-shrink: 0;
+}
+.filter-bar select { flex: 1; min-width: 0; }
+
+.grp {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 4px 0 6px; cursor: pointer; user-select: none;
+}
+.grp .gutter { flex-shrink: 0; align-self: stretch; }
+.grp-label { font-weight: 700; padding: 4px 0; flex: 1; min-width: 0; }
+.grp.floor { border-left: 4px solid; }
+.grp.floor .grp-label { font-size: 11.5px; letter-spacing: .3px; }
+.grp.cat .grp-label { font-size: 11px; font-weight: 600; padding: 3px 0; }
+.grp.sub .grp-label { font-size: 10.5px; font-weight: 600; padding: 2px 0; }
+.grp-qty { font-size: 10px; color: var(--text-faint); white-space: nowrap; }
+
+.row {
+  display: flex; align-items: stretch; gap: 6px;
+  padding: 0 6px; cursor: pointer; user-select: none;
+}
+.row:hover { filter: brightness(1.14); }
+.row.on { background: var(--select) !important; }
+.row .gutter { flex-shrink: 0; }
+.row .dot {
+  width: 8px; height: 8px; border-radius: 4px;
+  margin-top: 7px; flex-shrink: 0;
+}
+.row .col { flex: 1; min-width: 0; padding: 3px 0; }
+.row .badge {
+  width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+  font-size: 8px; font-weight: 700; color: #fff;
+  display: grid; place-items: center; margin-top: 3px;
+}
+.row .badge.M { background: var(--material); }
+.row .badge.L { background: var(--labor); }
+.row .nm {
+  display: flex; gap: 5px; align-items: flex-start;
+  font-size: 11.5px; color: var(--text-2); word-break: break-word;
+}
+.row.hidden .nm { color: var(--text-off); }
+.row .val { font-size: 10.5px; color: var(--accent-2); margin-top: 1px; }
+.row.hidden .val { color: #303030; }
+.row .nt {
+  font-size: 10px; font-style: italic; color: var(--text-faint);
+  margin-top: 1px; word-break: break-word;
+}
+.row .mats { font-size: 10px; color: var(--materials); margin-top: 1px; }
+.row .side {
+  display: flex; flex-direction: column; align-items: flex-end;
+  justify-content: space-between; padding: 3px 0; flex-shrink: 0;
+}
+.row .pg { font-size: 10px; color: #4a4a4a; }
+.row .pg.solo { font-style: italic; }
+.row .acts { display: flex; gap: 2px; }
+.row .act {
+  background: none; border: 0; cursor: pointer; padding: 0 3px;
+  font-size: 12px; line-height: 1; color: var(--materials);
+}
+.row .eye { color: var(--eye-on); font-size: 13px; }
+.row.hidden .eye { color: var(--eye-off); }
+
+.gutter { width: 12px; position: relative; }
+.gutter svg { display: block; height: 100%; }
+
+.items-foot {
+  padding: 6px 8px; border-top: 1px solid var(--border-soft);
+  background: var(--head-bg); font-size: 10.5px; color: var(--text-dim);
+  flex-shrink: 0; min-height: 26px;
+}
+
+.empty-list {
+  text-align: center; color: var(--text-ghost);
+  font-size: 11.5px; padding: 30px 10px; white-space: pre-line; line-height: 1.6;
+}
+
+/* ── stage ────────────────────────────────────────────────────────────── */
+
+/* The canvas is taken OUT OF FLOW deliberately.
+   A `height: 100%` canvas inside a `1fr` grid row feeds its own height back
+   into the row: the canvas grows, the row grows to fit it, the canvas takes
+   100% of the bigger row, and the layout runs away — measured at 67,000 px
+   tall after a couple of window resizes. Absolute positioning inside a
+   `position: relative` stage means the canvas can never size its own parent.
+   min-height/min-width 0 stops the grid item from being sized by its content
+   for the same reason. */
+.stage { position: relative; min-width: 0; min-height: 0; overflow: hidden;
+         background: var(--canvas-bg); }
+/* width/height are NOT redundant with inset:0 here. A <canvas> is a REPLACED
+   element: absolutely positioned with all insets zero but width:auto, CSS
+   resolves it to the intrinsic 300x150, not to the containing block. */
+#canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; outline: none;
+  /* Every gesture on the sheet belongs to the app. Without this the browser
+     takes the first finger-drag for a scroll, fires pointercancel, and the
+     measurement being traced is abandoned with nothing on screen to say so.
+     It also switches off double-tap-to-zoom over the canvas only, so the
+     toolbars and dialogs keep their normal behaviour. */
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.empty-state[hidden] { display: none; }
+.empty-state {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  pointer-events: none;
+}
+.es-card {
+  pointer-events: auto; text-align: center; max-width: 460px; padding: 32px 36px;
+  background: #1a1a1a; border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+}
+.es-card h1 { margin: 0 0 4px; font-size: 19px; font-weight: 700; color: var(--text); }
+.es-tag { margin: 0 0 22px; font-size: 12px; color: var(--text-faint); }
+.es-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.es-btn {
+  background: var(--btn-bg); color: var(--text);
+  border: 1px solid var(--btn-press); border-radius: 6px;
+  padding: 9px 15px; font-size: 12.5px; cursor: pointer;
+}
+.es-btn:hover { background: var(--btn-hover); }
+.es-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.es-btn.primary:hover { background: #5482c6; }
+.es-hint { margin: 20px 0 0; font-size: 11px; color: var(--text-ghost); }
+.es-hint code {
+  font-family: var(--mono); background: #101010;
+  padding: 1px 4px; border-radius: 3px; color: var(--text-faint);
+}
+
+.drop-veil[hidden] { display: none; }
+.drop-veil {
+  position: absolute; inset: 12px; z-index: 30;
+  border: 2px dashed var(--accent); border-radius: 12px;
+  background: rgba(71,114,179,.12);
+  display: grid; place-items: center;
+  font-size: 15px; font-weight: 600; color: #cfe0ff;
+  pointer-events: none;
+}
+
+/* ── status bar ───────────────────────────────────────────────────────── */
+
+.statusbar {
+  display: flex; align-items: center; gap: 12px;
+  height: 24px; padding: 0 10px;
+  background: var(--head-bg); border-top: 1px solid var(--border-soft);
+  font-size: 11px; color: var(--text-dim);
+}
+.status-text { white-space: pre-line; overflow: hidden; text-overflow: ellipsis; }
+.status-right { margin-left: auto; display: flex; gap: 14px; color: var(--text-faint); }
+
+/* ── overlays ─────────────────────────────────────────────────────────── */
+
+.overlay {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(0,0,0,.55);
+  display: grid; place-items: center;
+  backdrop-filter: blur(1.5px);
+}
+.overlay[hidden] { display: none; }
+
+/* Dialogs stack: each gets its own backdrop layer inside the host, and the
+   ones underneath dim so the live one is unambiguous. */
+#modal { background: none; backdrop-filter: none; display: block; }
+.modal-layer {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  display: grid; place-items: center;
+  backdrop-filter: blur(1.5px);
+}
+.modal-layer.behind > .dlg { filter: brightness(.6); pointer-events: none; }
+
+.progress-card {
+  width: 380px; padding: 22px 24px;
+  background: var(--chip-bg); border: 1px solid var(--border-hard);
+  border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+.progress-label { font-size: 13px; margin-bottom: 12px; }
+.progress-track { height: 6px; background: #111; border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: var(--accent); transition: width .12s linear; }
+.progress-sub { margin-top: 8px; font-size: 11px; color: var(--text-faint); min-height: 14px; }
+
+/* dialogs */
+.dlg {
+  width: min(560px, 94vw); max-height: 88vh;
+  display: flex; flex-direction: column;
+  background: var(--chip-bg); border: 1px solid var(--border-hard);
+  border-radius: 10px; box-shadow: 0 24px 70px rgba(0,0,0,.65);
+}
+.dlg.wide { width: min(1000px, 96vw); }
+.dlg-head {
+  padding: 13px 18px; border-bottom: 1px solid #333;
+  font-size: 13.5px; font-weight: 600;
+}
+.dlg-body { padding: 16px 18px; overflow: auto; }
+.dlg-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 18px; border-top: 1px solid #333;
+}
+.dlg-foot .spacer { margin-right: auto; }
+
+.form { display: grid; grid-template-columns: 128px 1fr; gap: 9px 12px; align-items: center; }
+.form > label { font-size: 12px; color: var(--text-dim); text-align: right; }
+.form .full { grid-column: 1 / -1; }
+.form input[type=text], .form input[type=number], .form select, .form textarea {
+  width: 100%; background: var(--field-bg); color: var(--text);
+  border: 1px solid #303030; border-radius: 5px;
+  padding: 6px 8px; font-size: 12.5px; font-family: inherit;
+}
+.form textarea { min-height: 62px; resize: vertical; }
+.form .hint { font-size: 11px; color: var(--text-faint); grid-column: 2; margin-top: -4px; }
+.form .err { font-size: 11.5px; color: var(--err); grid-column: 1 / -1; min-height: 15px; }
+.radio-row { display: flex; gap: 14px; align-items: center; font-size: 12.5px; }
+.radio-row label { display: flex; gap: 5px; align-items: center; cursor: pointer; }
+
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatch {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+}
+.swatch.on { border-color: #fff; box-shadow: 0 0 0 2px rgba(71,114,179,.5); }
+
+.btn {
+  background: var(--btn-bg); color: var(--text);
+  border: 1px solid var(--btn-press); border-radius: 5px;
+  padding: 7px 14px; font-size: 12.5px; cursor: pointer;
+}
+.btn:hover { background: var(--btn-hover); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: #5482c6; }
+.btn.danger { background: #7a2f2f; border-color: #7a2f2f; color: #fff; }
+
+table.grid {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+}
+table.grid th {
+  text-align: left; font-weight: 600; color: var(--text-faint);
+  border-bottom: 1px solid #333; padding: 6px 8px; position: sticky; top: 0;
+  background: var(--chip-bg);
+}
+table.grid td { padding: 5px 8px; border-bottom: 1px solid #232323; }
+table.grid tr:hover td { background: #232323; }
+table.grid tr.on td { background: var(--select); }
+table.grid td.num, table.grid th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.grid td.indent { padding-left: 26px; color: var(--text-dim); }
+
+.ctx-menu {
+  position: fixed; z-index: 90; min-width: 200px; padding: 5px;
+  background: var(--chip-bg); border: 1px solid var(--border-hard);
+  border-radius: 8px; box-shadow: 0 12px 34px rgba(0,0,0,.6);
+}
+.ctx-menu[hidden] { display: none; }
+.ctx-menu button {
+  display: block; width: 100%; text-align: left;
+  background: none; border: 0; color: var(--text);
+  padding: 6px 9px; border-radius: 5px; font-size: 12.5px; cursor: pointer;
+}
+.ctx-menu button:hover { background: var(--accent); color: #fff; }
+.ctx-menu hr { border: 0; border-top: 1px solid #333; margin: 4px 6px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%);
+  z-index: 95; padding: 9px 16px; border-radius: 8px;
+  background: #2b2b2b; border: 1px solid var(--border-hard);
+  box-shadow: 0 10px 30px rgba(0,0,0,.5); font-size: 12.5px;
+}
+.toast.err { border-color: #6a3030; color: #ffbdbd; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Phones and tablets
+
+   What was here before deleted the sheet list and the item list outright
+   below 900px — which is an iPad in portrait, not just a phone — and left
+   no way to reach either one, nor the per-item menu, which is bound to the
+   right mouse button. Below 1024px they become drawers instead: the same
+   DOM, slid over the sheet, one at a time, with a bar at the foot of the
+   screen to open them.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.scrim {
+  position: fixed; inset: 0; z-index: 55;
+  background: rgba(0, 0, 0, .5);
+}
+
+/* the bar at the foot of the screen — the only chrome that never scrolls */
+.mbar {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 70;
+  display: flex; align-items: stretch;
+  background: var(--head-bg);
+  border-top: 1px solid var(--border-hard);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mbar[hidden] { display: none; }
+.mbar-main, .mbar-chain { display: flex; flex: 1; }
+.mbar-main[hidden], .mbar-chain[hidden] { display: none; }
+.mbar-btn {
+  flex: 1; min-height: 52px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; padding: 4px 2px;
+  background: none; border: 0; border-right: 1px solid var(--border-soft);
+  color: var(--text-dim); font-family: inherit; font-size: 10px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.mbar-btn:last-child { border-right: 0; }
+.mbar-btn:active { background: var(--btn-press); }
+.mbar-btn b { font-size: 17px; font-weight: 400; line-height: 1.05; color: var(--text); }
+.mbar-btn.on b, .mbar-btn.on { color: var(--accent); }
+.mbar-btn.ok b { color: #6fcf7f; }
+.mbar-btn.warn b { color: var(--err); }
+
+@media (max-width: 1023px) {
+  /* The seven menus do not wrap either, and they were the last thing still
+     forcing the document wider than the screen. */
+  .menubar { overflow-x: auto; scrollbar-width: none; }
+  .menubar::-webkit-scrollbar { height: 0; }
+  .menubar > * { flex: 0 0 auto; }
+  .menubar-right { margin-left: 8px; }
+
+  /* One scrolling row per toolbar beats wrapping: wrapping the 13 tools
+     cost 122px of height on a 844px screen, and height is the scarce one. */
+  .toolbar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+  .toolbar > * { flex: 0 0 auto; }
+  .toolbar::-webkit-scrollbar { height: 0; }
+  .toolbar { scrollbar-width: none; }
+  .tb-spacer { display: none; }
+
+  /* the sheet takes the whole body; the panels slide over it */
+  .body,
+  .body.no-thumbs,
+  .body.no-items,
+  .body.no-thumbs.no-items { grid-template-columns: 1fr; }
+  /* A drawer parked off-screen with translateX still counts as scrollable
+     overflow, which reported the document 319px wider than the phone. */
+  .body { overflow: hidden; }
+  .stage { grid-column: 1; }
+  .grip { display: none; }
+
+  .thumbs, .items {
+    grid-column: 1;
+    position: absolute; top: 0; bottom: 0; z-index: 60;
+    width: min(320px, 84vw);
+    box-shadow: 0 0 44px rgba(0, 0, 0, .65);
+    transition: transform .18s ease-out;
+  }
+  .thumbs { left: 0;  transform: translateX(-101%); }
+  .items  { right: 0; transform: translateX(101%); }
+  .thumbs.mopen, .items.mopen { transform: none; }
+
+  /* the foot bar owns the bottom of the stage */
+  .stage { padding-bottom: 0; }
+  .statusbar { padding-bottom: env(safe-area-inset-bottom); }
+  .toast { bottom: calc(64px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 720px) {
+  .brand-name { display: none; }
+  .statusbar { display: none; }
+  .proj-title { max-width: 46vw; }
+  .menubar { gap: 8px; padding: 0 8px; }
+  /* the markup row is off by default here and toggles from the View menu */
+}
+
+/* ── a fingertip is not a mouse cursor ────────────────────────────────── */
+@media (pointer: coarse) {
+  .tb-btn, .tool-btn, .es-btn { min-height: 40px; padding: 8px 12px; }
+  .menu-btn { min-height: 38px; padding: 6px 10px; }
+  .menu-pop button { min-height: 42px; }
+  .icon-btn { min-width: 38px; min-height: 38px; }
+  .swatch-btn { width: 30px; height: 30px; }
+  .tb-range { width: 128px; height: 28px; }
+  /* 16px or iOS zooms the whole page in when a field takes focus, and never
+     zooms back out. */
+  .tb-select, .tb-input, input, select, textarea { font-size: 16px; }
+  .tb-select, .tb-input { min-height: 38px; }
+  .form { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .form { grid-template-columns: 1fr; }
+}
