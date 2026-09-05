@@ -1,0 +1,9 @@
+# Serve exactly what was committed. These are shipped to a browser, and a
+# line-ending rewrite on checkout would change bytes nobody inspected.
+* text=auto eol=lf
+
+# Three source files use literal NUL bytes as cache-key and sentinel
+# separators. Git already detects them as binary; saying so is insurance
+# against a future setting deciding to "normalize" them.
+*.png binary
+vendor/pdfjs/build/* binary
