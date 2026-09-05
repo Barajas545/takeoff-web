@@ -2022,6 +2022,18 @@ loadCatalog().then(n => {
 // Offline. Registered late and never awaited: a worker that fails to
 // register must not stop the app from opening a project.
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  // Was a worker already driving this page? If so, a NEW one taking over
+  // means the app was updated underneath us and the HTML now on screen is
+  // the old one. Reload once so the markup, the stylesheet and the modules
+  // are all the same version — a mismatched set is how a page ends up with
+  // buttons that cannot be clicked.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;   // first install: nothing to replace
+    reloading = true;
+    location.reload();
+  });
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(new URL('sw.js', document.baseURI))
       .catch(err => console.warn('offline support unavailable', err));

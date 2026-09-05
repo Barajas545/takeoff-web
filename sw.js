@@ -13,7 +13,7 @@
  * Bump CACHE whenever the app changes, or an installed copy will keep
  * serving the old one.
  */
-const CACHE = 'ptt-web-v1';
+const CACHE = 'ptt-web-v2';
 
 /**
  * The shell, precached on install so the very first offline load works even
@@ -57,13 +57,33 @@ self.addEventListener('message', ev => {
 });
 
 /**
- * Cache first, then refresh in the background.
+ * The program is fetched fresh when there is a network; everything else is
+ * served from the cache.
  *
- * Cache first because the point is to work with no signal, and because a
- * plan sheet being drawn must never wait on a network round trip. The
- * background refresh is what picks up a new version: the next launch gets
- * it, which for a tool used in the field is the right trade.
+ * Cache-first for everything was the obvious choice and it is wrong here.
+ * The HTML, the CSS and the modules have to agree with each other: serve a
+ * new index.html beside a cached stylesheet from the previous version and
+ * you get a broken app with nothing in the console to explain it. That is
+ * not hypothetical — it happened during development, and the symptom was a
+ * page where no button could be clicked.
+ *
+ * So the shell is network-first with a short timeout, falling back to cache
+ * the moment the network is slow or absent. Offline still works; a stale
+ * mixture cannot happen. Assets that never change without changing their
+ * name — pdf.js, the icons, the catalog — stay cache-first, which is where
+ * nearly all the bytes are anyway.
  */
+const SHELL_RE = /\.(?:html|css|js|webmanifest)$|\/$/;
+const NET_TIMEOUT_MS = 2500;
+
+function withTimeout(promise, ms) {
+  return new Promise(resolve => {
+    const t = setTimeout(() => resolve(null), ms);
+    promise.then(v => { clearTimeout(t); resolve(v); },
+                 () => { clearTimeout(t); resolve(null); });
+  });
+}
+
 self.addEventListener('fetch', ev => {
   const req = ev.request;
   if (req.method !== 'GET') return;
@@ -83,7 +103,16 @@ self.addEventListener('fetch', ev => {
       return res;
     }).catch(() => null);
 
-    if (hit) {
+    // vendor/ is a pinned third-party release: its contents never change
+    // without the version in the path changing, so it stays cache-first
+    // and 1.4 MB of pdf.js is not re-fetched on every launch.
+    const isShell = req.mode === 'navigate'
+      || (SHELL_RE.test(url.pathname) && !url.pathname.includes('/vendor/'));
+    if (isShell) {
+      const fresh = await withTimeout(fromNetwork, NET_TIMEOUT_MS);
+      if (fresh) return fresh;
+      if (hit) return hit;
+    } else if (hit) {
       ev.waitUntil(fromNetwork);          // refresh for next time
       return hit;
     }

@@ -49,6 +49,20 @@
 
 * { box-sizing: border-box; }
 
+/* `hidden` means hidden.
+ *
+ * The HTML attribute is implemented as a UA rule of `display: none`, which
+ * ANY author rule that sets `display` silently beats — and a component rule
+ * almost always sets display. That is how `#modal` came to sit over the
+ * whole app: `.overlay[hidden] { display: none }` was written correctly, and
+ * `#modal { ...; display: block }` twelve lines later outranked it, so the
+ * dialog host never went away. A fixed, inset-0, z-index-80 sheet with no
+ * background is invisible and swallows every click in the program.
+ *
+ * Nothing in this app ever wants an element that is `hidden` and painted,
+ * so the attribute is made to win outright. */
+[hidden] { display: none !important; }
+
 html, body {
   height: 100%; margin: 0;
   /* No pull-to-refresh and no rubber-band on a phone: both fire mid-drag,
