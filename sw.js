@@ -13,7 +13,7 @@
  * Bump CACHE whenever the app changes, or an installed copy will keep
  * serving the old one.
  */
-const CACHE = 'ptt-web-v2';
+const CACHE = 'ptt-web-v3';
 
 /**
  * The shell, precached on install so the very first offline load works even
@@ -39,7 +39,15 @@ self.addEventListener('install', ev => {
     const cache = await caches.open(CACHE);
     // One at a time and forgiving: addAll rejects the whole install if any
     // single entry 404s, which would leave the app with no worker at all.
-    await Promise.all(SHELL.map(u => cache.add(u).catch(() => {})));
+    // And revalidating rather than cache.add, because the browser's HTTP
+    // cache would otherwise hand the installer the very copy this new
+    // version exists to replace.
+    await Promise.all(SHELL.map(async u => {
+      try {
+        const res = await fetch(u, { cache: 'no-cache' });
+        if (res && res.ok) await cache.put(u, res);
+      } catch { /* a shell entry that will not load must not fail install */ }
+    }));
     await self.skipWaiting();
   })());
 });
@@ -98,25 +106,34 @@ self.addEventListener('fetch', ev => {
     const cache = await caches.open(CACHE);
     const hit = await cache.match(req, { ignoreSearch: false });
 
-    const fromNetwork = fetch(req).then(res => {
-      if (res && res.ok && res.type === 'basic') cache.put(req, res.clone());
-      return res;
-    }).catch(() => null);
-
     // vendor/ is a pinned third-party release: its contents never change
     // without the version in the path changing, so it stays cache-first
     // and 1.4 MB of pdf.js is not re-fetched on every launch.
     const isShell = req.mode === 'navigate'
       || (SHELL_RE.test(url.pathname) && !url.pathname.includes('/vendor/'));
+
+    // The browser's own HTTP cache sits UNDERNEATH this worker, and GitHub
+    // Pages serves with a max-age. So a plain fetch() can hand back the very
+    // copy we are trying to replace, and "network first" quietly means "HTTP
+    // cache first" — which is exactly how a stale stylesheet survived a
+    // redeploy and left the app with no clickable buttons. Shell requests
+    // revalidate against the server; a 304 makes that nearly free.
+    const go = () => fetch(req, isShell ? { cache: 'no-cache' } : undefined)
+      .then(res => {
+        if (res && res.ok && res.type === 'basic') cache.put(req, res.clone());
+        return res;
+      })
+      .catch(() => null);
+
     if (isShell) {
-      const fresh = await withTimeout(fromNetwork, NET_TIMEOUT_MS);
+      const fresh = await withTimeout(go(), NET_TIMEOUT_MS);
       if (fresh) return fresh;
       if (hit) return hit;
     } else if (hit) {
-      ev.waitUntil(fromNetwork);          // refresh for next time
+      ev.waitUntil(go());                 // refresh for next time
       return hit;
     }
-    const res = await fromNetwork;
+    const res = await go();
     if (res) return res;
 
     // Offline and never cached. A navigation still has somewhere to go.
