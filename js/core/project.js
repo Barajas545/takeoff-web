@@ -526,6 +526,32 @@ export class Project extends EventTarget {
    * Record that pages were inserted at `at`. Everything filed under a later
    * page number moves along with it; the standalone bucket does not move.
    */
+  /**
+   * Move every callout's target with the sheets.
+   *
+   * A page_ref item stores `ref_page`, the index of the sheet it points at.
+   * That is a reference INTO the set, not a property of the page it sits on,
+   * so the per-page bucket shuffling above does not touch it. Insert one
+   * sheet in the middle and every callout after it points one drawing too
+   * high; the preview then shows the wrong detail with total confidence.
+   *
+   * `removedIndex`, when given, is a sheet that no longer exists: a callout
+   * that pointed AT it loses its target rather than silently sliding onto
+   * whatever took its place.
+   */
+  _shiftCalloutTargets(at, delta, removedIndex = null) {
+    for (const list of Object.values(this.measurements)) {
+      for (const m of list) {
+        if (m.type !== 'page_ref' || !Number.isInteger(m.ref_page)) continue;
+        if (removedIndex != null && m.ref_page === removedIndex) {
+          delete m.ref_page;                 // the sheet it named is gone
+          continue;
+        }
+        if (m.ref_page >= at) m.ref_page += delta;
+      }
+    }
+  }
+
   notePagesInserted(at, count) {
     this._shiftStores(at - 1, count);
     spliceArray(this.metadata.page_labels, at, count, '');
@@ -534,6 +560,7 @@ export class Project extends EventTarget {
     for (const key of INDEX_DICT_KEYS) {
       this.metadata[key] = shiftIndexDict(this.metadata[key], at - 1, count);
     }
+    this._shiftCalloutTargets(at, count);
     this.pageCount += count;
     this.clearHistory('a sheet was added');
     this.markDirty();
@@ -545,6 +572,7 @@ export class Project extends EventTarget {
     delete this.measurements[index];
     delete this.annotations[index];
     this._shiftStores(index, -1);
+    this._shiftCalloutTargets(index, -1, index);
     (this.metadata.page_labels || []).splice(index, 1);
     for (const key of INDEX_DICT_KEYS) {
       const d = { ...(this.metadata[key] || {}) };

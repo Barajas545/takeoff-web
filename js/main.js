@@ -5,6 +5,8 @@ import {
   STANDALONE_PAGE,
 } from './core/takeoff-file.js';
 import { draftKey, putDraft, getDraft, dropDraft } from './core/drafts.js';
+import { CalloutPreview } from './ui/callout-preview.js';
+import { resolveUiMode } from './ui/settings.js';
 import { RemoteFile } from './core/remote-file.js';
 import { PageStore } from './core/page-store.js';
 import { Project } from './core/project.js';
@@ -123,7 +125,7 @@ function drawFrame() {
     if (applyDefaultZoom()) pendingFit = false;
   }
   renderer.markerScale = app.settings.get('marker_scale');
-  renderer.uiScale = app.settings.get('ui_touch_mode') ? 1.6 : 1.0;
+  renderer.uiScale = uiMode() === 'touch' ? 1.6 : 1.0;
   renderer.background = app.settings.get('background_color');
   renderer.pageDpi = app.project.dpi;
   controller.calloutRadiusPx = calloutRadius({
@@ -147,6 +149,40 @@ function drawFrame() {
 }
 
 controller.addEventListener('changed', () => { requestDraw(); syncMobileBar(); });
+
+/* ── the callout preview ───────────────────────────────────────────────
+ *
+ * A bubble that says "3/S301" is a question, and following it by hand costs
+ * four navigations and your place on the sheet. Tapping it answers the
+ * question where you are standing.
+ */
+const calloutPreview = new CalloutPreview({
+  pages: app.pages,
+  sheetLabel: i => pageFinalLabel(i),
+  goToSheet: i => { void goToPage(i); },
+  sizeName: () => app.settings.get('preview_popup_size') || 'medium',
+});
+
+controller.addEventListener('callout-activated', ev => {
+  const { item, x, y } = ev.detail;
+  void calloutPreview.show(item, x, y, { pinned: true });
+});
+
+// Hover is a mouse affordance; the controller only emits it for a mouse.
+controller.addEventListener('callout-hover', ev => {
+  const { item, x, y } = ev.detail;
+  if (item) calloutPreview.hoverIn(item, x, y);
+  else calloutPreview.hoverOut();
+});
+
+// A pinned preview belongs to the user until they dismiss it. Capture phase,
+// so it closes before the press does anything else — but never when the
+// press landed inside the preview itself.
+document.addEventListener('pointerdown', ev => {
+  if (!calloutPreview.open) return;
+  if (ev.target.closest && ev.target.closest('#calloutPreview')) return;
+  calloutPreview.hide();
+}, true);
 controller.addEventListener('selection-changed', ev => {
   itemsPanel.setSelection(ev.detail.ids);
 });
@@ -275,6 +311,40 @@ function syncPageOf() {
 
    Everything here is behind one matchMedia. The desktop layout is untouched.
    ══════════════════════════════════════════════════════════════════════ */
+
+/* ── touch layout or standard layout ───────────────────────────────────
+ *
+ * Touch is the default, on every device, because that is what was asked
+ * for; standard is one click away and is remembered. Live, not on reload:
+ * everything that sizes the chrome reads a CSS custom property, and the two
+ * things that size the DRAWING are read fresh every frame in drawFrame.
+ */
+function uiMode() { return resolveUiMode(app.settings.values); }
+
+function setUiMode(mode, { announce = true } = {}) {
+  const next = mode === 'standard' ? 'standard' : 'touch';
+  document.documentElement.dataset.ui = next;
+  app.settings.set('ui_mode', next);
+  // Kept in step so a stale main.js served from cache cannot disagree with
+  // the stylesheet. Nothing new reads it.
+  app.settings.set('ui_touch_mode', next === 'touch');
+  syncUiModeMenu();
+  // The canvas box changed underneath the viewport.
+  requestDraw();
+  if (announce) {
+    setStatus(next === 'touch'
+      ? 'Touch layout — bigger targets, made for a finger.'
+      : 'Standard layout — the desktop proportions.');
+  }
+}
+
+function syncUiModeMenu() {
+  const m = uiMode();
+  const t = document.getElementById('uiTouchItem');
+  const d = document.getElementById('uiStandardItem');
+  if (t) t.textContent = m === 'touch' ? '✓  Touch layout' : 'Touch layout';
+  if (d) d.textContent = m === 'standard' ? '✓  Standard layout' : 'Standard layout';
+}
 
 const MOBILE_Q = window.matchMedia('(max-width: 1023px)');
 const isMobileLayout = () => MOBILE_Q.matches;
@@ -663,6 +733,9 @@ async function loadProjectFile(file, handle = null) {
     // A new session picks up the palette where the project left off, so a
     // fresh item does not repeat the colour of the last one drawn.
     setPaletteIndex(countItems());
+    // Another project's details are not this one's.
+    calloutPreview.hide();
+    calloutPreview.clearCache();
     hideEmptyState();
     buildScaleSelect();
     thumbs.refresh(0);
@@ -1337,6 +1410,8 @@ async function runAction(act) {
       $('app').querySelector('.body').classList.toggle('no-items');
       requestDraw();
       break;
+    case 'ui-touch': setUiMode('touch'); break;
+    case 'ui-standard': setUiMode('standard'); break;
     case 'toggle-markup-bar': {
       const bar = $('markupBar');
       bar.hidden = !bar.hidden;
@@ -1454,7 +1529,7 @@ function stepMarkerScale(dir) {
 function onSettingsChanged() {
   controller.zoomStepPercent = app.settings.get('zoom_step_percent');
   controller.wheelMode = app.settings.get('wheel_mode');
-  controller.uiScale = app.settings.get('ui_touch_mode') ? 1.6 : 1.0;
+  controller.uiScale = uiMode() === 'touch' ? 1.6 : 1.0;
   controller.markerScale = app.settings.get('marker_scale');
   // The nudge shortcut steps aside when the arrows are the page-turn keys.
   const nav = app.settings.get('page_nav_keys');
@@ -1771,6 +1846,12 @@ async function showShortcuts() {
 
 document.addEventListener('keydown', ev => {
   if (D.dialogsOpen()) return;
+  // Before anything else: a preview on screen is what Escape means.
+  if (ev.key === 'Escape' && calloutPreview.open) {
+    ev.preventDefault();
+    calloutPreview.hide();
+    return;
+  }
   const t = ev.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
 
@@ -2002,6 +2083,10 @@ wireMenus();
 // A phone has 844px of height and the markup row costs 34 of them for tools
 // most jobs never use. It is one tap away under View ▸ Markup Toolbar.
 if (window.matchMedia('(max-width: 720px)').matches) $('markupBar').hidden = true;
+// The stamp in index.html already painted the right layout; this only makes
+// the menu agree with it and settles the value on a first-ever launch.
+document.documentElement.dataset.ui = uiMode();
+syncUiModeMenu();
 MOBILE_Q.addEventListener('change', () => { syncMobileBar(); requestDraw(); });
 $('scrim').addEventListener('click', closeDrawers);
 syncMobileBar();
@@ -2120,7 +2205,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 // Expose the live objects for the portal embed and for debugging.
 // The live objects, for the portal embed and for driving the app in tests.
 window.TakeoffApp = {
-  app, viewport, renderer, controller, itemsPanel, thumbs,
+  app, viewport, renderer, controller, itemsPanel, thumbs, calloutPreview,
   goToPage, loadProjectFile, importPdfFile, saveProject, runAction, newProject,
   requestDraw, pageFinalLabel,
 };

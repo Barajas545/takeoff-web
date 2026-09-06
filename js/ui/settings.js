@@ -21,7 +21,17 @@ export const DEFAULT_SETTINGS = {
   zoom_step_percent: 15,
   wheel_mode: 'zoom',              // zoom (CAD style) | scroll (touchpad style)
   background_color: '#1e1e1e',
-  ui_touch_mode: false,
+  // The layout the app runs in. `null` means the user has never chosen.
+  //
+  // A NEW key rather than flipping ui_touch_mode, and the resolver below
+  // must never consult that one: Settings.save() writes the whole object,
+  // so every install that has ever opened Settings already has a literal
+  // ui_touch_mode:false on disk. Reading that as "chose standard" would
+  // mean the touch-first default reached nobody who has used the app —
+  // exactly the failure the note at the top of this file warns about.
+  ui_mode: null,                  // 'touch' | 'standard' | null
+  ui_touch_mode: false,           // legacy mirror; nothing new may READ it
+  preview_popup_size: 'medium',   // small | medium | large | x-large
   page_nav_keys: 'pageupdown',
   thumb_width: 190,
   items_width: 300,
@@ -40,6 +50,16 @@ export const DEFAULT_SETTINGS = {
     window: 'W', door: 'O', slope_area: 'H', pitch: 'K',
   },
 };
+
+/**
+ * Which layout to paint. Touch unless the user has said standard.
+ *
+ * One definition, used by the pre-paint stamp in index.html and by the app,
+ * so the two can never disagree about what an unset preference means.
+ */
+export function resolveUiMode(values) {
+  return (values && values.ui_mode === 'standard') ? 'standard' : 'touch';
+}
 
 export const PAGE_NAV_PRESETS = [
   ['pageupdown', 'Page Up / Page Down'],

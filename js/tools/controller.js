@@ -102,6 +102,8 @@ const CATEGORY_DEFAULT_OPENINGS = 'Doors & Windows';
 
 /** How far a finger may slide and still count as a tap, in screen px. */
 const TAP_SLOP = 11;
+/** A mouse is steadier than a finger: the desktop uses 4px for this. */
+const CLICK_SLOP = 4;
 /** How long a finger must rest before it means the right mouse button. */
 const LONG_PRESS_MS = 500;
 
@@ -225,6 +227,9 @@ export class ToolController extends EventTarget {
     // has not yet earned its point.
     this._pointers = new Map();
     this._pinch = null;
+    // A press that landed on a callout bubble, waiting to find out on
+    // release whether it was a read or a drag.
+    this._calloutPress = null;
     this._pendingTap = null;
     this._lpTimer = null;
     this._lpFired = false;
@@ -462,6 +467,9 @@ export class ToolController extends EventTarget {
 
   _panModePress(ev, pt) {
     const hit = this.hitTest(pt);
+    if (hit && hit.item.type === 'page_ref') {
+      this._calloutPress = { item: hit.item, x: ev.clientX, y: ev.clientY };
+    }
     if (hit && hit.vertexIndex >= 0) {
       this._select(hit.item, ev);
       this.dragVertex = { id: hit.item._uid, index: hit.vertexIndex };
@@ -673,6 +681,13 @@ export class ToolController extends EventTarget {
         this.hoverId = nextHover;
         this.hoverVertex = nextVert;
         this.emit('changed');
+        // Only a mouse hovers. A finger's pointermove is a drag in progress,
+        // and firing this on touch would open a preview the user is trying
+        // to pan past.
+        if (ev.pointerType !== 'touch') {
+          const over = hit && hit.item.type === 'page_ref' ? hit.item : null;
+          this.emit('callout-hover', { item: over, x: ev.clientX, y: ev.clientY });
+        }
       }
       this.canvas.style.cursor = hit
         ? (hit.vertexIndex >= 0 ? 'grab' : 'move')
@@ -707,6 +722,19 @@ export class ToolController extends EventTarget {
         && Math.hypot(ev.clientX - tap.x, ev.clientY - tap.y) <= TAP_SLOP) {
       const pt = this.viewport.eventToPage(ev);
       this._collectPoint(ev, pt, pt);   // no Shift constraint from a finger
+    }
+
+    // Decided here rather than on press, because the same gesture also
+    // moves the pin. Captured before the drag teardown below clears the flag.
+    const bubble = this._calloutPress;
+    this._calloutPress = null;
+    if (bubble && !this._dragMoved && !this._lpFired
+        && ev.type === 'pointerup'
+        && Math.hypot(ev.clientX - bubble.x, ev.clientY - bubble.y) <= CLICK_SLOP) {
+      this.emit('callout-activated', {
+        item: bubble.item, x: ev.clientX, y: ev.clientY,
+        pointerType: ev.pointerType || 'mouse',
+      });
     }
 
     if (this._lpFired) {

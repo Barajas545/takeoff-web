@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Professional Takeoff Tools — Web</title>
+<script>
+/* The layout must be decided BEFORE the stylesheet paints, or the app flashes
+   the wrong one on every launch. Inline, tiny, and duplicated from
+   resolveUiMode() in js/ui/settings.js on purpose: a module import cannot run
+   this early, and the two are one line each. Touch unless standard was chosen. */
+try {
+  var st = JSON.parse(localStorage.getItem('ptt.settings.v1') || '{}');
+  document.documentElement.dataset.ui = st.ui_mode === 'standard' ? 'standard' : 'touch';
+} catch (e) {
+  document.documentElement.dataset.ui = 'touch';
+}
+</script>
 <link rel="stylesheet" href="css/app.css">
 
 <!-- Installable to a home screen, and usable with no signal once cached. -->
@@ -67,6 +79,9 @@
           <button data-act="toggle-items">Project Items Panel</button>
           <button data-act="toggle-markup-bar">Markup Toolbar</button>
           <button data-act="toggle-labels">Measurement Labels</button>
+          <hr>
+          <button data-act="ui-touch" id="uiTouchItem">Touch layout</button>
+          <button data-act="ui-standard" id="uiStandardItem">Standard layout</button>
           <hr>
           <button data-act="marker-smaller">Smaller Markers<kbd>Ctrl+Shift+[</kbd></button>
           <button data-act="marker-normal">Normal Markers<kbd>Ctrl+0</kbd></button>

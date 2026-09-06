@@ -47,6 +47,90 @@
   --mono: 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   Two layouts, one set of numbers
+
+   Everything that has to grow for a fingertip is a token here, and exactly
+   one selector decides the values. That is what lets a USER CHOICE beat a
+   media query: `@media (pointer: coarse)` is a fact about the hardware, and
+   there is no CSS operator for "this query, unless the user said otherwise".
+
+   Order matters and is deliberate:
+     1. bare :root          — the desktop numbers, and the fallback if the
+                              stamping script never runs (JS off, storage
+                              blocked, a stale cached index.html).
+     2. :root:not([data-ui]) inside the media query — no preference yet, so
+                              the device still decides.
+     3. :root[data-ui=…]    — the user chose. Beats 2 by being a different,
+                              mutually exclusive selector.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ctl-h: 0px;              /* control floor; padding alone decides */
+  --ctl-pad: 5px 9px;
+  --menu-h: 0px;
+  --menuitem-h: 0px;
+  --icon-h: 0px;
+  --icon-pad: 2px 6px;
+  --swatch: 20px;
+  --range-w: 96px;
+  --range-h: auto;
+  --field-h: 0px;
+  --field-fs: 12px;
+  --panel-head-h: 36px;
+  --filter-h: 30px;
+  --rowact-h: 0px;
+  --rowact-pad: 0 3px;
+  --cost-pad: 3px 6px;
+  --form-cols: 128px 1fr;
+}
+
+@media (pointer: coarse) {
+  :root:not([data-ui]) {
+    --ctl-h: 40px;   --ctl-pad: 8px 12px;
+    --menu-h: 38px;  --menuitem-h: 42px;
+    --icon-h: 38px;  --icon-pad: 6px 10px;
+    --swatch: 30px;
+    --range-w: 128px; --range-h: 28px;
+    --field-h: 38px; --field-fs: 16px;
+    --panel-head-h: 46px;
+    --filter-h: 48px;
+    --rowact-h: 38px; --rowact-pad: 0 10px;
+    --cost-pad: 8px 10px;
+    --form-cols: 1fr;
+  }
+}
+
+:root[data-ui="touch"] {
+  --ctl-h: 40px;   --ctl-pad: 8px 12px;
+  --menu-h: 38px;  --menuitem-h: 42px;
+  --icon-h: 38px;  --icon-pad: 6px 10px;
+  --swatch: 30px;
+  --range-w: 128px; --range-h: 28px;
+  --field-h: 38px; --field-fs: 16px;
+  --panel-head-h: 46px;
+  --filter-h: 48px;
+  --rowact-h: 38px; --rowact-pad: 0 10px;
+  --cost-pad: 8px 10px;
+  --form-cols: 1fr;
+}
+
+/* Written out rather than left to inherit block 1, so that "standard" is a
+   statement and no future coarse-device rule can leak into it. */
+:root[data-ui="standard"] {
+  --ctl-h: 0px;    --ctl-pad: 5px 9px;
+  --menu-h: 0px;   --menuitem-h: 0px;
+  --icon-h: 0px;   --icon-pad: 2px 6px;
+  --swatch: 20px;
+  --range-w: 96px; --range-h: auto;
+  --field-h: 0px;  --field-fs: 12px;
+  --panel-head-h: 36px;
+  --filter-h: 30px;
+  --rowact-h: 0px; --rowact-pad: 0 3px;
+  --cost-pad: 3px 6px;
+  --form-cols: 128px 1fr;
+}
+
 * { box-sizing: border-box; }
 
 /* `hidden` means hidden.
@@ -176,7 +260,8 @@ button { font-family: inherit; }
 .tb-btn, .tool-btn {
   background: var(--btn-bg); color: var(--text);
   border: 1px solid var(--btn-press); border-radius: 4px;
-  padding: 5px 9px; font-size: 12px; cursor: pointer; white-space: nowrap;
+  padding: var(--ctl-pad); min-height: var(--ctl-h);
+  font-size: 12px; cursor: pointer; white-space: nowrap;
 }
 .tb-btn:hover, .tool-btn:hover { background: var(--btn-hover); }
 .tb-btn:active { background: var(--btn-press); }
@@ -187,7 +272,8 @@ button { font-family: inherit; }
 .tb-select, .tb-input {
   background: var(--field-bg); color: var(--text);
   border: 1px solid #303030; border-radius: 4px;
-  padding: 4px 6px; font-size: 12px; font-family: inherit;
+  padding: 4px 6px; font-size: max(var(--field-fs), 12px);
+  min-height: var(--field-h); font-family: inherit;
 }
 .tb-select.sm, .tb-input.sm { padding: 3px 5px; font-size: 11.5px; }
 .tb-input { width: 120px; }
@@ -206,13 +292,13 @@ button { font-family: inherit; }
 .toolbar.markup[hidden] { display: none; }
 
 .swatch-btn {
-  width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
+  width: var(--swatch); height: var(--swatch); border-radius: 4px; cursor: pointer;
   border: 1px solid var(--border-hard); padding: 0;
 }
 .swatch-btn:hover { border-color: #fff; }
 .swatch-btn.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
 
-.tb-range { width: 96px; accent-color: var(--accent); }
+.tb-range { width: var(--range-w); height: var(--range-h); accent-color: var(--accent); }
 
 /* the floating per-tool options bar */
 .tool-opts {
@@ -254,7 +340,7 @@ button { font-family: inherit; }
 
 .panel-head {
   display: flex; align-items: center; gap: 6px;
-  height: 36px; padding: 0 8px;
+  min-height: var(--panel-head-h); padding: 0 8px;
   background: var(--head-bg);
   border-bottom: 1px solid var(--border-soft);
   flex-shrink: 0;
@@ -266,7 +352,8 @@ button { font-family: inherit; }
 .icon-btn {
   margin-left: auto;
   background: none; border: 0; color: var(--text-faint);
-  font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+  font-size: 14px; cursor: pointer; border-radius: 4px;
+  padding: var(--icon-pad); min-height: var(--icon-h); min-width: var(--icon-h);
 }
 .icon-btn:hover { background: #232323; color: var(--text); }
 
@@ -325,7 +412,7 @@ button { font-family: inherit; }
 .cost-toggle button {
   background: #232323; color: var(--text-faint);
   border: 1px solid #2e2e2e; border-radius: 4px;
-  font-size: 9.5px; font-weight: 700; padding: 3px 6px; cursor: pointer;
+  font-size: 9.5px; font-weight: 700; padding: var(--cost-pad); cursor: pointer;
 }
 .cost-toggle button.on { color: #fff; border-color: transparent; }
 .cost-toggle button[data-cost="all"].on { background: var(--accent); }
@@ -333,7 +420,7 @@ button { font-family: inherit; }
 .cost-toggle button[data-cost="material"].on { background: var(--material); }
 
 .filter-bar {
-  display: flex; gap: 5px; padding: 4px 6px; height: 30px;
+  display: flex; gap: 5px; padding: 4px 6px; min-height: var(--filter-h);
   background: var(--filter-bg); flex-shrink: 0;
 }
 .filter-bar select { flex: 1; min-width: 0; }
@@ -387,9 +474,11 @@ button { font-family: inherit; }
 }
 .row .pg { font-size: 10px; color: #4a4a4a; }
 .row .pg.solo { font-style: italic; }
-.row .acts { display: flex; gap: 2px; }
+.row .acts { display: flex; gap: 2px; align-items: center; }
 .row .act {
-  background: none; border: 0; cursor: pointer; padding: 0 3px;
+  background: none; border: 0; cursor: pointer;
+  padding: var(--rowact-pad); min-width: var(--rowact-h);
+  align-self: stretch;
   font-size: 12px; line-height: 1; color: var(--materials);
 }
 .row .eye { color: var(--eye-on); font-size: 13px; }
@@ -535,7 +624,7 @@ button { font-family: inherit; }
 }
 .dlg-foot .spacer { margin-right: auto; }
 
-.form { display: grid; grid-template-columns: 128px 1fr; gap: 9px 12px; align-items: center; }
+.form { display: grid; grid-template-columns: var(--form-cols); gap: 9px 12px; align-items: center; }
 .form > label { font-size: 12px; color: var(--text-dim); text-align: right; }
 .form .full { grid-column: 1 / -1; }
 .form input[type=text], .form input[type=number], .form select, .form textarea {
@@ -696,21 +785,77 @@ table.grid td.indent { padding-left: 26px; color: var(--text-dim); }
   /* the markup row is off by default here and toggles from the View menu */
 }
 
-/* ── a fingertip is not a mouse cursor ────────────────────────────────── */
-@media (pointer: coarse) {
-  .tb-btn, .tool-btn, .es-btn { min-height: 40px; padding: 8px 12px; }
-  .menu-btn { min-height: 38px; padding: 6px 10px; }
-  .menu-pop button { min-height: 42px; }
-  .icon-btn { min-width: 38px; min-height: 38px; }
-  .swatch-btn { width: 30px; height: 30px; }
-  .tb-range { width: 128px; height: 28px; }
-  /* 16px or iOS zooms the whole page in when a field takes focus, and never
-     zooms back out. */
-  .tb-select, .tb-input, input, select, textarea { font-size: 16px; }
-  .tb-select, .tb-input { min-height: 38px; }
-  .form { grid-template-columns: 1fr; }
-}
+/* A fingertip is not a mouse cursor. These read the tokens above, so the
+   layout follows the user's choice and not the hardware. 16px on a field is
+   not cosmetic: anything smaller makes iOS zoom the whole page in when the
+   field takes focus, and it never zooms back out. */
+.es-btn { min-height: var(--ctl-h); }
+.menu-btn { min-height: var(--menu-h); }
+.menu-pop button { min-height: var(--menuitem-h); }
+input, select, textarea { font-size: max(var(--field-fs), 12px); }
 
 @media (max-width: 480px) {
   .form { grid-template-columns: 1fr; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Callout preview
+
+   A crop of the sheet a callout points at, shown beside the bubble. Sized
+   to the drawing rather than to a fixed rectangle: a detail is whatever
+   shape it is, and pinning every one into 3:2 frames most of them in bars.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.cpv {
+  position: fixed; z-index: 78;
+  display: flex; flex-direction: column;
+  max-width: min(92vw, 840px);
+  background: var(--chip-bg, #232323);
+  border: 1px solid var(--border-hard);
+  border-radius: 10px;
+  box-shadow: 0 18px 54px rgba(0, 0, 0, .62);
+  overflow: hidden;
+  /* The popup must never eat a gesture meant for the sheet behind it, so it
+     is only interactive while it is open — and `hidden` is enforced with
+     !important globally, so closed really is gone. */
+}
+.cpv-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px 7px 11px;
+  background: var(--head-bg);
+  border-bottom: 1px solid var(--border-soft);
+}
+.cpv-title {
+  font-size: 12px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cpv-x {
+  margin-left: auto; flex: 0 0 auto;
+  min-width: 30px; min-height: 30px;
+  background: none; border: 0; border-radius: 6px;
+  color: var(--text-dim); font-size: 13px; cursor: pointer;
+}
+.cpv-x:hover { background: var(--btn-hover); color: var(--text); }
+.cpv-body {
+  display: grid; place-items: center;
+  padding: 8px; background: #f4f4f4; min-width: 220px; min-height: 90px;
+}
+.cpv-body canvas { display: block; border-radius: 3px; }
+.cpv-msg {
+  min-width: 220px; min-height: 60px;
+  display: grid; place-items: center;
+  color: #555; font-size: 12px;
+}
+.cpv-foot {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px;
+  border-top: 1px solid var(--border-soft);
+}
+.cpv-go {
+  background: var(--accent); color: #fff;
+  border: 1px solid var(--accent); border-radius: 6px;
+  padding: 6px 12px; font-family: inherit; font-size: 12px; cursor: pointer;
+  min-height: var(--ctl-h, 0px);
+}
+.cpv-go:disabled { opacity: .4; cursor: default; }
+.cpv-hint { font-size: 10.5px; color: var(--text-faint); }
