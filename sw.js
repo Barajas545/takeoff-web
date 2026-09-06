@@ -13,7 +13,7 @@
  * Bump CACHE whenever the app changes, or an installed copy will keep
  * serving the old one.
  */
-const CACHE = 'ptt-web-v3';
+const CACHE = 'ptt-web-v4';
 
 /**
  * The shell, precached on install so the very first offline load works even

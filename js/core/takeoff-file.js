@@ -318,7 +318,15 @@ export async function decodePng(pngBytes, opts) {
  * a 2 GB project neither decodes nor allocates anything.
  */
 export async function encodePageSource(src) {
-  if (src.kind === 'slice') return { part: src.data, size: src.data.size };
+  if (src.kind === 'slice') {
+    // A project opened over the network has slices that are handles, not
+    // Blobs, and `new Blob([handle])` would stringify it into the file. Those
+    // pages are pulled down here, one at a time as they are packed — a remote
+    // save costs the whole project on the wire, which is the honest price of
+    // writing back bytes the browser never had.
+    const part = src.data instanceof Blob ? src.data : await src.data.blob();
+    return { part, size: part.size };
+  }
   if (src.kind === 'raw') return { part: src.data, size: src.data.length };
   let png = src.data;
   if (src.kind === 'bitmap') png = new Uint8Array(await bitmapToPng(src.data));

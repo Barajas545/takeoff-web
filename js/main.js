@@ -5,6 +5,7 @@ import {
   STANDALONE_PAGE,
 } from './core/takeoff-file.js';
 import { draftKey, putDraft, getDraft, dropDraft } from './core/drafts.js';
+import { RemoteFile } from './core/remote-file.js';
 import { PageStore } from './core/page-store.js';
 import { Project } from './core/project.js';
 import { importPdf, canvasToPng } from './core/pdf-import.js';
@@ -2007,9 +2008,85 @@ syncMobileBar();
 syncHistoryButtons();
 syncTitle();
 onSettingsChanged();
-setStatus(canUseFsApi
-  ? 'Open a .takeoff project, or start from a PDF.'
-  : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.');
+// ── handed over by the portal ─────────────────────────────────────────────
+/**
+ * A project the portal asked this app to open.
+ *
+ * Nothing about the file travels in the URL. A pre-authed download link is a
+ * credential, and a query string ends up in history, in the Referer header and
+ * in anything that logs a URL — so the portal writes the details to
+ * sessionStorage (same origin: both apps are served from barajas545.github.io)
+ * and passes only a one-shot key in the hash. The key is consumed on arrival
+ * and the hash removed, so a reload does not silently reopen a project the
+ * estimator has since closed.
+ *
+ * The file is never downloaded. It is opened over HTTP ranges exactly as it
+ * would be from disk, which is what makes a 155 MB plan set open in about a
+ * second on a phone.
+ */
+async function openFromPortal(id) {
+  let rec = null;
+  const key = 'ptt.open.' + decodeURIComponent(id);
+  try {
+    rec = JSON.parse(sessionStorage.getItem(key) || 'null');
+    sessionStorage.removeItem(key);
+  } catch { /* a blocked store just means no handoff */ }
+  try {
+    history.replaceState(null, '', location.pathname + location.search);
+  } catch { /* cosmetic */ }
+
+  if (!rec || !rec.url) {
+    // Most often a reload after the key was consumed, not a fault.
+    setStatus('That project link has already been used — open it again from the portal.');
+    return;
+  }
+
+  await loadProjectFile(new RemoteFile({
+    url: rec.url,
+    name: rec.name,
+    size: rec.size,
+    lastModified: Number(rec.lastModified) || 0,
+    renew: renewerFor(rec.renew),
+  }));
+}
+
+/**
+ * How to mint a fresh download link when the current one expires.
+ *
+ * The portal names the endpoint and the localStorage key its token lives
+ * under, rather than handing the token over — copying a bearer token into a
+ * second store is a second place for it to leak from, and both apps share an
+ * origin so there is no need. An app opened without a portal handoff has no
+ * renewer at all and simply uses the link until it expires.
+ */
+function renewerFor(r) {
+  if (!r || !r.url) return null;
+  return async () => {
+    const headers = {};
+    let token = '';
+    try { token = (r.tokenKey && localStorage.getItem(r.tokenKey)) || ''; } catch { /* blocked */ }
+    if (token) headers.Authorization = 'Bearer ' + token;
+    const res = await fetch(r.url, { headers });
+    if (!res.ok) throw new Error(`Could not refresh the link (${res.status}).`);
+    const d = await res.json();
+    return d.downloadUrl || '';
+  };
+}
+
+/* Checked synchronously: an async check would let the idle status below land
+   on top of "Opening project…". */
+const HANDOFF = /(?:^|[#&])open=([^&]+)/.exec(location.hash || '');
+if (HANDOFF) {
+  setStatus('Opening the project from the portal…');
+  openFromPortal(HANDOFF[1]).catch(async err => {
+    setStatus('Could not open that project.');
+    await D.alertDialog('Could not open', err.message || String(err));
+  });
+} else {
+  setStatus(canUseFsApi
+    ? 'Open a .takeoff project, or start from a PDF.'
+    : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.');
+}
 requestDraw();
 
 // The catalog backs the name box's autocomplete; a failure to load it must
