@@ -21,7 +21,26 @@ export class Viewport {
     this.width = 0;                  // CSS pixels
     this.height = 0;
     this.dpr = 1;
+    // Where the sheet currently being drawn sits in the continuous view.
+    // null in the ordinary single-sheet view, and every method below takes
+    // an early return on that, so single-sheet arithmetic is not merely
+    // equivalent to what it was — it is the same expression.
+    this._frame = null;
   }
+
+  /**
+   * Draw the next passes as if this sheet's top-left were the world origin.
+   *
+   * Page coordinates in, page coordinates out: a measurement stored at
+   * (13, 907) on sheet 40 converts exactly as it would if sheet 40 were the
+   * only sheet open. That is what lets every tool, every hit test and every
+   * label keep working in a continuous view with no changes.
+   */
+  setPageFrame(ox, oy) { this._frame = { x: ox || 0, y: oy || 0 }; }
+
+  clearPageFrame() { this._frame = null; }
+
+  get pageFrame() { return this._frame; }
 
   /** Match the backing store to the element's box. Returns true if it changed. */
   resize() {
@@ -39,11 +58,17 @@ export class Viewport {
   }
 
   toScreen(px, py) {
-    return [(px - this.origin.x) * this.zoom, (py - this.origin.y) * this.zoom];
+    const f = this._frame;
+    if (!f) return [(px - this.origin.x) * this.zoom, (py - this.origin.y) * this.zoom];
+    return [(px + f.x - this.origin.x) * this.zoom,
+            (py + f.y - this.origin.y) * this.zoom];
   }
 
   toPage(sx, sy) {
-    return [sx / this.zoom + this.origin.x, sy / this.zoom + this.origin.y];
+    const f = this._frame;
+    if (!f) return [sx / this.zoom + this.origin.x, sy / this.zoom + this.origin.y];
+    return [sx / this.zoom + this.origin.x - f.x,
+            sy / this.zoom + this.origin.y - f.y];
   }
 
   /** A length in page pixels, as it appears on screen. */
@@ -138,11 +163,14 @@ export class Viewport {
 
   /** Apply the transform to a 2D context, device pixel ratio included. */
   applyTransform(ctx) {
+    const f = this._frame;
+    const ox = f ? this.origin.x - f.x : this.origin.x;
+    const oy = f ? this.origin.y - f.y : this.origin.y;
     ctx.setTransform(
       this.zoom * this.dpr, 0,
       0, this.zoom * this.dpr,
-      -this.origin.x * this.zoom * this.dpr,
-      -this.origin.y * this.zoom * this.dpr
+      -ox * this.zoom * this.dpr,
+      -oy * this.zoom * this.dpr
     );
   }
 
