@@ -32,6 +32,10 @@ export const DEFAULT_SETTINGS = {
   ui_mode: null,                  // 'touch' | 'standard' | null
   ui_touch_mode: false,           // legacy mirror; nothing new may READ it
   preview_popup_size: 'medium',   // small | medium | large | x-large
+  // A project opens in View Only: more room for the drawing, and nothing can
+  // be changed by accident. This is for the estimator who lives in Edit Mode
+  // and would rather not press the button every time.
+  open_in_edit_mode: false,
   page_nav_keys: 'pageupdown',
   thumb_width: 190,
   items_width: 300,

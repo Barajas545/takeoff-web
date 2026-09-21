@@ -24,6 +24,7 @@ import {
 import { DEFAULT_DPI, DEFAULT_PPF, scaleLabelFor } from './units.js';
 import { polygonArea, pathLength } from './geom.js';
 import { shapeOwn } from './measure.js';
+import { shiftRevisionIndices } from './revisions.js';
 
 export { STANDALONE_PAGE };
 
@@ -125,6 +126,9 @@ export class Project extends EventTarget {
     this._dirty = false;
     this._txDepth = 0;
     this._txSnapshot = null;
+    // Set at load when the file names revision sets whose images could not be
+    // read. A save must not silently drop them — see loadFrom.
+    this.revisionsUnreadable = false;
     this.filePath = '';           // display name of the opened file
     this.fileHandle = null;       // FileSystemFileHandle, when we have one
     this._isolation = null;       // transient "show only these" — never saved
@@ -132,8 +136,17 @@ export class Project extends EventTarget {
 
   // ── loading ──────────────────────────────────────────────────────────
 
-  /** Adopt an opened project file. */
-  loadFrom({ metadata, annotations, measurements, pageCount }) {
+  /**
+   * Adopt an opened project file.
+   *
+   * `revisionCounts` is how many sheets each revision set in the file's
+   * TKREVS01 tail holds, read out of the tail's INDEX. The desktop app pairs
+   * each `metadata.revisions` record with a set of decoded images; this app
+   * never holds those pixels — on the largest real job they run to 1.42 GB —
+   * so it pairs each record with a page COUNT instead, and fetches one page
+   * only when it is drawn.
+   */
+  loadFrom({ metadata, annotations, measurements, pageCount, revisionCounts = [] }) {
     this.reset();
     this.pageCount = pageCount;
     // Everything the writer folds in is stripped back out here, so metadata
@@ -151,7 +164,21 @@ export class Project extends EventTarget {
       page_scales: normaliseScales(meta.page_scales),
       cad_layers: Array.isArray(meta.cad_layers) && meta.cad_layers.length
         ? meta.cad_layers : defaultLayers(),
+      revisions: adoptRevisions(meta.revisions, revisionCounts),
     };
+    // The file SAYS it has revision sets but the tail could not be read.
+    //
+    // `readRevisionIndex` answers [] for a truncated or corrupt tail, by
+    // design — a bad tail must never cost the main project. But that leaves
+    // the records with no pixels behind them, and a save composed from what
+    // is in hand would then write those records with no TKREVS01 block at
+    // all: up to 1.42 GB of drawings gone, in place, with nothing said.
+    //
+    // Recorded here and refused at the point of saving, where it can still be
+    // stopped. Google Drive has truncated this estimator's files three times.
+    this.revisionsUnreadable =
+      (Array.isArray(meta.revisions) ? meta.revisions.length : 0) > 0
+      && revisionCounts.length === 0;
     this.measurements = normaliseStore(measurements);
     this.annotations = normaliseStore(annotations);
     this._backfillItems();
@@ -227,6 +254,11 @@ export class Project extends EventTarget {
     // Runtime keys never reach the file. See the note on identity above.
     meta.annotations = stripRuntimeKeys(this.annotations);
     meta.measurements = stripRuntimeKeys(meas);
+    // A revision record carries a page count this app derived from the file's
+    // own tail, and possibly a placeholder for a set of blobs the metadata
+    // never described. Neither belongs on disk. Written back untouched
+    // otherwise, so a save still reproduces the file it opened.
+    meta.revisions = revisionsForSave(this.metadata.revisions);
     return meta;
   }
 
@@ -561,10 +593,13 @@ export class Project extends EventTarget {
       this.metadata[key] = shiftIndexDict(this.metadata[key], at - 1, count);
     }
     this._shiftCalloutTargets(at, count);
+    this._shiftRevisions(at, count);
     this.pageCount += count;
     this.clearHistory('a sheet was added');
     this.markDirty();
-    this.emit('pages-changed', {});
+    // `at` and `delta` are carried so anything keyed by page index OUTSIDE
+    // this class can move with the sheets too — temporary dimensions are.
+    this.emit('pages-changed', { at, delta: count });
   }
 
   /** Record that one page was removed. Its items go with it. */
@@ -579,10 +614,37 @@ export class Project extends EventTarget {
       delete d[String(index)];
       this.metadata[key] = shiftIndexDict(d, index, -1);
     }
+    this._shiftRevisions(index, -1);
     this.pageCount = Math.max(0, this.pageCount - 1);
     this.clearHistory('a sheet was deleted');
     this.markDirty();
-    this.emit('pages-changed', {});
+    this.emit('pages-changed', { at: index, delta: -1 });
+  }
+
+  /**
+   * Move every page-index reference in the revision model with the pages.
+   *
+   * A revision's `match` is keyed by main page index, `extra_sheets[].after`
+   * names the sheet a new-sheet row follows, and `sheet_version` says which
+   * version of each sheet its totals come from — all three are page indices.
+   *
+   * Left behind, an insert hands one sheet's revisions to whichever sheet
+   * landed on its number, and with them the version its takeoff is counted
+   * from. Nothing errors; the wrong drawing is simply current.
+   */
+  _shiftRevisions(at, delta) {
+    const revs = this.metadata.revisions;
+    const extra = this.metadata.extra_sheets;
+    if (!(revs || []).length && !(extra || []).length
+        && !Object.keys(this.metadata.sheet_version || {}).length) return;
+    if (!this.metadata.sheet_version) this.metadata.sheet_version = {};
+    shiftRevisionIndices(revs, extra, this.metadata.sheet_version, at, delta);
+    if (!Object.keys(this.metadata.sheet_version).length) {
+      // Absent means "the original", so an empty dict is the same statement
+      // as no dict — and not writing one keeps a file that never had the key
+      // exactly as it was.
+      delete this.metadata.sheet_version;
+    }
   }
 
   /**
@@ -764,6 +826,98 @@ function normaliseScales(pageScales) {
     if (Number.isFinite(n) && n > 0) out[String(k)] = n;
   }
   return out;
+}
+
+/**
+ * Pair each saved revision record with the sheet count of its image set.
+ *
+ * The file stores the two separately and pairs them BY POSITION: the nth
+ * `metadata.revisions` record describes the nth set of blobs in the TKREVS01
+ * tail. Verified across the library — every project's blob counts match its
+ * records' `page_labels` lengths exactly, set for set.
+ *
+ * A record whose images are not in this file gets `pageCount: 0`. It is kept
+ * rather than dropped: the id is still real, every item ever taken off that
+ * revision is stamped with it, and minting a fresh id on a re-import would
+ * strand them for good. It simply has no pages to show.
+ *
+ * A set of blobs with no record is the other way round — it has pages and no
+ * description. It is given a placeholder so the sheets can still be looked at,
+ * flagged `_orphanSet` so the save strips it back out and the file keeps
+ * exactly the `revisions` array it arrived with.
+ */
+function adoptRevisions(saved, counts) {
+  const list = Array.isArray(saved) ? saved : [];
+  const out = [];
+  for (let i = 0; i < Math.max(list.length, counts.length); i++) {
+    const rec = list[i];
+    const n = Number.isFinite(counts[i]) ? counts[i] : 0;
+    if (rec) {
+      out.push({
+        ...rec,
+        // Which set of blobs in the tail is this record's. It is just `i` —
+        // the file pairs them by position and nothing else — but everything
+        // downstream reads a FILTERED list (visible, non-empty), where the
+        // array position no longer means the set number. Carrying it avoids
+        // every bug of the form "column 3 fetched revision 4's pixels".
+        _setIndex: i,
+        id: String(rec.id || ''),
+        match: revIndexMap(rec.match),
+        extra: revSlotMap(rec.extra),
+        page_labels: Array.isArray(rec.page_labels) ? rec.page_labels.slice() : [],
+        visible: rec.visible !== false,
+        archived: !!rec.archived,
+        pageCount: n,
+      });
+    } else {
+      out.push({
+        _setIndex: i,
+        id: `rev-unnamed-${i}`, date: '', description: `Revision ${i + 1}`,
+        notes: '', source: '', added: '', visible: true, archived: false,
+        page_labels: [], match: {}, extra: {}, pageCount: n, _orphanSet: true,
+      });
+    }
+  }
+  return out;
+}
+
+/** A revision's match map: {mainPageIndex: revPageIndex}, both real indices. */
+function revIndexMap(m) {
+  const out = {};
+  for (const [k, v] of Object.entries(m || {})) {
+    const i = parseInt(k, 10);
+    const j = Number(v);
+    if (Number.isFinite(i) && Number.isInteger(j) && j >= 0) out[String(i)] = j;
+  }
+  return out;
+}
+
+/** A revision's extra map: {slotId: revPageIndex}. The key is NOT an index. */
+function revSlotMap(m) {
+  const out = {};
+  for (const [k, v] of Object.entries(m || {})) {
+    const j = Number(v);
+    if (k && Number.isInteger(j) && j >= 0) out[String(k)] = j;
+  }
+  return out;
+}
+
+/**
+ * Revision fields this app adds at runtime and the file must never carry.
+ *
+ * `pageCount` is read back from the tail on every open, and `_orphanSet`
+ * describes a record that does not exist on disk at all. Writing either would
+ * change a file the round-trip test proves byte-identical.
+ */
+const REVISION_RUNTIME_KEYS = ['pageCount', '_orphanSet', '_setIndex'];
+
+/** The `revisions` array as the file wants it: no runtime keys, no orphans. */
+function revisionsForSave(revs) {
+  return (revs || []).filter(r => !r._orphanSet).map(r => {
+    const copy = { ...r };
+    for (const key of REVISION_RUNTIME_KEYS) delete copy[key];
+    return copy;
+  });
 }
 
 /** The metadata dicts keyed by a stringified page index. */

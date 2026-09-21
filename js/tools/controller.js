@@ -26,6 +26,7 @@ import {
 } from '../core/units.js';
 import { nextPaletteColor, peekPaletteColor } from '../render/theme.js';
 import { STANDALONE_PAGE } from '../core/takeoff-file.js';
+import { onThisVersion } from '../core/revisions.js';
 import {
   MARKUP_TOOLS, MARKUP_HINTS, MarkupState, beginStroke, extendStroke,
   rectFrom, rectIsWorthKeeping, annotationsUnderEraser, makeTextNote,
@@ -57,6 +58,23 @@ export const TOOLS = [...TAKEOFF_TOOLS, ...MARKUP_TOOLS];
 
 /** True for a tool that writes markup rather than takeoff. */
 export const isMarkupTool = mode => MARKUP_TOOLS.some(t => t[0] === mode);
+
+/**
+ * The tools that can produce a TEMPORARY measurement.
+ *
+ * These read a drawing rather than taking off from it: a length, an area, a
+ * roof pitch. They are the three that make sense with nothing to save — and
+ * pitch needs no scale at all, being a ratio.
+ *
+ * They are the ordinary modes, not special ones. What decides where the
+ * result lands is `scratchSink`, so all the geometry, the live preview, the
+ * shift-constraint and the hints are the same code in both modes.
+ */
+export const SCRATCH_CAPABLE = new Set(['distance', 'area', 'pitch']);
+
+/** What to say when a tool is refused and nothing more specific was set. */
+const READ_ONLY_DEFAULT =
+  'This is View Only mode — switch to Edit Mode to change the takeoff.';
 
 export const HINTS = {
   pan: 'Click an item to select it.\nDrag vertices to reshape. Double-click to edit.',
@@ -174,6 +192,63 @@ export class ToolController extends EventTarget {
     this.host = host || {};
 
     this.mode = 'pan';
+
+    /* ── looking at another version of this sheet ──────────────────────
+     *
+     * `viewingVersion` says which drawing is on screen: rev_id '' with
+     * revPage null is the sheet's own. A HIT TEST may only ever see the
+     * items belonging to it, and while `readOnly` is set nothing may be
+     * placed, moved or deleted at all.
+     *
+     * The gate is on INTENT, not on the name of the current tool. The
+     * desktop learned this the expensive way: its press guard refused tools
+     * by mode name and left Pan exempt — and Pan is the mode an estimator
+     * sits in all day. Every item the painter had just refused to draw was
+     * still grabbable, so a drag moved a real measurement onto a drawing it
+     * was never traced on, with neither the item nor its grips on screen to
+     * show it, and the next save kept it.
+     *
+     * So the filter lives in `hitTest`, which selection, vertex dragging,
+     * item dragging, hover, the callout press and double-click all go
+     * through. Pan, pinch, the wheel and both other mouse buttons stay live,
+     * because looking is never refused.
+     */
+    this.viewingVersion = { revId: '', revPage: null };
+
+    /* ── read-only: looking is free, editing is not ────────────────────
+     *
+     * Set while the app is in View Only mode, and while another version of
+     * a sheet is on screen. It draws the line at INTENT:
+     *
+     *   allowed    pan, pinch, wheel, both other mouse buttons, and
+     *              SELECTING an item — clicking a wall to read what it is
+     *              is looking, and a viewer that cannot do it is a picture
+     *   refused    dragging an item or a vertex, Delete, the nudge arrows,
+     *              double-click-to-edit, the item context menu, and every
+     *              tool that would put something into the project
+     *
+     * Note what is NOT here: `hitTest` does not go blank. That was the
+     * blunt version. What must not happen is a DRAG, and the drag is armed
+     * in one place, so that is where it is stopped.
+     */
+    this.readOnly = false;
+
+    /**
+     * Where a finished measurement goes when it is not going into the
+     * project. Set in View Only mode; the item lands in a scratch store
+     * that no save can reach, which is what makes a temporary dimension
+     * temporary — not a flag on it that something might forget to read.
+     * @type {((item: object) => void)|null}
+     */
+    this.scratchSink = null;
+
+    /**
+     * Set while the overlay's Align is on: a drag moves the overlay instead
+     * of panning. Receives the movement in SHEET pixels.
+     * @type {((dx:number, dy:number) => void)|null}
+     */
+    this.overlayDrag = null;
+
     this.uiScale = 1.0;
     this.markerScale = 1.0;
     this.zoomStepPercent = 15;
@@ -245,6 +320,14 @@ export class ToolController extends EventTarget {
 
   async setMode(mode, { ask = true } = {}) {
     if (!TOOLS.some(t => t[0] === mode)) return false;
+    // Read-only: refuse the TOOL, not just what it would place. A toolbar
+    // showing Highlighter as the live tool while every stroke is silently
+    // dropped is worse than not offering it — the user concludes the app is
+    // broken rather than that the mode is doing its job.
+    if (this.readOnly && mode !== 'pan' && !this.isScratchTool(mode)) {
+      this.emit('status', { text: this.readOnlyReason || READ_ONLY_DEFAULT });
+      return false;
+    }
     // The count tool asks which item is being counted BEFORE it is entered.
     // Cancelling the question must leave the previous tool in place.
     if (mode === 'count' && ask) {
@@ -305,6 +388,31 @@ export class ToolController extends EventTarget {
     this.dragVertex = null;
     this._moveDrag = null;
     this.emit('changed');
+  }
+
+  /**
+   * Say which version of the current sheet is on screen.
+   *
+   * The SELECTION is cleared on every real flip. Changing sheets clears it
+   * already, but raising another version of the SAME sheet does not — and a
+   * selection left over from the sheet's own drawing would then be a set of
+   * items the user can no longer see, still answering to Delete.
+   */
+  setVersionView(revId, revPage) {
+    const id = String(revId || '');
+    const changed = id !== this.viewingVersion.revId
+      || revPage !== this.viewingVersion.revPage;
+    this.viewingVersion = { revId: id, revPage: revPage == null ? null : revPage };
+    if (changed) {
+      this.cancel();
+      if (this.selected.size) {
+        this.selected.clear();
+        this.emit('selection-changed', { ids: [] });
+      }
+      this.hoverId = null;
+      this.hoverVertex = null;
+      this.emit('changed');
+    }
   }
 
   get ppf() {
@@ -389,6 +497,15 @@ export class ToolController extends EventTarget {
 
     const usePt = (ev.shiftKey && this.constrainedPt) ? this.constrainedPt : pt;
 
+    // Read-only. Pan falls straight through, and so does a tool whose result
+    // is going somewhere temporary — a dimension you take to read a drawing
+    // is looking, not editing. Everything that would put something INTO the
+    // project is held.
+    if (this.readOnly && this.mode !== 'pan' && !this.isScratchTool(this.mode)) {
+      this.emit('status', { text: this.readOnlyReason || READ_ONLY_DEFAULT });
+      return;
+    }
+
     if (ev.pointerType === 'touch' && this.mode === 'pan') {
       this._armLongPress(ev);
     }
@@ -469,6 +586,19 @@ export class ToolController extends EventTarget {
     const hit = this.hitTest(pt);
     if (hit && hit.item.type === 'page_ref') {
       this._calloutPress = { item: hit.item, x: ev.clientX, y: ev.clientY };
+    }
+    // Read-only: select it so it can be read, but arm NO drag. This is the
+    // single place a move or a reshape begins, which is why the gate is here
+    // rather than in the hit test — a viewer that cannot click a wall to see
+    // what it is would not be a viewer.
+    if (this.readOnly) {
+      if (hit) this._select(hit.item, ev);
+      else if (!ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
+        this.selected.clear();
+        this.emit('selection-changed', { ids: [] });
+      }
+      this._startPan(ev);
+      return;
     }
     if (hit && hit.vertexIndex >= 0) {
       this._select(hit.item, ev);
@@ -598,8 +728,16 @@ export class ToolController extends EventTarget {
     this.cursorPage = pt;
 
     if (this._panning && this._panLast) {
-      this.viewport.panBy(ev.clientX - this._panLast.x, ev.clientY - this._panLast.y);
+      const dxScreen = ev.clientX - this._panLast.x;
+      const dyScreen = ev.clientY - this._panLast.y;
       this._panLast = { x: ev.clientX, y: ev.clientY };
+      // While the overlay's Align is on, the same drag moves the overlay
+      // rather than the view. In SHEET pixels, so the nudge survives zooming.
+      if (this.overlayDrag) {
+        this.overlayDrag(dxScreen / this.viewport.zoom, dyScreen / this.viewport.zoom);
+        return;
+      }
+      this.viewport.panBy(dxScreen, dyScreen);
       this.emit('changed');
       return;
     }
@@ -796,6 +934,12 @@ export class ToolController extends EventTarget {
   _onDoubleClick(ev) {
     const pt = this.viewport.eventToPage(ev);
     if (this.mode === 'pan') {
+      // The browser delivers a double-click as its OWN event, so the press
+      // refusal above does not cover it. Properties is an edit dialog.
+      if (this.readOnly) {
+        this.emit('status', { text: this.readOnlyReason || READ_ONLY_DEFAULT });
+        return;
+      }
       const hit = this.hitTest(pt);
       if (hit) this.host.openProperties?.(hit.item);
       return;
@@ -829,6 +973,13 @@ export class ToolController extends EventTarget {
     }
     if (this.mode === 'pan') {
       const hit = this.hitTest(pt);
+      // The item menu is Delete / Hide / Properties — all edits. Selecting
+      // is still allowed, so a right-click still says what you clicked.
+      if (this.readOnly) {
+        if (hit) this._select(hit.item, { ctrlKey: false, shiftKey: false });
+        this.emit('status', { text: this.readOnlyReason || READ_ONLY_DEFAULT });
+        return;
+      }
       if (hit) {
         this._select(hit.item, { ctrlKey: false, shiftKey: false });
         this.host.showItemMenu?.(hit.item, ev);
@@ -893,6 +1044,18 @@ export class ToolController extends EventTarget {
         return true;
       }
       return false;
+    }
+    // Delete and the nudge arrows never touch a hit test, so the gate there
+    // does not cover them. The selection is cleared on every flip, so this
+    // should be unreachable — but "should be" is what the desktop's Pan bug
+    // was, and the cost of being wrong here is deleting work that is not on
+    // screen to see go.
+    if (this.readOnly && this.selected.size) {
+      const nudging = k.startsWith('Arrow') && (ev.shiftKey || !this.arrowsNavigatePages);
+      if (k === 'Delete' || k === 'Backspace' || nudging) {
+        this.emit('status', { text: this.readOnlyReason || READ_ONLY_DEFAULT });
+        return true;
+      }
     }
     if ((k === 'Delete' || k === 'Backspace') && this.selected.size) {
       this.project.removeItems([...this.selected]);
@@ -1152,8 +1315,13 @@ export class ToolController extends EventTarget {
     const crad = Math.max(7.0, PIN_GRAB * s * this.markerScale) / z;
 
     const page = this.getCurrentPage();
+    // Nothing on a drawing this work was not traced on can be grabbed — the
+    // filter below is what stops a drag from moving a measurement onto lines
+    // it was never taken from. It deliberately matches what the renderer
+    // paints, so nothing invisible is ever reachable.
     const items = (this.project.measurements[page] || [])
-      .filter(m => this.project.isVisible(m));
+      .filter(m => this.project.isVisible(m)
+        && onThisVersion(m, this.viewingVersion.revId, this.viewingVersion.revPage));
 
     let best = null;
     let bestDist = Infinity;
@@ -1251,10 +1419,13 @@ export class ToolController extends EventTarget {
       cost_type: 'material',
     });
     // A ruler is not part of the estimate: no dialog, and no sort_order.
-    const created = this.project.addItem(this.getCurrentPage(), m, { label: 'Measure' });
-    delete created.sort_order;
-    this.emit('changed');
-    this.emit('status', { text: `Measured ${formatFt(ft)}` });
+    const created = this._commit(m, 'Measure');
+    if (created) delete created.sort_order;
+    this.emit('status', {
+      text: this.scratchSink
+        ? `${formatFt(ft)} — a temporary dimension; it is not saved with the project`
+        : `Measured ${formatFt(ft)}`,
+    });
   }
 
   _finalizePitch(pts) {
@@ -1276,10 +1447,12 @@ export class ToolController extends EventTarget {
     // Pitch is a ratio of pixels — it carries no scale at all.
     delete m.scale;
     delete m.scale_label;
-    const created = this.project.addItem(this.getCurrentPage(), m, { label: 'Pitch' });
-    delete created.sort_order;
-    this.emit('changed');
-    this.emit('status', { text: `Pitch ${pitchLabel(rise12)} (${angle.toFixed(0)}°)` });
+    const created = this._commit(m, 'Pitch');
+    if (created) delete created.sort_order;
+    this.emit('status', {
+      text: `Pitch ${pitchLabel(rise12)} (${angle.toFixed(0)}°)`
+        + (this.scratchSink ? ' — temporary; not saved with the project' : ''),
+    });
   }
 
   async _finalizePolygon(mode, pts) {
@@ -1287,6 +1460,24 @@ export class ToolController extends EventTarget {
     if (!ppf || pts.length < 3) { this.emit('changed'); return; }
     const areaFt2 = polygonArea(pts) / (ppf * ppf);
     const perimFt = perimeter(pts) / ppf;
+
+    if (mode === 'area' && this.scratchSink) {
+      // A temporary area has nothing to name, nothing to file under a trade
+      // and no cost — so no dialog. Reading a room off a plan should cost two
+      // clicks and a double-click, not a form.
+      this._commit(this._base('area', {
+        points: pts.map(p => p.slice()),
+        label: `${areaFt2.toFixed(1)} sq ft`,
+        value: areaFt2, perimeter: perimFt,
+        name: '', color: nextPaletteColor(),
+        floor_level: '', category: '', sub_category: '',
+      }), 'Area');
+      this.emit('status', {
+        text: `${areaFt2.toFixed(1)} sq ft, ${formatFt(perimFt)} around `
+          + '— a temporary dimension; it is not saved with the project',
+      });
+      return;
+    }
 
     if (mode === 'area') {
       const spec = await this.host.askItem?.({
@@ -1572,9 +1763,28 @@ export class ToolController extends EventTarget {
     this.emit('changed');
   }
 
+  /** True while this tool's result would go to the scratch store. */
+  isScratchTool(mode) {
+    return !!this.scratchSink && SCRATCH_CAPABLE.has(mode);
+  }
+
+  /**
+   * File a finished item.
+   *
+   * With a scratch sink set it goes there and NEVER touches the project — not
+   * marked temporary, not filtered out later, simply never put anywhere a
+   * save can see. That is the whole guarantee, and it is structural rather
+   * than a flag something has to remember to check.
+   */
   _commit(item, label) {
-    this.project.addItem(this.getCurrentPage(), item, { label });
+    if (this.scratchSink) {
+      this.scratchSink({ ...item, scratch: true });
+      this.emit('changed');
+      return null;
+    }
+    const created = this.project.addItem(this.getCurrentPage(), item, { label });
     this.emit('changed');
+    return created;
   }
 
   _remember(spec) {

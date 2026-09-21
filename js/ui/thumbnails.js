@@ -7,12 +7,17 @@
 // decoded once, at thumbnail size, straight out of the PNG.
 
 export class Thumbnails {
-  constructor({ listEl, panelEl, project, pages, onPick }) {
+  constructor({ listEl, panelEl, project, pages, onPick, revisionCounts }) {
     this.listEl = listEl;
     this.panelEl = panelEl;
     this.project = project;
     this.pages = pages;
     this.onPick = onPick;
+    // () => Map<pageIndex, how many revision sets reissued that sheet>. A job
+    // with no revisions hands back an empty map and no card changes at all,
+    // which is the point: most projects have one drawing set and must look
+    // exactly as they did.
+    this.revisionCounts = revisionCounts || (() => new Map());
     this.current = 0;
     this._rows = [];
 
@@ -61,6 +66,9 @@ export class Thumbnails {
     const badge = document.createElement('span');
     badge.className = 'thumb-badge';
     cap.appendChild(badge);
+    const rev = document.createElement('span');
+    rev.className = 'thumb-rev';
+    cap.appendChild(rev);
     el.appendChild(cap);
 
     this._label(el, i);
@@ -79,6 +87,17 @@ export class Thumbnails {
     const badge = el.querySelector('.thumb-badge');
     badge.textContent = items ? String(items) : '';
     badge.title = items ? `${items} takeoff item${items === 1 ? '' : 's'} on this sheet` : '';
+
+    // How many times this sheet was re-issued. One dot per revision that
+    // carries it, so a glance down the list shows which drawings changed —
+    // and a job with no revisions gets an empty span and no layout shift.
+    const rev = el.querySelector('.thumb-rev');
+    const n = this.revisionCounts().get(i) || 0;
+    rev.textContent = n ? '•'.repeat(Math.min(n, 4)) + (n > 4 ? '+' : '') : '';
+    rev.title = n
+      ? `${n} revision${n === 1 ? '' : 's'} re-issued this sheet — `
+        + 'open Plan Revisions to compare them'
+      : '';
   }
 
   async _fill(el) {

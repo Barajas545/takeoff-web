@@ -30,13 +30,24 @@ export class PageStore {
     this.file = null;
     this.lruSize = lruSize;
 
-    // The plan-revision image sets, as Blob slices of the opened file. This
-    // app does not yet display them, but a save that quietly dropped them
-    // would destroy work: on the estimator's largest job that tail is 1.42 GB
-    // of scanned revision sheets, and it would be gone with no error and no
-    // way back. They are carried through untouched.
+    // The plan-revision image sets, as Blob slices of the opened file — one
+    // per sheet of each re-issue, fetched only when that sheet is looked at.
+    // On the estimator's largest job this tail is 1.42 GB, more than the
+    // original drawings, so it is never read as a whole and never held.
+    // Untouched sets pass straight back through on a save.
     /** @type {Array<Array<Blob>>} */
     this.revisionSlices = [];
+
+    // Revision sheets get their own cache, deliberately small and deliberately
+    // separate. The main LRU holds four, which is what makes paging smooth;
+    // letting a revision preview in would evict the very sheet it is being
+    // compared against, and flipping between the two is what comparing IS.
+    this.revLruSize = 2;
+    /** @type {Map<string, ImageBitmap>} keyed `${set}:${page}` */
+    this._revLru = new Map();
+    this._revPending = new Map();
+    /** @type {Map<string, {width:number,height:number}>} */
+    this._revSizes = new Map();
 
     /** @type {Array<{kind:string,data:any,width:number,height:number}>} */
     this.sources = [];
@@ -71,6 +82,12 @@ export class PageStore {
     this._thumbs.clear();
     this._pending.clear();
     this._thumbPending.clear();
+    // The revision caches too. They are keyed `${set}:${page}` with no file in
+    // the key, so opening a second project over the first would hand back the
+    // FIRST one's revision sheets under the second one's numbers: a picture of
+    // the wrong drawing, from the wrong job, with nothing to show it.
+    this.clearRevisionCaches();
+    this._revSizes.clear();
   }
 
   addPage(source, at = -1) {
@@ -194,31 +211,121 @@ export class PageStore {
     if (!src) return null;
     if (src.kind === 'bitmap') return src.data;
     const bytes = await this.pngBytes(index);
+    return decodeSheet(bytes);
+  }
 
-    // How big is this sheet, before anything tries to hold it? The PNG says
-    // so in its IHDR, 16 bytes in — far cheaper than finding out by failing.
-    const nat = pngSize(bytes);
-    const limits = await canvasLimits();
-    const factor = nat ? fitFactor(nat.width, nat.height, limits) : 1;
-    if (!nat || factor >= 1) return decodePng(bytes);
+  // ── revision sheets ────────────────────────────────────────────────────
+  //
+  // A revision set is another drawing set living in the same file, and it is
+  // where most of the bytes are: on the estimator's largest job the eleven
+  // revision sets come to 1.42 GB against 887 MB of original sheets. So they
+  // are read exactly like the main pages — one Blob slice at a time, decoded
+  // only when looked at — and they get their OWN small cache.
+  //
+  // The separate cache is the point. The main LRU holds four sheets, which is
+  // what makes paging through a set smooth. Letting a revision preview into it
+  // would evict the sheet the user is comparing against, so flipping between
+  // the two would re-decode both every time: measured, a 6300x4500 sheet is
+  // 21-120 ms to decode, and flipping is exactly what comparing IS.
 
-    const w = Math.max(1, Math.floor(nat.width * factor));
-    const h = Math.max(1, Math.floor(nat.height * factor));
-    let small = null;
-    if (limits.resizeOnDecode) {
-      small = await decodePng(bytes, {
-        resizeWidth: w, resizeHeight: h, resizeQuality: 'high',
-      });
-      // Asked for, not necessarily given. A decoder that ignored the request
-      // just handed back the full-size bitmap we were trying to avoid.
-      if (small.width !== w) {
-        const shrunk = await shrinkBitmap(small, w, true);
-        small = shrunk;
-      }
-    } else {
-      small = await shrinkBitmap(await decodePng(bytes), w, true);
+  /** Has this project got a revision set at `set` with a page at `page`? */
+  hasRevisionPage(set, page) {
+    const s = this.revisionSlices[set];
+    return !!(s && page >= 0 && page < s.length);
+  }
+
+  /** How many sheets a revision set holds. Reads nothing. */
+  revisionPageCount(set) {
+    return (this.revisionSlices[set] || []).length;
+  }
+
+  /** zlib-inflated PNG bytes for one revision sheet. */
+  async revisionPngBytes(set, page) {
+    const blob = (this.revisionSlices[set] || [])[page];
+    if (!blob) throw new Error(`No page ${page + 1} in revision set ${set + 1}`);
+    const { inflate } = await import('./zlib.js');
+    return inflate(new Uint8Array(await blob.arrayBuffer()));
+  }
+
+  /** One revision sheet, decoded. Concurrent calls share one decode. */
+  async getRevisionPage(set, page) {
+    const key = `${set}:${page}`;
+    const hit = this._revLru.get(key);
+    if (hit) {
+      this._revLru.delete(key);
+      this._revLru.set(key, hit);
+      return hit;
     }
-    return new ReducedPage(small, nat.width, nat.height);
+    const inflight = this._revPending.get(key);
+    if (inflight) return inflight;
+
+    const job = (async () => {
+      const bmp = await decodeSheet(await this.revisionPngBytes(set, page));
+      this._revPending.delete(key);
+      this._revLru.set(key, bmp);
+      while (this._revLru.size > this.revLruSize) {
+        const oldest = this._revLru.keys().next().value;
+        if (oldest === key) break;
+        const old = this._revLru.get(oldest);
+        this._revLru.delete(oldest);
+        queueMicrotask(() => old?.close?.());
+      }
+      return bmp;
+    })().catch(err => {
+      this._revPending.delete(key);
+      throw err;
+    });
+    this._revPending.set(key, job);
+    return job;
+  }
+
+  /** The decoded revision sheet if it is resident, else null. Never decodes. */
+  peekRevisionPage(set, page) {
+    return this._revLru.get(`${set}:${page}`) || null;
+  }
+
+  // There is deliberately NO getRevisionThumbnail here.
+  //
+  // A revision blob is a whole compressed sheet: measured over the real tail
+  // of the 2.3 GB job, 3.52 MB on average and 21.14 MB at the worst, and a
+  // PNG is already deflated so inflating buys nothing back. One 96px tile
+  // would cost that whole read, a second copy to hand it to the decoder, and
+  // a 28-megapixel decode — and the matrix on that job is 2,568 cells.
+  //
+  // So the grid is text and state, and a picture is fetched only when one
+  // cell is actually chosen: getRevisionPage, one sheet, on demand. If a
+  // preview picture is ever wanted here, it must be per-row-on-click with a
+  // single-slot queue, never a scroll-driven fill — on a project opened from
+  // the portal every one of those bytes is an HTTP range request.
+
+  /** A revision sheet's true size, from the PNG's IHDR. No decode. */
+  async revisionPageSize(set, page) {
+    const live = this.peekRevisionPage(set, page);
+    if (live) return { width: live.width, height: live.height };
+    const cached = this._revSizes.get(`${set}:${page}`);
+    if (cached) return cached;
+    const blob = (this.revisionSlices[set] || [])[page];
+    if (!blob) return null;
+    // The IHDR is 16 bytes into the PNG, but the PNG is deflated. zlib has no
+    // random access, so the smallest honest read is a prefix big enough to
+    // inflate the first chunk out of — 4 KB covers it on every real sheet.
+    const { inflate } = await import('./zlib.js');
+    let size = null;
+    try {
+      size = pngSize(inflate(new Uint8Array(await blob.slice(0, 4096).arrayBuffer())));
+    } catch {
+      size = null;                       // a truncated stream tells us nothing
+    }
+    if (!size) size = pngSize(await this.revisionPngBytes(set, page));
+    if (size) this._revSizes.set(`${set}:${page}`, size);
+    return size;
+  }
+
+  /** Release every decoded revision sheet. The slices stay — they hold nothing. */
+  clearRevisionCaches() {
+    for (const b of this._revLru.values()) b?.close?.();
+    this._revLru.clear();
+    this._revPending.clear();
   }
 
   /**
@@ -404,8 +511,41 @@ export class PageStore {
     let n = 0;
     for (const b of this._lru.values()) n += b.width * b.height * 4;
     for (const b of this._thumbs.values()) n += b.width * b.height * 4;
+    for (const b of this._revLru.values()) n += b.width * b.height * 4;
     return n;
   }
+}
+
+/**
+ * Decode one sheet's PNG bytes, reduced if this browser cannot hold it.
+ *
+ * Shared by the main pages and the revision sheets: a revision set is another
+ * drawing set, and iOS caps a canvas just as hard whichever set a sheet came
+ * from. `ReducedPage` still reports the sheet's TRUE size, so page space and
+ * every measurement on it are unchanged.
+ */
+async function decodeSheet(bytes) {
+  // How big is this sheet, before anything tries to hold it? The PNG says so
+  // in its IHDR, 16 bytes in — far cheaper than finding out by failing.
+  const nat = pngSize(bytes);
+  const limits = await canvasLimits();
+  const factor = nat ? fitFactor(nat.width, nat.height, limits) : 1;
+  if (!nat || factor >= 1) return decodePng(bytes);
+
+  const w = Math.max(1, Math.floor(nat.width * factor));
+  const h = Math.max(1, Math.floor(nat.height * factor));
+  let small = null;
+  if (limits.resizeOnDecode) {
+    small = await decodePng(bytes, {
+      resizeWidth: w, resizeHeight: h, resizeQuality: 'high',
+    });
+    // Asked for, not necessarily given. A decoder that ignored the request
+    // just handed back the full-size bitmap we were trying to avoid.
+    if (small.width !== w) small = await shrinkBitmap(small, w, true);
+  } else {
+    small = await shrinkBitmap(await decodePng(bytes), w, true);
+  }
+  return new ReducedPage(small, nat.width, nat.height);
 }
 
 /**

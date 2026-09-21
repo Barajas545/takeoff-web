@@ -24,6 +24,7 @@ import { calloutRadius } from './render/callouts.js';
 import { setPaletteIndex } from './render/theme.js';
 import {
   ToolController, TOOLS, TAKEOFF_TOOLS, MARKUP_TOOLS, HINTS, isMarkupTool,
+  SCRATCH_CAPABLE,
 } from './tools/controller.js';
 import { HIGHLIGHT_COLORS, PEN_COLORS } from './tools/markup.js';
 import { ItemsPanel } from './ui/items-panel.js';
@@ -32,6 +33,14 @@ import { Settings } from './ui/settings.js';
 import { openReportCenter } from './ui/reports.js';
 import { openCatalog, loadCatalog } from './ui/catalog.js';
 import { Thumbnails } from './ui/thumbnails.js';
+import { ScratchStore } from './core/scratch.js';
+import { VersionBar, sheetsWithRevisions } from './ui/version-bar.js';
+import { RevisionsPanel } from './ui/revisions-panel.js';
+import {
+  visibleRevisions, sheetVersions, newestVersionOf, versionItems,
+  revPageCount, revPageLabel, revisionLabel, workingVersionOf,
+  sizesMatch, sizeRefusal,
+} from './core/revisions.js';
 
 const $ = id => document.getElementById(id);
 
@@ -39,9 +48,13 @@ const app = {
   project: new Project(),
   pages: new PageStore(),
   settings: new Settings(),
+  // Temporary dimensions. Deliberately NOT on the project — see core/scratch.js.
+  scratch: new ScratchStore(),
   currentPage: 0,
   fileHandle: null,
   fileName: '',
+  // False is View Only, which is what a project opens in. See setEditing().
+  editing: false,
 };
 
 const canvas = $('canvas');
@@ -80,8 +93,14 @@ const itemsPanel = new ItemsPanel({
   project: app.project,
   host: {
     pageLabel: idx => pageFinalLabel(idx),
+    // The panel asks before it offers a control that writes.
+    readOnly: () => controller.readOnly,
     selectItem: (m, pageIdx, ev) => {
-      if (pageIdx !== STANDALONE_PAGE && pageIdx !== app.currentPage) goToPage(pageIdx);
+      // A jump whose whole purpose is to put a piece of the user's own work
+      // in front of them must land on the drawing that work was traced on.
+      // Landing on the newest revision would hide the very item they clicked,
+      // because an item is only painted over its own version of the sheet.
+      if (pageIdx !== STANDALONE_PAGE) goToPage(pageIdx, { version: m.rev_id || '' });
       controller.select([m._uid]);
       const bb = boundingBox(m.points || []);
       if (bb.w || bb.h) viewport.ensureVisible(bb);
@@ -99,7 +118,90 @@ const thumbs = new Thumbnails({
   project: app.project,
   pages: app.pages,
   onPick: idx => goToPage(idx),
+  // How many versions each sheet has beyond its own drawing, for the pips on
+  // the cards. Recomputed only when the revision model changes — not per row.
+  revisionCounts: () => revCountsBySheet,
 });
+
+// ── plan revisions ────────────────────────────────────────────────────────
+
+const versionBar = new VersionBar({
+  root: $('versionBar'),
+  pips: $('vbPips'),
+  state: () => ({
+    revs: allRevisions(),
+    page: app.currentPage,
+    sheetLabel: app.pages.pageCount ? pageFinalLabel(app.currentPage) : '',
+    viewingRevId: versionView.revId,
+    workingRevId: workingVersion(app.currentPage),
+    newestMode: newestMode(),
+    order: latestOrder(),
+  }),
+  onPick: revId => showSheetVersion(app.currentPage, revId),
+});
+
+const revisionsPanel = new RevisionsPanel({
+  root: $('revPanel'),
+  state: () => ({
+    revs: allRevisions(),
+    page: app.currentPage,
+    pageCount: app.pages.pageCount,
+    viewingRevId: versionView.revId,
+    extraSheets: app.project.metadata.extra_sheets || [],
+    order: latestOrder(),
+  }),
+  host: {
+    pageLabel: i => pageFinalLabel(i),
+    showVersion: (page, revId) => showSheetVersion(page, revId),
+    // The ORIGINAL column exists to show the project's OWN drawing, so it
+    // holds the Newest tick rather than obeying it.
+    showOwn: page => goToPageOwnVersion(page),
+    showLoosePage: (rev, rp) => showLoosePage(rev, rp),
+    setOrder: order => {
+      app.settings.set('latest_set_order', order);
+      syncVersionUi();
+    },
+  },
+});
+
+/** Which sheets have more than one version. Rebuilt only when the model does. */
+let revCountsBySheet = new Map();
+
+/**
+ * Everything that displays the version model, refreshed together.
+ *
+ * Cheap by construction: it reads counts and ids, never pixels. On a project
+ * with no revisions the bar hides, the panel is empty and the thumbnails draw
+ * exactly what they drew before this feature existed.
+ */
+function syncVersionUi({ rebuild = false } = {}) {
+  if (rebuild) {
+    revCountsBySheet = sheetsWithRevisions(app.pages.pageCount, allRevisions());
+    thumbs.syncLabels();
+  }
+  // The tools must know which drawing is under them BEFORE anything is
+  // painted or clicked: the hit test filters on it, and it is what stops a
+  // drag from moving work onto a drawing it was never traced on.
+  //
+  // syncModeUi owns `readOnly`, because it has TWO sources — the mode and
+  // the version on screen — and one of them setting it while the other
+  // clears it is exactly the disagreement that leaves an editable revision.
+  controller.setVersionView(versionView.revId, versionView.revPage);
+  syncModeUi();
+  versionBar.refresh();
+  revisionsPanel.refresh();
+  const on = browsingOtherVersion();
+  $('vbOverlay')?.classList.toggle('on', overlayActive());
+  const newestItem = $('newestMenu');
+  if (newestItem) {
+    newestItem.textContent = newestMode()
+      ? '✓ Show Newest Version of Every Sheet'
+      : 'Show Newest Version of Every Sheet';
+  }
+  // A version on screen is a look, not a place to draw — say so on the canvas
+  // rather than only in the status line, which scrolls away.
+  canvas.classList.toggle('on-version', on);
+}
 
 // ── render loop ───────────────────────────────────────────────────────────
 
@@ -132,11 +234,41 @@ function drawFrame() {
     dpi: app.project.dpi, zoom: viewport.zoom,
     markerScale: app.settings.get('marker_scale'),
   });
+  // Which drawing, and whose work on it. While another version of this sheet
+  // is up, the takeoff shown is the work traced on THAT drawing — never the
+  // sheet's own, which was taken off different lines. Markup and notes belong
+  // to the sheet's own drawing and are held. On a project with no revisions
+  // this is the identical expression it always was.
+  const onRev = browsingOtherVersion();
+  const shown = onRev ? versionView.bitmap : pageImage;
+  const onPage = app.project.measurements[app.currentPage] || [];
+  // Filtering allocates a new array, and this runs once per animation frame —
+  // so on a job with no revisions at all, which is most of them, the list is
+  // passed straight through exactly as it was before this feature existed.
+  const hasRevisions = (app.project.metadata.revisions || []).length > 0;
+  // Temporary dimensions ride along with the real items, so every pass that
+  // draws an item — geometry, markers, labels — draws them too. They carry
+  // `scratch: true`, which is what makes them dash, and they come from a
+  // store no save can reach.
+  const real = (onRev || hasRevisions)
+    ? versionItems(onPage, versionView.revId, versionView.revPage)
+    : onPage;
+  // Temporary dimensions go through the SAME version filter as real ones.
+  // A dimension read off a revision belongs to that drawing; drawn after the
+  // flip back it would lie across the original at a length taken from lines
+  // that are not under it.
+  const temp = versionItems(app.scratch.forPage(app.currentPage),
+    versionView.revId, versionView.revPage);
   renderer.draw({
-    pageImage,
-    items: app.project.measurements[app.currentPage] || [],
-    annotations: app.project.annotations[app.currentPage] || [],
-    isVisible: m => app.project.isVisible(m),
+    pageImage: shown,
+    items: temp.length ? [...real, ...temp] : real,
+    annotations: onRev ? [] : (app.project.annotations[app.currentPage] || []),
+    overlay: overlayFrame(),
+    // Isolation is a way of looking at the TAKEOFF — "show only these items".
+    // A temporary dimension is not one of them, and letting isolation swallow
+    // it meant measuring in View Only reported a length, bumped the counter,
+    // and drew nothing at all.
+    isVisible: m => (m.scratch ? m.visible !== false : app.project.isVisible(m)),
     selected: controller.selected,
     hoverId: controller.hoverId,
     hoverVertex: controller.hoverVertex,
@@ -188,7 +320,7 @@ controller.addEventListener('selection-changed', ev => {
 });
 controller.addEventListener('status', ev => setStatus(ev.detail.text));
 controller.addEventListener('mode-changed', ev => {
-  for (const wrap of [$('toolButtons'), $('markupButtons')]) {
+  for (const wrap of [$('toolButtons'), $('viewToolButtons'), $('markupButtons')]) {
     for (const b of wrap.children) {
       b.classList.toggle('on', b.dataset.mode === ev.detail.mode);
     }
@@ -215,7 +347,18 @@ app.project.addEventListener('scale-changed', () => {
   itemsPanel.refresh();
   requestDraw();
 });
-app.project.addEventListener('pages-changed', () => {
+app.project.addEventListener('pages-changed', ev => {
+  // Temporary dimensions are keyed by page index like everything else, so an
+  // inserted or deleted sheet moves them. Left behind, a dimension taken on
+  // sheet 6 would be drawn over whatever sheet took that number.
+  const { at, delta } = ev.detail || {};
+  if (Number.isFinite(at) && Number.isFinite(delta)) app.scratch.shiftPages(at, delta);
+  // The MODEL shifts with the pages — notePagesInserted / notePageRemoved run
+  // shiftRevisionIndices over every match map. The cached count-per-sheet does
+  // not, and it is what the dots on the cards are drawn from: left stale, row
+  // N shows row N+1's revisions after a single delete. A sheet reissued twice
+  // would show none and get skipped. So rebuild, not just re-label.
+  syncVersionUi({ rebuild: true });
   thumbs.refresh(app.currentPage);
   syncPageOf();
 });
@@ -229,12 +372,28 @@ new ResizeObserver(() => requestDraw()).observe($('stage'));
 // 25 MB sheet that window is seconds wide.
 let pageTicket = 0;
 
-async function goToPage(index) {
+/**
+ * Go to a sheet.
+ *
+ * `version` says which drawing of it to land on: omit it and the Newest tick
+ * decides, pass '' to insist on the sheet's own drawing, or pass a rev_id for
+ * a particular one. Every jump whose PURPOSE is to put the user's own work in
+ * front of them passes '' — landing on a revision there would hide the very
+ * item that was asked for, since work is only painted over the drawing it was
+ * traced on.
+ */
+async function goToPage(index, { version } = {}) {
   if (index < 0 || index >= app.pages.pageCount) return;
   const ticket = ++pageTicket;
   const first = app.currentPage !== index || !pageImage;
+  const movedSheet = app.currentPage !== index;
   app.currentPage = index;
   app.project.metadata.last_viewed_page = index;
+  // The version on screen belonged to the sheet we just left, and so did the
+  // overlay. Both are dropped here; what the new sheet shows is decided below,
+  // after its own drawing has been decoded.
+  clearVersion({ draw: false });
+  if (movedSheet) clearOverlay({ draw: false });
   controller.cancel();
   thumbs.setCurrent(index);
   syncPageOf();
@@ -248,6 +407,10 @@ async function goToPage(index) {
     if (ticket === pageTicket) {
       pageImage = null;
       setStatus(`Could not open sheet ${index + 1} — ${err.message}`);
+      // Without this the version bar goes on claiming a revision is up on a
+      // sheet that has no drawing at all, and readOnly stays stuck true with
+      // no Original to press.
+      syncVersionUi();
       requestDraw();
     }
     return;
@@ -256,8 +419,868 @@ async function goToPage(index) {
 
   pageImage = decoded;
   if (first && pageImage) pendingFit = !applyDefaultZoom();
-  app.pages.prefetchAround(index, 1);
+
+  // Which drawing of this sheet to show. Resolved AFTER the sheet's own image
+  // is in hand, so the scale check has something to compare against and a
+  // failed revision decode still leaves a usable sheet on screen.
+  const want = version === undefined
+    ? (newestMode() ? newestVersionOf(index, allRevisions(), latestOrder()) : '')
+    : String(version || '');
+
+  // Prefetching the neighbouring SHEETS is what makes paging smooth — but not
+  // while a revision is being carried across the set. Those two decodes are
+  // 28 megapixels each and go straight under a drawing that covers them, and
+  // they evict the four-slot LRU that the flip back to the original depends
+  // on. Walking the 93 sheets of one revision would be 372 full decodes where
+  // 93 would do.
+  app.pages.prefetchAround(index, want ? 0 : 1);
   requestDraw();
+
+  syncVersionUi();
+  if (want) await showSheetVersion(index, want, { announce: false, flip: false });
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   View Only mode
+
+   A project opens in View Only, and that is the right default for a browser:
+   most of the time a set of drawings is opened to be READ — on a phone, on a
+   tablet in a truck, from a link in the portal — and the reader is not the
+   estimator who drew it. Two things follow.
+
+   IT CANNOT BE CHANGED BY ACCIDENT. Not "changes are discouraged": the drag
+   is never armed, Delete is refused, double-click does not open the editor,
+   the item menu does not open, and every tool that would put something in the
+   project is held. Selecting still works, because clicking a wall to read
+   what it is is looking, not editing.
+
+   THERE IS MORE DRAWING. The thirteen takeoff tools, the markup row, the
+   undo/redo pair and the items panel are all for producing work, and none of
+   them earns its space while reading. They go, and the sheet gets the room.
+
+   What View Only KEEPS is the ability to measure — see core/scratch.js. A
+   dimension you take to read a drawing is not takeoff, and it is never saved.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/** The tools View Only offers: read a length, an area, a pitch. */
+const VIEW_TOOLS = [
+  ['pan', 'Pan / Select'],
+  ...TAKEOFF_TOOLS.filter(([m]) => SCRATCH_CAPABLE.has(m)),
+];
+
+/**
+ * Switch between View Only and Edit Mode.
+ *
+ * `announce` is false when a project is being opened, where the mode is not
+ * news — the status line has more useful things to say.
+ */
+function setEditing(on, { announce = true } = {}) {
+  const want = !!on;
+  const changed = app.editing !== want;
+  app.editing = want;
+
+  if (changed) {
+    // Whatever was half-drawn belonged to the other mode.
+    controller.cancel();
+    controller.selected.clear();
+    controller.setMode('pan');
+  }
+  // NOT guarded by `changed`. Opening a project calls this with the mode it is
+  // already in — false, on a fresh load — and the panels still have to be put
+  // the right way round. Both of these are idempotent for exactly that reason.
+  if (want) restorePanelsForEdit(); else tidyPanelsForView();
+
+  if (changed && announce) {
+    setStatus(want
+      ? 'Edit Mode — the takeoff tools are live and changes are saved with the project.'
+      : 'View Only — nothing here can change the project. You can still measure; '
+        + 'those dimensions are temporary and are never saved.');
+  }
+  // syncModeUi owns the items-panel refresh now — it is the one place that
+  // moves controller.readOnly, and the rows are built from it.
+  syncModeUi();
+  requestDraw();
+}
+
+/**
+ * Everything the mode governs, in one place.
+ *
+ * Called on every mode change, every project open and every version flip,
+ * because read-only has two independent sources — the mode, and looking at
+ * another version of a sheet — and they must never disagree about it.
+ */
+function syncModeUi() {
+  const open = app.pages.pageCount > 0;
+  const editing = app.editing;
+  const onVersion = browsingOtherVersion();
+  const wasReadOnly = controller.readOnly;
+
+  // THE gate. Read-only if the mode says so OR if another version is up.
+  //
+  // With NOTHING open there is nothing to protect, and saying "read-only"
+  // there would refuse the three actions that CREATE a project — Add Blank
+  // Sheet, Add Item Not on a Sheet, the Materials Catalog — while hiding the
+  // very button that would let the user out of it.
+  controller.readOnly = open && (!editing || onVersion);
+
+  // A revision re-issued on other paper has a different number of pixels to
+  // the foot, and the scale belongs to the SHEET. A dimension taken on it
+  // would be read against a scale it was never measured with — a wrong
+  // number, quietly — so measuring is refused there, not silently wrong.
+  const sizeOk = !onVersion || sizesMatch(
+    pageImage ? { width: pageImage.width, height: pageImage.height } : null,
+    versionView.size);
+
+  controller.readOnlyReason = onVersion
+    ? 'You are looking at another version of this sheet — press Original to '
+      + 'come back to it first.'
+    : 'This is View Only mode. Press Edit Mode to change the takeoff.';
+  // Where a finished measurement goes, and the rule is one sentence: you can
+  // always measure; whether it is SAVED depends on whether you can edit.
+  //
+  // So the sink follows readOnly rather than the mode. That also covers Edit
+  // Mode with another version of a sheet on screen — reading a dimension off
+  // a revision is a fair thing to want, and it cannot be takeoff, because the
+  // work would belong to a drawing the estimator is only looking at.
+  //
+  // The item is STAMPED with the version it was taken on, exactly as a real
+  // measurement is. Without that, a dimension read off a revision goes on
+  // being drawn after the flip back — lying across the original drawing, at
+  // a length taken from lines that are not under it.
+  controller.scratchSink = (controller.readOnly && sizeOk)
+    ? (m => app.scratch.add(app.currentPage, {
+        ...m,
+        ...(versionView.revId
+          ? { rev_id: versionView.revId, rev_page: versionView.revPage }
+          : null),
+      }))
+    : null;
+  if (!sizeOk) {
+    controller.readOnlyReason = sizeRefusal(
+      pageImage ? { width: pageImage.width, height: pageImage.height } : null,
+      versionView.size);
+  }
+
+  document.body.classList.toggle('view-only', !editing && open);
+  const btn = $('modeBtn');
+  btn.hidden = !open;
+  btn.textContent = editing ? 'View Only' : 'Edit Mode';
+  btn.classList.toggle('editing', editing);
+  btn.title = editing
+    ? 'Leave Edit Mode — more room for the drawing, and nothing can be changed'
+    : 'Enter Edit Mode to draw, measure and change the takeoff';
+  // The same switch in the phone's foot bar: the menubar's copy scrolls off a
+  // 375px screen, and a phone is exactly where View Only earns its keep.
+  const mLabel = $('mbarModeLabel');
+  if (mLabel) mLabel.textContent = editing ? 'View' : 'Edit';
+  const mBtn = $('mbarMode');
+  if (mBtn) { mBtn.hidden = !open; mBtn.classList.toggle('on', editing); }
+
+  // With nothing open, the toolbar stays as it always was — a View Only row
+  // over an empty stage offers tools with no sheet to use them on, and no
+  // badge or button to say what mode that even is.
+  const viewChrome = open && !editing;
+  $('toolButtons').hidden = viewChrome;
+  $('viewToolButtons').hidden = !viewChrome;
+  $('undoBtn').hidden = viewChrome;
+  $('redoBtn').hidden = viewChrome;
+  // Driven by the GATE, not the mode: setting a scale writes page_scales, and
+  // it must be as unavailable on a revision as Sheets ▸ Set Sheet Scale is.
+  $('scaleSelect').disabled = controller.readOnly;
+
+  // The item rows carry Hide and Materials buttons only when those would
+  // work, so the list has to be rebuilt whenever the gate moves. Here rather
+  // than in the callers: readOnly has two sources, and the one that changes
+  // it on a version flip had no idea the panel cared.
+  if (wasReadOnly !== controller.readOnly) itemsPanel.refresh();
+
+  syncScratchUi();
+  for (const [id, on] of [['modeViewItem', !editing], ['modeEditItem', editing]]) {
+    const el = $(id);
+    if (el) el.textContent = (on ? '✓ ' : '') + (id === 'modeViewItem' ? 'View Only' : 'Edit Mode');
+  }
+}
+
+/**
+ * What the panels looked like before View Only tidied them away.
+ *
+ * Restored on the way back out, so an estimator who had already closed the
+ * items panel in Edit Mode does not find it reopened — and, just as
+ * importantly, one who OPENS it while reading does not have it snap shut
+ * again on the next page turn. That is why this lives in the mode TRANSITION
+ * and not in syncModeUi, which runs on every navigation.
+ */
+let panelsBeforeView = null;
+
+function tidyPanelsForView() {
+  if (panelsBeforeView) return;            // already tidied; do not re-tidy
+  const body = document.querySelector('.body');
+  panelsBeforeView = {
+    items: body.classList.contains('no-items'),
+    markup: $('markupBar').hidden,
+  };
+  body.classList.add('no-items');
+  $('markupBar').hidden = true;
+}
+
+function restorePanelsForEdit() {
+  if (!panelsBeforeView) return;
+  const body = document.querySelector('.body');
+  body.classList.toggle('no-items', panelsBeforeView.items);
+  $('markupBar').hidden = panelsBeforeView.markup;
+  panelsBeforeView = null;
+}
+
+function syncScratchUi() {
+  const n = app.scratch.count;
+  // Visible wherever there is something to undo or clear, whichever mode that
+  // is — taking the last dimension away must also take its controls away, and
+  // taking the first one must bring them back.
+  const grp = $('viewMeasureGroup');
+  if (grp) grp.hidden = !(app.pages.pageCount && (!app.editing || n));
+  const out = $('scratchCount');
+  if (out) {
+    out.textContent = n ? `${n} temporary` : '';
+    out.title = n
+      ? `${n} temporary dimension${n === 1 ? '' : 's'} — not saved with the project`
+      : '';
+  }
+}
+
+app.scratch.addEventListener('changed', () => { syncScratchUi(); requestDraw(); });
+
+/* ══════════════════════════════════════════════════════════════════════
+   Plan revisions — looking at another version of a sheet
+
+   A revision set is a re-issue of part of the drawing set. It lives alongside
+   the original sheets rather than replacing them, because the takeoff on a
+   sheet was traced over THAT sheet's lines, and moving it to a different
+   drawing would put measurements on lines they were never taken from.
+
+   So "showing a revision" is a swap of the picture and of nothing else:
+
+     · the drawing on screen changes; zoom and pan do not
+     · the takeoff shown is the work traced on the version on screen. For a
+       project made before revisions could be taken off, that means the
+       sheet's own work when its own drawing is up and nothing at all when a
+       revision is up — which is the honest answer, not a gap
+     · markup belongs to the sheet's own drawing, so it is held
+     · the project is not touched. Looking is not an edit: it must not move
+       last_viewed_page, must not mark the file dirty, and must not be undoable
+
+   NOTHING HERE READS THE WHOLE FILE. One revision sheet is fetched, by
+   File.slice(), at the moment it goes on screen. On the estimator's largest
+   job the eleven revision sets come to 1.42 GB.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const versionView = {
+  revId: '',        // '' = the sheet's own drawing
+  revPage: null,    // which page of that revision stands in for this sheet
+  set: -1,          // which blob set in the tail, for the page store
+  bitmap: null,     // the decoded revision sheet, or null
+  size: null,       // its true pixel size, for the scale check
+};
+
+// A decode that was in flight when the user moved on must not paint. Same
+// reason goToPage carries a ticket: a revision sheet is 21–120 ms to decode,
+// and clicking down a column of the matrix is faster than that.
+let versionTicket = 0;
+
+/** Every revision record, including the hidden ones. */
+function allRevisions() {
+  return app.project.metadata.revisions || [];
+}
+
+/** Whether a version of the sheet, rather than the sheet itself, is on screen. */
+function browsingOtherVersion() {
+  return !!versionView.revId;
+}
+
+/**
+ * Which version of a sheet the TOTALS are counted from.
+ *
+ * Read out of metadata and nowhere else — not the newest, not the one on
+ * screen, not the one with work on it. Looking must never move a price.
+ * Resolved against every revision, hidden ones included, because hiding a
+ * revision is a way of looking.
+ */
+function workingVersion(page) {
+  return workingVersionOf(page, allRevisions(), app.project.metadata.sheet_version);
+}
+
+/** How "newest" is decided. Shared by the bar, the matrix and the current set. */
+function latestOrder() {
+  return app.settings.get('latest_set_order') === 'column' ? 'column' : 'date';
+}
+
+/** The "show me the newest drawing of every sheet" mode. A way of LOOKING. */
+function newestMode() {
+  return !!app.settings.get('newest_version_view');
+}
+
+/** Put the sheet's own drawing back. Draws; touches nothing else. */
+function clearVersion({ draw = true } = {}) {
+  if (!versionView.revId && !versionView.bitmap) return false;
+  versionTicket += 1;
+  versionView.revId = '';
+  versionView.revPage = null;
+  versionView.set = -1;
+  versionView.bitmap = null;
+  versionView.size = null;
+  app.pages.lruSize = MAIN_LRU;
+  controller.cancel();
+  if (draw) { syncVersionUi(); requestDraw(); }
+  return true;
+}
+
+// How many decoded sheets to keep while nothing is being compared, and while
+// something is.
+//
+// One sheet of the largest real job is 6300×4500 = 108 MB as RGBA. Four of
+// those, plus the two in the revision cache, is 648 MB of resident bitmaps —
+// and a phone, where the canvas cap reduces each to about 67 MB, still
+// reaches 400 MB, which is past where iOS starts discarding the tab.
+//
+// While a version IS up, the main cache only has to hold the sheet being
+// compared against, so it is cut to two: that sheet and one neighbour. The
+// prefetch is off in the same state, so nothing refills it behind the
+// drawing on screen.
+const MAIN_LRU = 4;
+const MAIN_LRU_COMPARING = 2;
+
+/**
+ * Put one version of one sheet on the main screen.
+ *
+ * `revId` of '' means the sheet's own drawing. Asking for the version already
+ * on screen flips back to the original — that back-and-forth is what makes a
+ * change jump out, and it is how the desktop behaves.
+ */
+async function showSheetVersion(page, revId, { announce = true, flip = true } = {}) {
+  if (!(page >= 0 && page < app.pages.pageCount)) return false;
+  const revs = allRevisions();
+
+  if (page !== app.currentPage) {
+    // This call IS the version decision, so the landing must not overrule it
+    // with whatever Newest would have picked.
+    await goToPage(page, { version: String(revId || '') });
+    return true;
+  }
+
+  const want = String(revId || '');
+  if (!want) {
+    if (clearVersion() && announce) {
+      const n = (app.project.measurements[page] || [])
+        .filter(m => !m.group_child && !m.rev_id).length;
+      setStatus(n
+        ? `Back on this sheet's own drawing — ${n} item${n === 1 ? '' : 's'} here`
+        : "Back on this sheet's own drawing — nothing taken off it yet");
+    }
+    return true;
+  }
+
+  const hit = sheetVersions(page, revs).find(v => v.revId === want);
+  if (!hit) {
+    setStatus('That revision no longer has a page for this sheet.');
+    return false;
+  }
+  if (flip && versionView.revId === want && versionView.revPage === hit.revPage) {
+    return showSheetVersion(page, '', { announce });      // the same one again
+  }
+
+  const ticket = ++versionTicket;
+  const set = hit.rev._setIndex;
+  if (!app.pages.hasRevisionPage(set, hit.revPage)) {
+    setStatus('This file does not carry an image for that revision sheet.');
+    return false;
+  }
+
+  let bmp;
+  try {
+    bmp = await app.pages.getRevisionPage(set, hit.revPage);
+  } catch (err) {
+    if (ticket === versionTicket) {
+      setStatus(`Could not open that revision sheet — ${err.message}`);
+    }
+    return false;
+  }
+  if (ticket !== versionTicket) return false;            // the user moved on
+
+  versionView.revId = want;
+  versionView.revPage = hit.revPage;
+  versionView.set = set;
+  versionView.bitmap = bmp;
+  versionView.size = { width: bmp.width, height: bmp.height };
+  app.pages.lruSize = MAIN_LRU_COMPARING;
+  controller.cancel();
+  syncVersionUi();
+  requestDraw();
+
+  if (announce) {
+    const lbl = revPageLabel(hit.rev, hit.revPage);
+    const where = `${hit.label}${hit.date ? ` (${hit.date})` : ''}`;
+    const sheetSize = pageImage
+      ? { width: pageImage.width, height: pageImage.height } : null;
+    setStatus(`Showing ${where}${lbl ? ` — sheet ${lbl}` : ''}. `
+      + (sizesMatch(sheetSize, versionView.size)
+        ? 'Click the same version again to flip back.'
+        : sizeRefusal(sheetSize, versionView.size)));
+  }
+  return true;
+}
+
+/** Land on a sheet showing ITS OWN drawing, whatever Newest says. */
+function goToPageOwnVersion(index) {
+  return goToPage(index, { version: '' });
+}
+
+/**
+ * The previous or next SHEET, staying on the same version where that sheet
+ * has one.
+ *
+ * Paging through a set while comparing a revision should keep comparing that
+ * revision, not drop back to the original on every sheet it did not reissue.
+ */
+function stepSheet(delta) {
+  const next = app.currentPage + delta;
+  if (!(next >= 0 && next < app.pages.pageCount)) return;
+  if (newestMode()) return goToPage(next);        // the tick decides
+  const want = versionView.revId;
+  const has = want
+    && sheetVersions(next, allRevisions()).some(v => v.revId === want);
+  return goToPage(next, { version: has ? want : '' });
+}
+
+/** The previous or next version of the sheet in view. */
+function stepSheetVersion(delta) {
+  const vers = sheetVersions(app.currentPage, allRevisions());
+  if (vers.length < 2) { setStatus('This sheet has only one version'); return; }
+  const i = Math.max(0, vers.findIndex(v => v.revId === versionView.revId));
+  const j = Math.max(0, Math.min(vers.length - 1, i + delta));
+  if (j !== i) showSheetVersion(app.currentPage, vers[j].revId);
+}
+
+async function setNewestMode(on) {
+  app.settings.set('newest_version_view', !!on);
+  if (on) {
+    const revs = allRevisions();
+    let n = 0;
+    for (let i = 0; i < app.pages.pageCount; i++) {
+      if (newestVersionOf(i, revs, latestOrder())) n += 1;
+    }
+    await showSheetVersion(app.currentPage,
+      newestVersionOf(app.currentPage, revs, latestOrder()),
+      { announce: false, flip: false });
+    setStatus(`Newest version of every sheet — ${n} sheet${n === 1 ? '' : 's'} `
+      + `${n === 1 ? 'has' : 'have'} one newer than the original. `
+      + 'Your takeoff still counts where you put it.');
+  } else {
+    clearVersion();
+    setStatus('Showing each sheet’s own version again');
+  }
+  syncVersionUi();
+}
+
+/**
+ * A revision page paired with no sheet in this project.
+ *
+ * It is not a VERSION of anything, so it must not go over a sheet: put over
+ * whatever happened to be up, work traced on it would be filed under a drawing
+ * it has nothing to do with. It opens on its own instead.
+ */
+async function showLoosePage(rev, revPage) {
+  if (!app.pages.hasRevisionPage(rev._setIndex, revPage)) return;
+  showProgress('Opening revision sheet…', 0, 1, '');
+  let bmp = null;
+  try {
+    bmp = await app.pages.getRevisionPage(rev._setIndex, revPage);
+  } catch (err) {
+    await D.alertDialog('Could not open', err.message);
+    return;
+  } finally {
+    hideProgress();
+  }
+  const name = (rev.description || '').trim() || (rev.date || 'Revision');
+  const lbl = revPageLabel(rev, revPage) || `page ${revPage + 1}`;
+  await showImageViewer(bmp, `${name} — ${lbl}`,
+    'This page is not paired with any sheet in this project, so it opens on '
+    + 'its own. Pair it in the desktop app to take off on it.');
+}
+
+/**
+ * One picture, on its own, that you can zoom and pan.
+ *
+ * Used for the diff and for a revision page paired with no sheet. It is its
+ * own canvas rather than the main one because neither of those things IS a
+ * sheet of this project — putting either on the main canvas would invite
+ * drawing on it, and what was drawn would be filed against a real sheet.
+ */
+function showImageViewer(bmp, title, legend = '') {
+  return D.showDialog(close => {
+    const d = D.el('div', 'dlg wide imgview');
+    d.appendChild(D.el('div', 'dlg-head', title));
+    if (legend) d.appendChild(D.el('div', 'imgview-legend', legend));
+
+    const wrap = D.el('div', 'imgview-body');
+    const cv = document.createElement('canvas');
+    cv.className = 'imgview-canvas';
+    wrap.appendChild(cv);
+    d.appendChild(wrap);
+
+    const foot = D.el('div', 'dlg-foot');
+    const hint = D.el('span', 'imgview-hint', 'scroll to zoom · drag to pan');
+    foot.appendChild(hint);
+    const ok = D.el('button', 'btn primary', 'Close');
+    ok.addEventListener('click', () => close(null));
+    foot.appendChild(ok);
+    d.appendChild(foot);
+
+    const src = bmp.bitmap || bmp;
+    let zoom = 1;
+    let ox = 0;
+    let oy = 0;
+    let fitted = false;
+
+    const paint = () => {
+      const r = wrap.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      if (!r.width || !r.height) return;
+      cv.width = Math.round(r.width * dpr);
+      cv.height = Math.round(r.height * dpr);
+      cv.style.width = `${r.width}px`;
+      cv.style.height = `${r.height}px`;
+      const ctx = cv.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = '#101010';
+      ctx.fillRect(0, 0, r.width, r.height);
+      if (!fitted) {
+        zoom = Math.min(r.width / src.width, r.height / src.height);
+        ox = (r.width - src.width * zoom) / 2;
+        oy = (r.height - src.height * zoom) / 2;
+        fitted = true;
+      }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(src, ox, oy, src.width * zoom, src.height * zoom);
+    };
+
+    wrap.addEventListener('wheel', ev => {
+      ev.preventDefault();
+      const r = wrap.getBoundingClientRect();
+      const mx = ev.clientX - r.left;
+      const my = ev.clientY - r.top;
+      const k = ev.deltaY < 0 ? 1.15 : 1 / 1.15;
+      // Zoom about the pointer, so what is under it stays under it.
+      ox = mx - (mx - ox) * k;
+      oy = my - (my - oy) * k;
+      zoom *= k;
+      paint();
+    }, { passive: false });
+
+    let drag = null;
+    wrap.addEventListener('pointerdown', ev => {
+      drag = { x: ev.clientX, y: ev.clientY };
+      wrap.setPointerCapture(ev.pointerId);
+    });
+    wrap.addEventListener('pointermove', ev => {
+      if (!drag) return;
+      ox += ev.clientX - drag.x;
+      oy += ev.clientY - drag.y;
+      drag = { x: ev.clientX, y: ev.clientY };
+      paint();
+    });
+    const stop = () => { drag = null; };
+    wrap.addEventListener('pointerup', stop);
+    wrap.addEventListener('pointercancel', stop);
+
+    // The dialog has no size until it is in the document, so the first paint
+    // has to wait — but it must not wait on requestAnimationFrame ALONE. A
+    // hidden or backgrounded tab runs no rAF at all, and this window opens
+    // from a click that may well be the last thing before the estimator
+    // switches away; it would come back to a blank rectangle. So: a rAF, a
+    // timeout, and a ResizeObserver, whichever arrives first. `paint` is
+    // idempotent and early-returns while the box is still unsized.
+    //
+    // The observer is parked on the node deliberately. A ResizeObserver with
+    // no strong reference is collectable, and the symptom of losing it is
+    // exactly this: a canvas that never gets its size.
+    requestAnimationFrame(paint);
+    setTimeout(paint, 0);
+    setTimeout(paint, 120);
+    d._ro = new ResizeObserver(paint);
+    d._ro.observe(wrap);
+    return d;
+  });
+}
+
+/* ── comparing two versions ───────────────────────────────────────────────
+ *
+ * Three ways, because they answer different questions:
+ *
+ *   FLIP     show the revision in place of the sheet, click again to come
+ *            back. The eye catches what moved between two identical frames
+ *            better than it catches anything in a static picture.
+ *   OVERLAY  the revision drawn in red ON the sheet, at an opacity you
+ *            choose, nudgeable if the scan is off-register, and blinkable.
+ *   DIFF     one picture: the original's lines blue, the revision's red,
+ *            unchanged linework dark. Nothing to hold in your head.
+ *
+ * The overlay is TRANSIENT here. The desktop persists it per sheet in
+ * metadata["page_overlays"]; this build deliberately does not write that key,
+ * so looking at a revision cannot change the file — which is the whole
+ * contract of this feature, and what keeps a save byte-identical.
+ */
+
+const overlay = {
+  revId: '', revPage: null, bitmap: null,   // the tinted image, ready to draw
+  alpha: 0.5, dx: 0, dy: 0,
+  align: false,        // dragging moves the overlay instead of panning
+  flashOn: true,       // the blink state
+  flashTimer: 0,
+};
+
+/** The overlay as the renderer wants it, or null. */
+function overlayFrame() {
+  if (!overlay.bitmap || !overlay.flashOn) return null;
+  return {
+    image: overlay.bitmap, alpha: overlay.alpha,
+    dx: overlay.dx, dy: overlay.dy, outline: overlay.align,
+  };
+}
+
+function overlayActive() { return !!overlay.bitmap; }
+
+function clearOverlay({ draw = true } = {}) {
+  if (overlay.flashTimer) { clearInterval(overlay.flashTimer); overlay.flashTimer = 0; }
+  overlay.bitmap?.close?.();
+  overlay.revId = ''; overlay.revPage = null; overlay.bitmap = null;
+  overlay.dx = 0; overlay.dy = 0;
+  overlay.align = false; overlay.flashOn = true;
+  // Align hands the controller a closure that takes over every left-button
+  // and middle-button drag. Left behind, it keeps taking them over against an
+  // overlay that no longer exists — the drawing simply stops panning, with no
+  // error and no way back short of reloading.
+  controller.overlayDrag = null;
+  $('overlayBar').hidden = true;
+  $('ovAlign')?.classList.remove('on');
+  $('ovFlash')?.classList.remove('on');
+  if (draw) { syncVersionUi(); requestDraw(); }
+}
+
+/**
+ * Lay the version on screen over the sheet's own drawing, in red.
+ *
+ * The sheet's OWN drawing has to be underneath — laid over the newest
+ * revision it would sit on the same lines and read as "nothing changed".
+ */
+async function startOverlay() {
+  const revId = versionView.revId;
+  const revPage = versionView.revPage;
+  const set = versionView.set;
+  if (!revId) {
+    setStatus('Put a revision of this sheet on screen first, then Overlay it '
+      + 'on the original.');
+    return;
+  }
+  const page = app.currentPage;
+  showProgress('Preparing the overlay…', 0, 1, '');
+  let tinted = null;
+  try {
+    const bmp = await app.pages.getRevisionPage(set, revPage);
+    tinted = await tintLinework(bmp, [255, 77, 77]);
+  } catch (err) {
+    await D.alertDialog('Could not build the overlay', err.message);
+    return;
+  } finally {
+    hideProgress();
+  }
+  clearOverlay({ draw: false });
+  overlay.revId = revId;
+  overlay.revPage = revPage;
+  overlay.bitmap = tinted;
+  overlay.alpha = Number($('ovAlpha').value) / 100;
+  // Back to the sheet's own drawing — that is what the revision goes OVER.
+  await showSheetVersion(page, '', { announce: false });
+  $('overlayBar').hidden = false;
+  $('ovWhat').textContent = revisionLabel(revId, allRevisions());
+  syncVersionUi();
+  requestDraw();
+  setStatus('Revision overlaid in red — Opacity to blend, Align to drag it '
+    + 'into register, Flash to blink the changes.');
+}
+
+/**
+ * A copy of a drawing where the paper is transparent and the lines are one
+ * flat colour.
+ *
+ * This is what the desktop's GL_MODULATE overlay does: the texture is white
+ * with `alpha = 1 − luminance`, tinted by glColor. Drawn with plain
+ * source-over at the user's alpha it lands pixel for pixel on the same result.
+ *
+ * Built once per overlay and cached, because it is a full-sheet pass: on a
+ * 6300×4500 sheet that is 28 million pixels, ~150 ms. Doing it per frame would
+ * make Flash unusable.
+ */
+async function tintLinework(bmp, [r, g, b]) {
+  const src = bmp.bitmap || bmp;                  // a ReducedPage wraps one
+  const w = src.width;
+  const h = src.height;
+  const cv = typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(w, h)
+    : Object.assign(document.createElement('canvas'), { width: w, height: h });
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(src, 0, 0);
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    // ITU-R 601-2 luma, the same weights PIL's convert("L") uses, so the
+    // result matches the desktop's texture rather than merely resembling it.
+    const lum = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
+    d[i] = r; d[i + 1] = g; d[i + 2] = b;
+    d[i + 3] = 255 - lum;
+  }
+  ctx.putImageData(img, 0, 0);
+  return createImageBitmap(cv);
+}
+
+function toggleOverlayAlign() {
+  if (!overlayActive()) return;
+  overlay.align = !overlay.align;
+  $('ovAlign').classList.toggle('on', overlay.align);
+  controller.overlayDrag = overlay.align
+    ? (dxPage, dyPage) => { overlay.dx += dxPage; overlay.dy += dyPage; requestDraw(); }
+    : null;
+  setStatus(overlay.align
+    ? 'Align: drag the drawing to move the red overlay into register. '
+      + 'Click Align again when it lines up.'
+    : 'Align off.');
+  requestDraw();
+}
+
+function toggleOverlayFlash() {
+  if (!overlayActive()) return;
+  if (overlay.flashTimer) {
+    clearInterval(overlay.flashTimer);
+    overlay.flashTimer = 0;
+    overlay.flashOn = true;
+    $('ovFlash').classList.remove('on');
+  } else {
+    overlay.flashTimer = setInterval(() => {
+      overlay.flashOn = !overlay.flashOn;
+      requestDraw();
+    }, 600);
+    $('ovFlash').classList.add('on');
+  }
+  requestDraw();
+}
+
+/**
+ * The two-colour slip-sheet diff.
+ *
+ * Original lines BLUE, revision lines RED, unchanged linework dark, paper
+ * white. Exactly the desktop's `_compose_diff_image`: each sheet is colourised
+ * from its grey level — black→the colour, white→white — and the two are
+ * MULTIPLIED. Where both are dark the product is near-black; where only one
+ * is, its own colour survives; where neither is, white.
+ *
+ * There is no threshold and no auto-alignment, deliberately: either would
+ * change what a plan-checker is shown. The only offset is the one dragged in
+ * Align, and only for the revision that is actually overlaid.
+ */
+async function diffCurrentVersion() {
+  const revId = versionView.revId || overlay.revId;
+  const revPage = versionView.revId ? versionView.revPage : overlay.revPage;
+  if (!revId) {
+    setStatus('Put a revision of this sheet on screen first, then Diff it '
+      + 'against the original.');
+    return;
+  }
+  const page = app.currentPage;
+  const rev = allRevisions().find(r => String(r.id) === String(revId));
+  if (!rev) return;
+
+  showProgress('Building the diff…', 0, 1, '');
+  let out = null;
+  try {
+    const own = await app.pages.getPage(page);
+    const other = await app.pages.getRevisionPage(rev._setIndex, revPage);
+    const off = (overlay.revId === revId && overlay.revPage === revPage)
+      ? { dx: Math.round(overlay.dx), dy: Math.round(overlay.dy) }
+      : { dx: 0, dy: 0 };
+    out = await composeDiff(own, other, off);
+  } catch (err) {
+    await D.alertDialog('Could not build the diff', err.message);
+    return;
+  } finally {
+    hideProgress();
+  }
+  if (!out) return;
+  await showImageViewer(out,
+    `Diff — sheet ${pageFinalLabel(page)}`,
+    `RED = ${revisionLabel(revId, allRevisions())}   ·   `
+    + 'BLUE = this project’s own drawing   ·   DARK = unchanged');
+}
+
+/**
+ * Compose the slip-sheet diff on a canvas.
+ *
+ * The canvas is GROWN to fit a negative offset before anything is drawn
+ * (`ox = max(-dx, 0)`), or a revision nudged up and left is clipped off the
+ * top — and a real change then disappears instead of showing.
+ *
+ * Both sheets are routed through the browser's canvas cap first. Past about
+ * 16.8 megapixels a canvas does not throw: it returns transparent black. A
+ * full-resolution diff of two 28-megapixel sheets would render BLANK on an
+ * iPad, and blank reads as "nothing changed" — the most dangerous wrong
+ * answer this feature could give.
+ */
+async function composeDiff(oldImg, newImg, { dx = 0, dy = 0 } = {}) {
+  const a = oldImg.bitmap || oldImg;
+  const b = newImg.bitmap || newImg;
+  const w = Math.max(a.width, b.width + Math.max(dx, 0)) + Math.max(-dx, 0);
+  const h = Math.max(a.height, b.height + Math.max(dy, 0)) + Math.max(-dy, 0);
+  const ox = Math.max(-dx, 0);
+  const oy = Math.max(-dy, 0);
+
+  const { canvasLimits, fitFactor } = await import('./core/canvas-limits.js');
+  const limits = await canvasLimits();
+  const k = Math.min(1, fitFactor(w, h, limits));
+  const cw = Math.max(1, Math.floor(w * k));
+  const ch = Math.max(1, Math.floor(h * k));
+
+  const make = () => (typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(cw, ch)
+    : Object.assign(document.createElement('canvas'), { width: cw, height: ch }));
+
+  // Each layer: white paper, the sheet drawn grey, then colourised. `screen`
+  // with a flat colour IS PIL's colorize(black=c, white=white) — for a grey v,
+  // both give c + v·(255−c)/255.
+  const layer = (img, sx, sy, colour) => {
+    const cv = make();
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.filter = 'grayscale(1)';
+    ctx.drawImage(img, sx * k, sy * k, img.width * k, img.height * k);
+    ctx.filter = 'none';
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = colour;
+    ctx.fillRect(0, 0, cw, ch);
+    return cv;
+  };
+
+  const blue = layer(a, ox, oy, 'rgb(50,90,220)');
+  const red = layer(b, ox + dx, oy + dy, 'rgb(225,45,45)');
+
+  const out = make();
+  const ctx = out.getContext('2d');
+  ctx.drawImage(blue, 0, 0);
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.drawImage(red, 0, 0);
+  const bmp = await createImageBitmap(out);
+  // A canvas over the cap comes back transparent rather than failing, so check
+  // rather than trust: a blank diff would read as "nothing changed".
+  if (!bmp || !bmp.width) throw new Error('This device could not build an image that large.');
+  return bmp;
 }
 
 /** Frame the current sheet. Returns false if the canvas has no size yet. */
@@ -491,18 +1514,24 @@ async function setSheetScale(ppf) {
 
 function buildToolButtons() {
   fillToolRow($('toolButtons'), TAKEOFF_TOOLS);
+  fillToolRow($('viewToolButtons'), VIEW_TOOLS, {
+    // The same three tools, said in the words that are true here: these read
+    // a drawing, they do not take off from it.
+    labels: { distance: 'Measure', area: 'Area', pitch: 'Pitch' },
+    hint: 'Temporary — not saved with the project.',
+  });
   fillToolRow($('markupButtons'), MARKUP_TOOLS);
   buildMarkupStyleControls();
 }
 
-function fillToolRow(wrap, tools) {
+function fillToolRow(wrap, tools, { labels = null, hint = '' } = {}) {
   wrap.textContent = '';
   for (const [mode, label] of tools) {
     const b = document.createElement('button');
     b.className = `tool-btn${mode === 'pan' ? ' on' : ''}`;
     b.dataset.mode = mode;
-    b.textContent = label;
-    b.title = HINTS[mode] || label;
+    b.textContent = (labels && labels[mode]) || label;
+    b.title = (HINTS[mode] || label) + (hint && mode !== 'pan' ? `\n\n${hint}` : '');
     b.addEventListener('click', () => controller.setMode(mode));
     wrap.appendChild(b);
   }
@@ -562,6 +1591,20 @@ $('markupWidth').addEventListener('input', () => {
   $('markupWidthOut').textContent = String(v);
 });
 
+// ── the revision bars' own controls ──────────────────────────────────────
+// (every plain button in them carries data-act and is dispatched already)
+
+$('ovAlpha').addEventListener('input', () => {
+  const v = Math.max(5, Math.min(95, Number($('ovAlpha').value) || 50));
+  overlay.alpha = v / 100;
+  $('ovAlphaOut').textContent = `${v}%`;
+  requestDraw();
+});
+
+$('vbNewest').addEventListener('change', () => {
+  safeRun('newest-versions');
+});
+
 /** The floating options bar, parked under the button that owns it. */
 function syncToolOptions(mode) {
   const bar = $('toolOpts');
@@ -569,12 +1612,14 @@ function syncToolOptions(mode) {
   const o = controller.options;
   const parts = [];
 
-  // Markup carries no item name — it is not an item.
+  // Markup carries no item name — it is not an item. Neither does a temporary
+  // dimension: it is not filed anywhere, so there is nothing for a name to be
+  // on, and offering the field would suggest it is going to be kept.
   const NO_NAME = new Set([
     'pan', 'window', 'door', 'calibrate', 'pitch',
     ...MARKUP_TOOLS.map(t => t[0]),
   ]);
-  if (!NO_NAME.has(mode)) {
+  if (!NO_NAME.has(mode) && !controller.isScratchTool(mode)) {
     const nameInput = D.input(o.pendingName, 'text');
     nameInput.className = 'tb-input';
     nameInput.placeholder = 'Item name…';
@@ -653,7 +1698,10 @@ function TILE_PATTERN_OPTIONS() {
  */
 function placeToolOptions(mode) {
   const bar = $('toolOpts');
+  // View Only puts its tools in their own row, and a lookup that missed it
+  // left the bar parked wherever it last was — over the sheets panel.
   const btn = $('toolButtons').querySelector(`[data-mode="${mode}"]`)
+    || $('viewToolButtons').querySelector(`[data-mode="${mode}"]`)
     || $('markupButtons').querySelector(`[data-mode="${mode}"]`);
   if (!btn || bar.hidden) return;
   const br = btn.getBoundingClientRect();
@@ -724,6 +1772,10 @@ async function loadProjectFile(file, handle = null) {
       annotations: opened.annotations,
       measurements: opened.measurements,
       pageCount: opened.pageCount,
+      // How many sheets each revision set holds, out of the tail's INDEX.
+      // None of their pixels are read here — on the 2.3 GB job that tail is
+      // 1.42 GB, and a revision sheet is fetched only when it is looked at.
+      revisionCounts: opened.revisions.map(set => set.length),
     });
     app.pages.setFromProject(opened);
     app.fileHandle = handle;
@@ -738,6 +1790,17 @@ async function loadProjectFile(file, handle = null) {
     calloutPreview.clearCache();
     hideEmptyState();
     buildScaleSelect();
+    // Rebuilt before the thumbnails, so the cards carry their revision dots
+    // on the first paint rather than after a second pass.
+    revCountsBySheet = sheetsWithRevisions(opened.pageCount, allRevisions());
+    clearOverlay({ draw: false });
+    // Another project's dimensions are not this one's, and they are keyed by
+    // page index — left behind they would draw over whatever sheet took that
+    // number.
+    app.scratch.clear();
+    // A project opens in View Only. The setting exists for an estimator who
+    // lives in Edit Mode; it defaults to false, which is what was asked for.
+    setEditing(!!app.settings.get('open_in_edit_mode'), { announce: false });
     thumbs.refresh(0);
     const start = Math.min(
       Math.max(0, Number(app.project.metadata.last_viewed_page) || 0),
@@ -745,6 +1808,7 @@ async function loadProjectFile(file, handle = null) {
     );
     pageImage = null;
     await goToPage(Math.max(0, start));
+    syncVersionUi({ rebuild: true });
     app.project.markSaved();
     noteRecent(file);
     syncTitle();
@@ -774,6 +1838,30 @@ async function saveProject({ saveAs = false } = {}) {
     setStatus('Nothing to save yet.');
     return;
   }
+
+  // This file names revision sets whose images this app could not read, so a
+  // save composed from what is in hand would write those records with no
+  // TKREVS01 block behind them — on the estimator's largest job, 1.42 GB of
+  // drawings gone, in place, with nothing said. Ask before writing over it.
+  if (app.project.revisionsUnreadable) {
+    const n = (app.project.metadata.revisions || []).length;
+    const ok = await D.confirmDialog(
+      'This project’s revision images could not be read',
+      `${app.fileName || 'This file'} lists ${n} revision set${n === 1 ? '' : 's'}, `
+      + 'but the block of drawings that holds their pages is unreadable — '
+      + 'most often a file that was copied or synced while it was still being '
+      + 'written.\n\n'
+      + 'Saving now writes a project with those revisions EMPTY. The pages are '
+      + 'not recoverable from this copy afterwards.\n\n'
+      + 'Save anyway, or cancel and open a backup instead?',
+      { okLabel: 'Save without the revision images', danger: true }
+    );
+    if (!ok) {
+      setStatus('Save cancelled — the revision images in this file could not be read.');
+      return;
+    }
+  }
+
   let handle = app.fileHandle;
   if (saveAs || !handle) {
     if (canUseFsApi) {
@@ -1099,6 +2187,10 @@ async function importPdfFile(file, { intoOpen = false } = {}) {
     await goToPage(startAt);
     syncTitle();
 
+    // Importing a PDF is the start of a takeoff, not a read — so this one
+    // opens in Edit Mode. Opening an existing .takeoff does not.
+    setEditing(true, { announce: false });
+
     const detected = (app.project.metadata.page_labels || []).filter(Boolean).length;
     setStatus(
       `Imported ${result.pageCount} sheet${result.pageCount === 1 ? '' : 's'} at ${dpi} DPI` +
@@ -1132,6 +2224,9 @@ function nowStamp() {
 // ── item editing ──────────────────────────────────────────────────────────
 
 async function openProperties(item) {
+  // Reachable from the items panel, which never touches the canvas hit test,
+  // so the pointer gates do not cover it.
+  if (controller.readOnly) { setStatus(controller.readOnlyReason); return; }
   if (item.type === 'standalone') {
     const patch = await D.askStandalone(item);
     if (patch) app.project.updateItem(item._uid, patch);
@@ -1200,12 +2295,22 @@ async function openProperties(item) {
 }
 
 async function openMaterials(item) {
+  if (controller.readOnly) { setStatus(controller.readOnlyReason); return; }
   const { openAssemblyManager } = await import('./ui/assemblies.js');
   const lines = await openAssemblyManager(item);
   if (lines) app.project.updateItem(item._uid, { associated_items: lines }, { label: 'Materials' });
 }
 
 function showItemMenu(item, ev) {
+  // Delete / Hide / Properties on an item, from a drawing that item was not
+  // traced on. The controller's hit test cannot produce this while a version
+  // is up, but the right-button branch reaches it from a LEFTOVER selection —
+  // so it is one added caller away from live, and what it removes is not on
+  // screen to be seen going.
+  if (controller.readOnly) {
+    setStatus(controller.readOnlyReason);
+    return;
+  }
   const menu = $('ctxMenu');
   menu.textContent = '';
   const add = (label, fn, cls) => {
@@ -1316,10 +2421,22 @@ function newProject() {
   // A dialog left open over a project that no longer exists would write its
   // result into the new one.
   D.closeAllDialogs();
+  // Both of these hold ImageBitmaps that clearCaches() is about to close, and
+  // a closed bitmap is still truthy — so drawing one throws InvalidStateError
+  // inside the rAF callback, before anything else in the frame paints. The
+  // new, empty project would sit there showing the previous job's revision
+  // sheet, frozen, throwing once a frame. Cleared BEFORE the teardown.
+  clearOverlay({ draw: false });
+  clearVersion({ draw: false });
+  app.scratch.clear();
   app.project.reset();
   app.pages.clearCaches();          // release the old ImageBitmaps
   app.pages = new PageStore();
   thumbs.pages = app.pages;
+  calloutPreview.pages = app.pages; // or it keeps cropping the old project
+  calloutPreview.hide();
+  calloutPreview.clearCache();
+  revCountsBySheet = new Map();
   pageImage = null;
   pendingFit = false;
   pageTicket += 1;                  // orphan any decode still in flight
@@ -1335,10 +2452,47 @@ function newProject() {
   syncPageOf();
   syncScaleSelect();
   syncHistoryButtons();
+  syncVersionUi({ rebuild: true });
   requestDraw();
 }
 
+/**
+ * Menu actions that must not run while another version of a sheet is on
+ * screen.
+ *
+ * The pointer gate lives in the controller, but a menu reaches past it. Each
+ * of these writes to the SHEET — its scale, its markup, its place in the set,
+ * or the takeoff on it — from a drawing that is not the sheet.
+ *
+ * `set-scale` is the one worth naming: the scale is pixels-per-foot of the
+ * sheet's OWN image, so recalibrating from a revision that is a different size
+ * stores a number the sheet was never measured with. It is a priced, saved,
+ * silent mistake, and it is reached by a control that looks harmless.
+ *
+ * Undo and redo are here too: their snapshots were taken against the sheet's
+ * own drawing, and replaying one while looking elsewhere puts work back with
+ * nothing on screen to show it landing.
+ */
+const REFUSED_WHEN_READ_ONLY = new Set([
+  'delete', 'clear-markup',
+  'set-scale', 'delete-page', 'add-blank', 'import-more', 'review-labels',
+  'undo', 'redo', 'add-standalone', 'catalog',
+  // Project Info writes ten saved fields through transact(), and pressing OK
+  // commits even when nothing was typed.
+  'project-info',
+]);
+// Deliberately NOT refused: 'toggle-markup', 'isolate' and 'exit-isolate'.
+// All three change only what is SHOWN — `_isolation` is transient and never
+// saved, and toggle-markup flips a renderer flag. Refusing them trapped a
+// reader inside an isolation set in Edit Mode, with Show Everything answering
+// "press Edit Mode to change the takeoff" for something that changes nothing.
+
+
 async function runAction(act) {
+  if (controller.readOnly && REFUSED_WHEN_READ_ONLY.has(act)) {
+    setStatus(controller.readOnlyReason);
+    return;
+  }
   switch (act) {
     case 'new-project':
       if (!(await confirmDiscard())) return;
@@ -1448,6 +2602,48 @@ async function runAction(act) {
     case 'review-labels': await reviewSheetLabels(); break;
     case 'set-scale': $('scaleSelect').focus(); break;
     case 'delete-page': await deleteCurrentPage(); break;
+
+    // ── view only / edit ──
+    case 'toggle-mode': setEditing(!app.editing); break;
+    case 'mode-view': setEditing(false); break;
+    case 'mode-edit': setEditing(true); break;
+    case 'scratch-undo':
+      setStatus(app.scratch.undo(app.currentPage)
+        ? 'Last temporary dimension removed.'
+        : 'No temporary dimensions on this sheet.');
+      break;
+    case 'scratch-clear': {
+      const n = app.scratch.count;
+      if (!n) { setStatus('No temporary dimensions to clear.'); break; }
+      app.scratch.clear();
+      setStatus(`Cleared ${n} temporary dimension${n === 1 ? '' : 's'}.`);
+      break;
+    }
+
+    // ── plan revisions ──
+    case 'revisions':
+      if (!app.pages.pageCount) { setStatus('Open a project first.'); break; }
+      revisionsPanel.toggle('matrix');
+      break;
+    case 'current-set':
+      if (!app.pages.pageCount) { setStatus('Open a project first.'); break; }
+      revisionsPanel.show('current');
+      break;
+    case 'newest-versions': await setNewestMode(!newestMode()); break;
+    case 'version-prev': stepSheetVersion(-1); break;
+    case 'version-next': stepSheetVersion(1); break;
+    case 'version-own': await showSheetVersion(app.currentPage, ''); break;
+    case 'compare-overlay':
+      if (overlayActive()) clearOverlay(); else await startOverlay();
+      break;
+    case 'compare-diff': await diffCurrentVersion(); break;
+    case 'overlay-align': toggleOverlayAlign(); break;
+    case 'overlay-flash': toggleOverlayFlash(); break;
+    case 'overlay-reset':
+      overlay.dx = 0; overlay.dy = 0; requestDraw();
+      setStatus('Overlay back where it started.');
+      break;
+    case 'overlay-off': clearOverlay(); break;
 
     case 'catalog': await openCatalog(); break;
     case 'add-standalone': {
@@ -1678,6 +2874,9 @@ async function reviewSheetLabels() {
 }
 
 async function openProjectInfo() {
+  // Ten saved fields, committed through transact() — an edit, reached from a
+  // menu rather than from the canvas, so no pointer gate covers it.
+  if (controller.readOnly) { setStatus(controller.readOnlyReason); return; }
   const md = app.project.metadata;
   const patch = await D.showDialog(close => {
     const form = D.el('div', 'form');
@@ -1852,6 +3051,17 @@ document.addEventListener('keydown', ev => {
     calloutPreview.hide();
     return;
   }
+  if (ev.key === 'Escape') {
+    // Escape walks back out of comparing, one layer at a time: the overlay
+    // first, then the version, then the panel.
+    if (overlayActive()) { ev.preventDefault(); clearOverlay(); return; }
+    if (browsingOtherVersion()) {
+      ev.preventDefault();
+      showSheetVersion(app.currentPage, '');
+      return;
+    }
+    if (revisionsPanel.open) { ev.preventDefault(); revisionsPanel.hide(); return; }
+  }
   const t = ev.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
 
@@ -1876,8 +3086,17 @@ document.addEventListener('keydown', ev => {
     pageupdown: ['PageUp', 'PageDown'], leftright: ['ArrowLeft', 'ArrowRight'],
     updown: ['ArrowUp', 'ArrowDown'], brackets: ['[', ']'], commaperiod: [',', '.'],
   }[nav] || ['PageUp', 'PageDown'];
-  if (ev.key === NAV[0]) { ev.preventDefault(); goToPage(app.currentPage - 1); return; }
-  if (ev.key === NAV[1]) { ev.preventDefault(); goToPage(app.currentPage + 1); return; }
+  if (ev.key === NAV[0]) { ev.preventDefault(); stepSheet(-1); return; }
+  if (ev.key === NAV[1]) { ev.preventDefault(); stepSheet(1); return; }
+
+  // Left and Right walk the VERSIONS of the sheet in view — unless the user
+  // has bound them to turning pages, in which case the bar's own arrows and
+  // the pips are the way, and stealing the keys would take away the only way
+  // through the set.
+  if (nav !== 'leftright' && VersionBar.shouldShow(allRevisions())) {
+    if (ev.key === 'ArrowLeft') { ev.preventDefault(); stepSheetVersion(-1); return; }
+    if (ev.key === 'ArrowRight') { ev.preventDefault(); stepSheetVersion(1); return; }
+  }
 
   // The desktop's markup keys. T for draw, S for highlight, B for box,
   // E for erase, N for note.
@@ -1928,7 +3147,18 @@ window.addEventListener('drop', async ev => {
   if (n.endsWith(FILE_EXTENSION) || n.endsWith(LEGACY_EXTENSION)) {
     if (await confirmDiscard()) await loadProjectFile(file);
   } else if (n.endsWith('.pdf')) {
-    await importPdfFile(file, { intoOpen: app.pages.pageCount > 0 && await askAppend(file) });
+    // Adding sheets to the open project is an edit, and a drop does not go
+    // through the menu gate. But refusing to ASK is worse than the edit was:
+    // it closed the set the user was reading, without a word, and there is no
+    // way back but reopening the file. So the question stands, and choosing
+    // to append is choosing to edit.
+    if (app.pages.pageCount && await askAppend(file)) {
+      if (!app.editing) setEditing(true, { announce: false });
+      await importPdfFile(file, { intoOpen: true });
+    } else {
+      if (app.pages.pageCount && !(await confirmDiscard())) return;
+      await importPdfFile(file, { intoOpen: false });
+    }
   } else {
     setStatus(`${file.name} is not a takeoff project or a PDF`);
   }
@@ -2087,6 +3317,9 @@ if (window.matchMedia('(max-width: 720px)').matches) $('markupBar').hidden = tru
 // the menu agree with it and settles the value on a first-ever launch.
 document.documentElement.dataset.ui = uiMode();
 syncUiModeMenu();
+// Settle the mode chrome before anything is open, so the empty state is not
+// briefly offering an Edit Mode button for a project that does not exist.
+syncModeUi();
 MOBILE_Q.addEventListener('change', () => { syncMobileBar(); requestDraw(); });
 $('scrim').addEventListener('click', closeDrawers);
 syncMobileBar();
@@ -2208,4 +3441,14 @@ window.TakeoffApp = {
   app, viewport, renderer, controller, itemsPanel, thumbs, calloutPreview,
   goToPage, loadProjectFile, importPdfFile, saveProject, runAction, newProject,
   requestDraw, pageFinalLabel,
+  // Plan revisions — the same entry points the panel and the bar call, so a
+  // test drives the real path rather than a parallel one.
+  versionView, overlay, versionBar, revisionsPanel,
+  // View Only — the same entry points the buttons call.
+  setEditing, syncModeUi, VIEW_TOOLS,
+  showSheetVersion, clearVersion, stepSheetVersion, stepSheet,
+  goToPageOwnVersion, setNewestMode, showLoosePage,
+  startOverlay, clearOverlay, diffCurrentVersion, composeDiff,
+  allRevisions, browsingOtherVersion, syncVersionUi,
+  revisionCounts: () => revCountsBySheet,
 };

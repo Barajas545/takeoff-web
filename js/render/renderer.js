@@ -100,6 +100,9 @@ export class Renderer {
     ctx.fillRect(0, 0, vp.width, vp.height);
 
     if (f.pageImage) this._drawPage(f.pageImage);
+    // Another version of this sheet, laid over it. Before the takeoff, because
+    // the takeoff is what the comparison is for.
+    if (f.overlay) this._drawOverlay(f.overlay);
 
     const items = f.items || [];
     const visible = items.filter(m => (f.isVisible ? f.isVisible(m) : m.visible !== false));
@@ -175,6 +178,41 @@ export class Renderer {
     vp.applyScreenTransform(ctx);
   }
 
+  /**
+   * Another version of this sheet, laid over it in one flat colour.
+   *
+   * `image` arrives already tinted: its paper is transparent and its lines
+   * carry the colour, so a plain source-over draw at `alpha` puts the
+   * revision's linework on top of the sheet's without hiding what is under it.
+   * That is exactly what the desktop's GL_MODULATE overlay produces.
+   *
+   * `dx`/`dy` are in SHEET pixels, not screen pixels, so a nudge made while
+   * zoomed in survives zooming out and the two drawings stay in register.
+   */
+  _drawOverlay(o) {
+    const ctx = this.ctx;
+    const vp = this.viewport;
+    const img = o.image.bitmap || o.image;
+    vp.applyTransform(ctx);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, o.alpha == null ? 0.5 : o.alpha));
+    ctx.imageSmoothingEnabled = vp.zoom < 1.5;
+    ctx.imageSmoothingQuality = 'high';
+    const w = o.image.width || img.width;
+    const h = o.image.height || img.height;
+    ctx.drawImage(img, o.dx || 0, o.dy || 0, w, h);
+    if (o.outline) {
+      // While Align is on, show where the overlay's edges are — a sheet that
+      // is mostly white paper otherwise gives nothing to drag against.
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = 'rgb(255,77,77)';
+      ctx.lineWidth = 2 / vp.zoom;
+      ctx.strokeRect(o.dx || 0, o.dy || 0, w, h);
+    }
+    ctx.restore();
+    vp.applyScreenTransform(ctx);
+  }
+
   // ── item geometry ───────────────────────────────────────────────────
 
   _drawItemFills(ctx, m) {
@@ -200,6 +238,12 @@ export class Renderer {
     const c = itemColor(m);
     const z = this.viewport.zoom;
     const w = px => px / z;    // a screen-pixel width under the world transform
+
+    // A TEMPORARY dimension is drawn dashed, and it has to LOOK temporary —
+    // an estimator who mistakes one for takeoff will go looking for it in the
+    // estimate. The dash is in screen pixels so it stays a dash at any zoom.
+    const restoreDash = m.scratch ? ctx.getLineDash() : null;
+    if (m.scratch) ctx.setLineDash([w(7), w(5)]);
 
     switch (m.type) {
       case 'distance': {
@@ -283,6 +327,10 @@ export class Renderer {
       default:
         break;
     }
+    // Put the dash back, or every item drawn after a temporary one inherits
+    // it — and real takeoff that looks temporary is the same mistake in the
+    // other direction.
+    if (m.scratch) ctx.setLineDash(restoreDash || []);
   }
 
   _drawGridLines(ctx, m, c, w) {
