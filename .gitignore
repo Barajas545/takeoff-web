@@ -1,9 +1,24 @@
 # ── never publish ─────────────────────────────────────────────────────────
 #
-# tests/ holds real project files from real jobs — a named client's whole
-# stamped plan set among them — and harnesses that point at the estimator's
-# own machine and project library. None of it belongs on a public repo.
-tests/
+# The HARNESSES are committed: they take their paths from the environment
+# (tests/config.mjs) and skip when the data is not there, so a fresh clone can
+# run everything that does not need one particular machine's files.
+#
+# What must never be published is the DATA they run against.
+
+# Real project files from real jobs — a named client's whole stamped plan set
+# among them. tests/data/ is the committed, anonymised counterpart.
+tests/fixtures/
+
+# A local override of the library and desktop-source paths, if anyone prefers
+# a file to environment variables.
+tests/config.local.mjs
+
+# Captured output from a run against the real library: it carries project
+# names, client names and source PDF filenames.
+tests/*-truth.json
+!tests/catalog-python-truth.json
+tests/out/
 
 # docs/spec/ is the desktop program specified back out of its source: the
 # file format, the measurement schema, the scale maths, the tool behaviour.
