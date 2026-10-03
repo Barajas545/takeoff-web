@@ -74,27 +74,32 @@ export class VersionBar {
 
     const showing = this.root.querySelector('#vbShowing');
     const n = vers.length;
+    // Is the drawing on screen the newest there is? Derived from the RANK,
+    // never from position in the list: the revisions in a real file are not in
+    // date order — measured, one dated 06-19 sits ninth of eleven — so
+    // counting columns would call the newest drawing old.
+    const onNewest = viewing === String(newest || '');
+    const which = viewing ? vers.findIndex(v => v.revId === viewing) + 1 : 1;
+
     if (n <= 1) {
       showing.textContent = '· only one version';
       showing.classList.remove('rev');
-    } else if (!viewing) {
-      // "OLDER" only when this sheet really has a newer version — derived from
-      // the RANK, never from list position. The revisions in a real file are
-      // not in date order (measured: one dated 06-19 sits ninth of eleven), so
-      // counting columns would announce "older" on the newest drawing there is.
-      const older = newest ? ' — a newer version exists' : '';
-      showing.textContent = `· showing the sheet's own drawing${older}`;
-      showing.classList.toggle('rev', false);
+    } else if (onNewest) {
+      showing.textContent = `· newest of ${n} drawings`;
+      showing.classList.remove('rev');
     } else {
-      const which = vers.findIndex(v => v.revId === viewing) + 1;
-      showing.textContent =
-        `· showing ${cur.label}${cur.date ? ` (${cur.date})` : ''} — ${which} of ${n}`;
+      // The sheet's own drawing is just the first of the run now, and when
+      // something newer exists it is as superseded as any other old issue.
+      const what = viewing
+        ? `${cur.label}${cur.date ? ` (${cur.date})` : ''}`
+        : 'the original drawing';
+      showing.textContent = `· OLD — showing ${what}, ${which} of ${n}`;
       showing.classList.add('rev');
     }
 
-    this.root.querySelector('#vbOwn').disabled = !viewing;
-    const newestBox = this.root.querySelector('#vbNewest');
-    if (newestBox && newestBox.checked !== !!s.newestMode) newestBox.checked = !!s.newestMode;
+    // Nothing to go back to until you have gone somewhere.
+    const back = this.root.querySelector('#vbNewestBtn');
+    if (back) back.disabled = onNewest || n <= 1;
 
     this._drawPips(vers, viewing, s.workingRevId || '', newest);
   }

@@ -30,6 +30,18 @@ try {
 
 <div id="app" class="app">
 
+  <!--
+    Everything above the drawing, in one element.
+
+    It is a wrapper rather than five separately-hidden rows because hiding a
+    GRID ROW is what makes the drawing disappear: `display:none` takes the
+    element out of the grid, auto-placement slides `.body` up into an `auto`
+    row, and that row measures 0 tall because the canvas inside it is
+    absolutely positioned. Out of flow, this whole stack collapses its row to
+    nothing and `.body` keeps the `1fr` it already had.
+  -->
+  <div class="chrome" id="chrome">
+
   <!-- ── menu bar ─────────────────────────────────────────────────────── -->
   <div class="menubar" id="menubar">
     <div class="brand">
@@ -81,6 +93,7 @@ try {
           <button data-act="toggle-thumbs">Sheets Panel</button>
           <button data-act="toggle-items">Project Items Panel</button>
           <button data-act="toggle-markup-bar">Markup Toolbar</button>
+          <button data-act="toggle-chrome-pin" id="chromePinItem">Pin Toolbars</button>
           <button data-act="toggle-labels">Measurement Labels</button>
           <hr>
           <button data-act="ui-touch" id="uiTouchItem">Touch layout</button>
@@ -103,8 +116,6 @@ try {
           <hr>
           <button data-act="revisions">Plan Revisions…</button>
           <button data-act="current-set">Current Set of Drawings…</button>
-          <button data-act="newest-versions" id="newestMenu">Show Newest Version of Every Sheet</button>
-          <hr>
           <button data-act="delete-page">Delete This Sheet</button>
         </div>
       </div>
@@ -144,6 +155,10 @@ try {
               title="Switch between View Only and Edit Mode">Edit Mode</button>
       <span class="dirty-dot" id="dirtyDot" title="Unsaved changes" hidden>●</span>
       <span class="proj-title" id="projTitle">No project open</span>
+      <!-- Pinned, these bars behave exactly as they always have. Unpinned they
+           get out of the way of the drawing and come back when reached for. -->
+      <button class="pin-btn" id="chromePin" data-act="toggle-chrome-pin"
+              title="Keep the toolbars on screen (M)">📌</button>
     </div>
   </div>
 
@@ -219,8 +234,6 @@ try {
             title="Remove every highlight and pen stroke on this sheet">Clear sheet</button>
   </div>
 
-  <!-- ── tool options bar (floats over the canvas) ────────────────────── -->
-  <div class="tool-opts" id="toolOpts" hidden></div>
   <!-- ── sheet versions ───────────────────────────────────────────────────
        Hidden entirely on a job with no plan revisions, which is most of them —
        and when it is hidden the page below must not move by a pixel, so it is
@@ -232,12 +245,8 @@ try {
             title="Every version of this sheet. Click one to put it on screen."></canvas>
     <button class="tb-btn" data-act="version-prev" title="Previous version of this sheet (Left)">‹</button>
     <button class="tb-btn" data-act="version-next" title="Next version of this sheet (Right)">›</button>
-    <button class="tb-btn" data-act="version-own" id="vbOwn"
-            title="Back to this sheet's own drawing">Original</button>
-    <div class="tb-sep"></div>
-    <label class="vb-check" title="Show the newest version of every sheet as you move through the set">
-      <input type="checkbox" id="vbNewest"> Newest
-    </label>
+    <button class="tb-btn" data-act="version-newest" id="vbNewestBtn"
+            title="Back to the newest drawing of this sheet">Newest</button>
     <div class="tb-sep"></div>
     <button class="tb-btn" data-act="compare-overlay" id="vbOverlay"
             title="Draw this revision over the sheet in red">Overlay</button>
@@ -250,9 +259,22 @@ try {
   <!-- ── overlay compare controls (only while an overlay is up) ─────────── -->
   <div class="verbar ovbar" id="overlayBar" hidden>
     <span class="vb-sheet" id="ovWhat"></span>
-    <span class="tb-label">Opacity</span>
-    <input type="range" id="ovAlpha" class="tb-range" min="5" max="95" step="1" value="50">
-    <span class="tb-label" id="ovAlphaOut">50%</span>
+    <!--
+      A BALANCE between the two drawings, not an opacity.
+
+      Centre shows both. Right brings the newest forward and fades the older
+      out; left does the reverse. It cannot be a plain alpha over the sheet
+      because a floor plan is mostly white paper: blending two white sheets
+      hides the lines of whichever is underneath. Both drawings are reduced to
+      their ink and laid on one paper plate, so the comparison reads the same
+      whatever colour the background is set to.
+    -->
+    <span class="tb-label">Older</span>
+    <input type="range" id="ovBalance" class="tb-range wide"
+           min="-100" max="100" step="1" value="0"
+           title="Centre shows both drawings. Slide towards the version you want to see more of.">
+    <span class="tb-label">Newest</span>
+    <span class="tb-label ov-bal" id="ovBalanceOut">both</span>
     <div class="tb-sep"></div>
     <button class="tb-btn" data-act="overlay-align" id="ovAlign"
             title="Drag the overlay to line it up with the sheet">Align</button>
@@ -263,6 +285,28 @@ try {
     <button class="tb-btn" data-act="overlay-off" title="Stop comparing">Done</button>
   </div>
 
+  </div><!-- /#chrome -->
+
+  <!--
+    The tool's own options — size, pattern, angle, the item name.
+
+    OUTSIDE #chrome on purpose. It belongs to the tool being used on the
+    drawing, not to the toolbars, and inside the stack it was positioned
+    against a container translated off the top of the window: pick Tile, move
+    onto the sheet, and the controls went away with the bars. Out here it is
+    positioned against #app, which is what placeToolOptions already measures.
+  -->
+  <div class="tool-opts" id="toolOpts" hidden></div>
+
+  <!--
+    The strip you pull the chrome down from. Always present, four pixels of
+    nothing at the very top: the pointer reaching up finds it, and a downward
+    swipe starting on it brings the bars in. It is a sibling of #chrome rather
+    than a child so that it cannot travel with the thing it reveals.
+  -->
+  <div class="chrome-edge" id="chromeEdge" title="Pull down for the toolbars (M)">
+    <span class="chrome-edge-grip"></span>
+  </div>
 
   <!-- ── main body ────────────────────────────────────────────────────── -->
   <div class="body">
@@ -291,6 +335,16 @@ try {
             Drop a <code>.takeoff</code> or <code>.pdf</code> file anywhere on this window.
           </p>
         </div>
+      </div>
+      <!--
+        Not the newest drawing of this sheet. Translucent and in the corner,
+        because it has to be impossible to miss and impossible to mistake for
+        part of the drawing — an estimator who takes a quantity off a
+        superseded sheet has no way of finding out from the numbers.
+      -->
+      <div class="old-badge" id="oldBadge" hidden aria-live="polite">
+        <span class="old-word">OLD</span>
+        <span class="old-sub" id="oldBadgeSub"></span>
       </div>
       <div class="drop-veil" id="dropVeil" hidden><span>Drop to open</span></div>
     </main>

@@ -121,6 +121,22 @@ const thumbs = new Thumbnails({
   // How many versions each sheet has beyond its own drawing, for the pips on
   // the cards. Recomputed only when the revision model changes — not per row.
   revisionCounts: () => revCountsBySheet,
+  // Sliding a card sideways walks that sheet's drawings.
+  onSlideVersion: (i, step) => slideSheetVersion(i, step),
+  // Which sheet is off its newest drawing, and where in the run it sits.
+  // Read from the app every time it paints rather than pushed in, so the red
+  // frame and the drawing on screen cannot get out of step.
+  versionState: () => {
+    const page = app.currentPage;
+    const vers = sheetVersions(page, allRevisions());
+    const cur = String(versionView.revId || '');
+    return {
+      page,
+      old: showingOldVersion(),
+      which: vers.length ? Math.max(0, vers.findIndex(v => v.revId === cur)) + 1 : 1,
+      count: vers.length,
+    };
+  },
 });
 
 // ── plan revisions ────────────────────────────────────────────────────────
@@ -134,7 +150,6 @@ const versionBar = new VersionBar({
     sheetLabel: app.pages.pageCount ? pageFinalLabel(app.currentPage) : '',
     viewingRevId: versionView.revId,
     workingRevId: workingVersion(app.currentPage),
-    newestMode: newestMode(),
     order: latestOrder(),
   }),
   onPick: revId => showSheetVersion(app.currentPage, revId),
@@ -192,15 +207,35 @@ function syncVersionUi({ rebuild = false } = {}) {
   revisionsPanel.refresh();
   const on = browsingOtherVersion();
   $('vbOverlay')?.classList.toggle('on', overlayActive());
-  const newestItem = $('newestMenu');
-  if (newestItem) {
-    newestItem.textContent = newestMode()
-      ? '✓ Show Newest Version of Every Sheet'
-      : 'Show Newest Version of Every Sheet';
-  }
+  syncOldBadge();
+  thumbs.syncVersions();
   // A version on screen is a look, not a place to draw — say so on the canvas
   // rather than only in the status line, which scrolls away.
   canvas.classList.toggle('on-version', on);
+}
+
+/**
+ * The translucent OLD over the corner of the sheet.
+ *
+ * Hidden on the overwhelming majority of sheets, which have one drawing and
+ * nothing to be old about. It names which of the run is on screen, because
+ * "this is not the newest" is the warning and "it is the second of four" is
+ * what tells you how far back you have gone.
+ */
+function syncOldBadge() {
+  const el = $('oldBadge');
+  if (!el) return;
+  const old = showingOldVersion();
+  el.hidden = !old;
+  if (!old) return;
+  const vers = sheetVersions(app.currentPage, allRevisions());
+  const cur = String(versionView.revId || '');
+  const which = Math.max(0, vers.findIndex(v => v.revId === cur)) + 1;
+  const what = vers[which - 1];
+  const label = cur && what ? what.label : 'original';
+  $('oldBadgeSub').textContent = vers.length > 1
+    ? `${label} · ${which} of ${vers.length}`
+    : label;
 }
 
 // ── render loop ───────────────────────────────────────────────────────────
@@ -424,7 +459,7 @@ async function goToPage(index, { version } = {}) {
   // is in hand, so the scale check has something to compare against and a
   // failed revision decode still leaves a usable sheet on screen.
   const want = version === undefined
-    ? (newestMode() ? newestVersionOf(index, allRevisions(), latestOrder()) : '')
+    ? newestOf(index)                 // unasked, you get the newest
     : String(version || '');
 
   // Prefetching the neighbouring SHEETS is what makes paging smooth — but not
@@ -515,14 +550,6 @@ function syncModeUi() {
   const onVersion = browsingOtherVersion();
   const wasReadOnly = controller.readOnly;
 
-  // THE gate. Read-only if the mode says so OR if another version is up.
-  //
-  // With NOTHING open there is nothing to protect, and saying "read-only"
-  // there would refuse the three actions that CREATE a project — Add Blank
-  // Sheet, Add Item Not on a Sheet, the Materials Catalog — while hiding the
-  // very button that would let the user out of it.
-  controller.readOnly = open && (!editing || onVersion);
-
   // A revision re-issued on other paper has a different number of pixels to
   // the foot, and the scale belongs to the SHEET. A dimension taken on it
   // would be read against a scale it was never measured with — a wrong
@@ -531,10 +558,32 @@ function syncModeUi() {
     pageImage ? { width: pageImage.width, height: pageImage.height } : null,
     versionView.size);
 
-  controller.readOnlyReason = onVersion
-    ? 'You are looking at another version of this sheet — press Original to '
-      + 'come back to it first.'
-    : 'This is View Only mode. Press Edit Mode to change the takeoff.';
+  // THE gate. Read-only if the mode says so, if this drawing has been
+  // SUPERSEDED, or if it is a different paper size.
+  //
+  // It used to ask `onVersion` — is any revision on screen — which was the
+  // same question while the sheet's own drawing was the default. It is not
+  // any more: the newest drawing is what you get, so asking that made every
+  // reissued sheet in the job read-only, with the estimator's own takeoff
+  // hidden under a drawing they could not draw on. What actually makes a
+  // drawing unsafe to trace on is that it is out of date, or that the scale
+  // would be wrong, so those are what it asks.
+  //
+  // With NOTHING open there is nothing to protect, and saying "read-only"
+  // there would refuse the three actions that CREATE a project — Add Blank
+  // Sheet, Add Item Not on a Sheet, the Materials Catalog — while hiding the
+  // very button that would let the user out of it.
+  const superseded = showingOldVersion();
+  controller.readOnly = open && (!editing || superseded || !sizeOk);
+
+  controller.readOnlyReason = superseded
+    ? 'This is an older drawing of this sheet. Slide the sheet card to the '
+      + 'right, or press Newest, to come back to the current one.'
+    : !sizeOk
+      ? sizeRefusal(
+        pageImage ? { width: pageImage.width, height: pageImage.height } : null,
+        versionView.size)
+      : 'This is View Only mode. Press Edit Mode to change the takeoff.';
   // Where a finished measurement goes, and the rule is one sentence: you can
   // always measure; whether it is SAVED depends on whether you can edit.
   //
@@ -555,12 +604,6 @@ function syncModeUi() {
           : null),
       }))
     : null;
-  if (!sizeOk) {
-    controller.readOnlyReason = sizeRefusal(
-      pageImage ? { width: pageImage.width, height: pageImage.height } : null,
-      versionView.size);
-  }
-
   document.body.classList.toggle('view-only', !editing && open);
   const btn = $('modeBtn');
   btn.hidden = !open;
@@ -713,9 +756,22 @@ function latestOrder() {
   return app.settings.get('latest_set_order') === 'column' ? 'column' : 'date';
 }
 
-/** The "show me the newest drawing of every sheet" mode. A way of LOOKING. */
-function newestMode() {
-  return !!app.settings.get('newest_version_view');
+/**
+ * The newest drawing of a sheet, or '' when the sheet's own IS the newest.
+ *
+ * This used to be a mode with a tick beside it. It is the behaviour now: a
+ * superseded sheet is the one mistake in this whole feature that the numbers
+ * can never show you afterwards, so looking at an old one has to be something
+ * you did on purpose, not something you forgot to turn on.
+ */
+function newestOf(page) {
+  return newestVersionOf(page, allRevisions(), latestOrder());
+}
+
+/** Is the drawing on screen something other than the newest of its sheet? */
+function showingOldVersion() {
+  if (!app.pages.pageCount) return false;
+  return String(versionView.revId || '') !== String(newestOf(app.currentPage) || '');
 }
 
 /** Put the sheet's own drawing back. Draws; touches nothing else. */
@@ -843,11 +899,11 @@ function goToPageOwnVersion(index) {
 function stepSheet(delta) {
   const next = app.currentPage + delta;
   if (!(next >= 0 && next < app.pages.pageCount)) return;
-  if (newestMode()) return goToPage(next);        // the tick decides
-  const want = versionView.revId;
-  const has = want
-    && sheetVersions(next, allRevisions()).some(v => v.revId === want);
-  return goToPage(next, { version: has ? want : '' });
+  // Every sheet opens on its newest drawing, this one included. Carrying the
+  // revision across the set was what the old "stay on this revision" mode
+  // wanted; now that looking at an old sheet is a deliberate act on ONE sheet,
+  // carrying it would quietly make the next four sheets old as well.
+  return goToPage(next);
 }
 
 /** The previous or next version of the sheet in view. */
@@ -856,28 +912,36 @@ function stepSheetVersion(delta) {
   if (vers.length < 2) { setStatus('This sheet has only one version'); return; }
   const i = Math.max(0, vers.findIndex(v => v.revId === versionView.revId));
   const j = Math.max(0, Math.min(vers.length - 1, i + delta));
-  if (j !== i) showSheetVersion(app.currentPage, vers[j].revId);
+  if (j === i) {
+    setStatus(delta > 0
+      ? 'Already on the newest drawing of this sheet'
+      : 'This is the oldest drawing of this sheet');
+    return;
+  }
+  showSheetVersion(app.currentPage, vers[j].revId);
 }
 
-async function setNewestMode(on) {
-  app.settings.set('newest_version_view', !!on);
-  if (on) {
-    const revs = allRevisions();
-    let n = 0;
-    for (let i = 0; i < app.pages.pageCount; i++) {
-      if (newestVersionOf(i, revs, latestOrder())) n += 1;
-    }
-    await showSheetVersion(app.currentPage,
-      newestVersionOf(app.currentPage, revs, latestOrder()),
-      { announce: false, flip: false });
-    setStatus(`Newest version of every sheet — ${n} sheet${n === 1 ? '' : 's'} `
-      + `${n === 1 ? 'has' : 'have'} one newer than the original. `
-      + 'Your takeoff still counts where you put it.');
-  } else {
-    clearVersion();
-    setStatus('Showing each sheet’s own version again');
+/**
+ * Slide a card in the sheets list to walk that sheet's drawings.
+ *
+ * Right is forward in time, left is back — the direction the drawing moves,
+ * not the direction the stack does. A card for a sheet that was never
+ * reissued says so rather than doing nothing, because "nothing happened" and
+ * "there is nothing to happen" look identical from the other side of a swipe.
+ */
+async function slideSheetVersion(index, step) {
+  if (!(index >= 0 && index < app.pages.pageCount)) return;
+  const vers = sheetVersions(index, allRevisions());
+  if (vers.length < 2) {
+    setStatus(`${pageFinalLabel(index)} has only one drawing — nothing to slide to`);
+    return;
   }
-  syncVersionUi();
+  if (index !== app.currentPage) await goToPage(index);
+  // Two quick slides on different cards both resume here, and the second
+  // navigation can land between this one's await and its step — which would
+  // step a sheet the user never touched.
+  if (index !== app.currentPage) return;
+  stepSheetVersion(step);
 }
 
 /**
@@ -1031,18 +1095,51 @@ function showImageViewer(bmp, title, legend = '') {
  */
 
 const overlay = {
-  revId: '', revPage: null, bitmap: null,   // the tinted image, ready to draw
-  alpha: 0.5, dx: 0, dy: 0,
+  revId: '', revPage: null,
+  bitmap: null,        // the NEWER drawing, as ink
+  older: null,         // the OLDER drawing, as ink
+  // −1 … 0 … +1. Centre shows both; the ends leave one drawing on the page.
+  balance: 0,
+  dx: 0, dy: 0,
   align: false,        // dragging moves the overlay instead of panning
   flashOn: true,       // the blink state
   flashTimer: 0,
 };
 
+// The two drawings, and the paper they are laid on.
+//
+// Red for the newest and blue for the older is the vocabulary the slip-sheet
+// Diff already uses in this app, so the two tools read the same way round.
+// The paper is painted by us rather than inherited from the background,
+// which is what makes this legible whatever `background_color` is set to —
+// a white plan on a dark app, or a dark app made light.
+const INK_NEW = [214, 40, 40];
+const INK_OLD = [30, 95, 190];
+const COMPARE_PAPER = '#ffffff';
+
+/**
+ * How strongly each drawing is painted, from the slider.
+ *
+ * Centre is both at full: the comparison is a comparison, and halving both
+ * would only make two faint drawings instead of two clear ones. Moving off
+ * centre fades the far one out and leaves the near one alone.
+ */
+function compareAlphas() {
+  const b = Math.max(-1, Math.min(1, overlay.balance || 0));
+  return {
+    older: b <= 0 ? 1 : Math.max(0, 1 - b),
+    newer: b >= 0 ? 1 : Math.max(0, 1 + b),
+  };
+}
+
 /** The overlay as the renderer wants it, or null. */
 function overlayFrame() {
   if (!overlay.bitmap || !overlay.flashOn) return null;
+  const a = compareAlphas();
   return {
-    image: overlay.bitmap, alpha: overlay.alpha,
+    image: overlay.bitmap, alpha: a.newer,
+    older: overlay.older, olderAlpha: a.older,
+    paper: COMPARE_PAPER,
     dx: overlay.dx, dy: overlay.dy, outline: overlay.align,
   };
 }
@@ -1052,7 +1149,10 @@ function overlayActive() { return !!overlay.bitmap; }
 function clearOverlay({ draw = true } = {}) {
   if (overlay.flashTimer) { clearInterval(overlay.flashTimer); overlay.flashTimer = 0; }
   overlay.bitmap?.close?.();
-  overlay.revId = ''; overlay.revPage = null; overlay.bitmap = null;
+  overlay.older?.close?.();
+  overlay.revId = ''; overlay.revPage = null;
+  overlay.bitmap = null; overlay.older = null;
+  overlay.balance = 0;
   overlay.dx = 0; overlay.dy = 0;
   overlay.align = false; overlay.flashOn = true;
   // Align hands the controller a closure that takes over every left-button
@@ -1073,22 +1173,42 @@ function clearOverlay({ draw = true } = {}) {
  * revision it would sit on the same lines and read as "nothing changed".
  */
 async function startOverlay() {
-  const revId = versionView.revId;
-  const revPage = versionView.revPage;
-  const set = versionView.set;
-  if (!revId) {
-    setStatus('Put a revision of this sheet on screen first, then Overlay it '
-      + 'on the original.');
-    return;
-  }
   const page = app.currentPage;
-  showProgress('Preparing the overlay…', 0, 1, '');
-  let tinted = null;
+  // Compare the sheet's own drawing against the NEWEST reissue of it, whichever
+  // of the two happens to be on screen. Insisting the revision be up first was
+  // right when the original was the default; now that the newest is, sliding
+  // back to the original to look at it would have refused the comparison on the
+  // one sheet the user had just said they were interested in.
+  let revId = versionView.revId;
+  let revPage = versionView.revPage;
+  let set = versionView.set;
+  if (!revId) {
+    const newest = newestOf(page);
+    const v = newest
+      && sheetVersions(page, allRevisions()).find(x => x.revId === newest);
+    if (!v) {
+      setStatus('This sheet has only one drawing — there is nothing to compare it with.');
+      return;
+    }
+    // sheetVersions hands back the revision OBJECT; the set index lives on it.
+    revId = v.revId; revPage = v.revPage; set = v.rev._setIndex;
+  }
+  showProgress('Preparing the comparison…', 0, 1, '');
+  let inkNew = null;
+  let inkOld = null;
   try {
     const bmp = await app.pages.getRevisionPage(set, revPage);
-    tinted = await tintLinework(bmp, [255, 77, 77]);
+    inkNew = await tintLinework(bmp, INK_NEW);
+    // The sheet's OWN drawing is the other half of the comparison, and it has
+    // to become ink too. Left as a raster its white paper would cover the
+    // revision's lines wherever the two differ — which is precisely and only
+    // the places worth looking at.
+    const own = await app.pages.getPage(page);
+    inkOld = await tintLinework(own, INK_OLD);
   } catch (err) {
-    await D.alertDialog('Could not build the overlay', err.message);
+    inkNew?.close?.();
+    inkOld?.close?.();
+    await D.alertDialog('Could not build the comparison', err.message);
     return;
   } finally {
     hideProgress();
@@ -1096,16 +1216,27 @@ async function startOverlay() {
   clearOverlay({ draw: false });
   overlay.revId = revId;
   overlay.revPage = revPage;
-  overlay.bitmap = tinted;
-  overlay.alpha = Number($('ovAlpha').value) / 100;
-  // Back to the sheet's own drawing — that is what the revision goes OVER.
-  await showSheetVersion(page, '', { announce: false });
+  overlay.bitmap = inkNew;
+  overlay.older = inkOld;
+  overlay.balance = Number($('ovBalance').value) / 100;
+  // The version on screen is deliberately NOT changed.
+  //
+  // This used to flip back to the sheet's own drawing so the revision had
+  // something to sit on. The comparison paints both drawings itself now, so
+  // the flip bought nothing — and it cost a great deal: it left the sheet
+  // standing on its superseded drawing, which marked it OLD, raised the badge
+  // and made it read-only, for the crime of comparing. Comparing is looking at
+  // both; it is not being on the old one.
   $('overlayBar').hidden = false;
+  // Bring the stack down with it. A bar whose whole purpose is a slider the
+  // user is about to drag must not arrive hidden above the top of the window.
+  openChrome();
   $('ovWhat').textContent = revisionLabel(revId, allRevisions());
+  syncCompareLabel();
   syncVersionUi();
   requestDraw();
-  setStatus('Revision overlaid in red — Opacity to blend, Align to drag it '
-    + 'into register, Flash to blink the changes.');
+  setStatus('Comparing: older in blue, newest in red. Slide towards the one '
+    + 'you want to see more of — the centre shows both.');
 }
 
 /**
@@ -1122,8 +1253,16 @@ async function startOverlay() {
  */
 async function tintLinework(bmp, [r, g, b]) {
   const src = bmp.bitmap || bmp;                  // a ReducedPage wraps one
-  const w = src.width;
+  const w = src.width;                            // the DECODED size
   const h = src.height;
+  // ...and the size the sheet really is. On iOS a big sheet is decoded
+  // reduced into a ReducedPage that still reports its native dimensions, and
+  // everything downstream — the paper plate, the align offset, the page
+  // coordinates — is in native pixels. Returning a bare bitmap measured in
+  // decoded pixels drew the whole comparison at a fraction of its size in the
+  // corner of a full-size white plate.
+  const nativeW = bmp.width || w;
+  const nativeH = bmp.height || h;
   const cv = typeof OffscreenCanvas !== 'undefined'
     ? new OffscreenCanvas(w, h)
     : Object.assign(document.createElement('canvas'), { width: w, height: h });
@@ -1139,7 +1278,15 @@ async function tintLinework(bmp, [r, g, b]) {
     d[i + 3] = 255 - lum;
   }
   ctx.putImageData(img, 0, 0);
-  return createImageBitmap(cv);
+  const bitmap = await createImageBitmap(cv);
+  // The same shape ReducedPage has: the renderer already draws `bitmap` to an
+  // explicit destination size taken from `width`/`height`.
+  return {
+    bitmap,
+    width: nativeW,
+    height: nativeH,
+    close() { this.bitmap?.close?.(); },
+  };
 }
 
 function toggleOverlayAlign() {
@@ -1594,16 +1741,142 @@ $('markupWidth').addEventListener('input', () => {
 // ── the revision bars' own controls ──────────────────────────────────────
 // (every plain button in them carries data-act and is dispatched already)
 
-$('ovAlpha').addEventListener('input', () => {
-  const v = Math.max(5, Math.min(95, Number($('ovAlpha').value) || 50));
-  overlay.alpha = v / 100;
-  $('ovAlphaOut').textContent = `${v}%`;
+$('ovBalance').addEventListener('input', () => {
+  overlay.balance = Math.max(-1, Math.min(1, (Number($('ovBalance').value) || 0) / 100));
+  syncCompareLabel();
   requestDraw();
 });
 
-$('vbNewest').addEventListener('change', () => {
-  safeRun('newest-versions');
+// Double-click the slider to put it back in the middle. A balance control is
+// worth being able to re-centre exactly, and dragging to 0 by hand is fiddly.
+$('ovBalance').addEventListener('dblclick', () => {
+  $('ovBalance').value = '0';
+  overlay.balance = 0;
+  syncCompareLabel();
+  requestDraw();
 });
+
+/** What the slider is saying, in words. */
+function syncCompareLabel() {
+  const out = $('ovBalanceOut');
+  if (!out) return;
+  const b = overlay.balance || 0;
+  const pct = Math.round(Math.abs(b) * 100);
+  out.textContent = pct < 3 ? 'both'
+    : b > 0 ? `newest +${pct}%`
+      : `older +${pct}%`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   The toolbars, and getting them out of the way
+
+   Five bars stack above the drawing and four of them are wanted a moment at a
+   time. Unpinned they are taken out of the layout — see the CSS, where the
+   whole stack goes `position:absolute` so its grid row collapses WITHOUT
+   being hidden; hiding a grid row is what used to slide the body into a row
+   that measured nothing and take the drawing with it.
+
+   Reaching for them is deliberately dumb: the pointer at the very top of the
+   window, or a pull down from the top edge. Both are what a person tries
+   first, and neither needs to be taught.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const appEl = $('app');
+let chromeOpen = false;
+let chromeHold = 0;          // close timer, so a brush past does not slam it
+
+function chromePinned() { return !!app.settings.get('chrome_pinned'); }
+
+function syncChrome() {
+  const pinned = chromePinned();
+  appEl.classList.toggle('chrome-float', !pinned);
+  appEl.classList.toggle('chrome-open', !pinned && chromeOpen);
+  $('chromePin')?.classList.toggle('on', pinned);
+  const item = $('chromePinItem');
+  if (item) item.textContent = pinned ? '✓ Pin Toolbars' : 'Pin Toolbars';
+  const pin = $('chromePin');
+  if (pin) {
+    pin.title = pinned
+      ? 'Toolbars are pinned — click to let them slide away (M)'
+      : 'Toolbars slide away — click to keep them on screen (M)';
+  }
+  // The options bar hangs off a toolbar button. With the stack away there is
+  // nothing to hang from, so it parks against the top of the sheet instead.
+  placeToolOptions(controller.mode);
+}
+
+function openChrome() {
+  clearTimeout(chromeHold);
+  if (chromePinned() || chromeOpen) return;
+  chromeOpen = true;
+  syncChrome();
+}
+
+function closeChrome({ delay = 0 } = {}) {
+  clearTimeout(chromeHold);
+  if (chromePinned() || !chromeOpen) return;
+  const go = () => { chromeOpen = false; syncChrome(); };
+  if (delay) chromeHold = setTimeout(go, delay);
+  else go();
+}
+
+function setChromePinned(on) {
+  app.settings.set('chrome_pinned', !!on);
+  chromeOpen = false;
+  syncChrome();
+  setStatus(on
+    ? 'Toolbars pinned'
+    : 'Toolbars hidden — reach the top of the window, or pull down from the top edge');
+}
+
+// Reaching the top of the window brings them down; leaving them sends them
+// away again, after a moment so that crossing a gap does not close them.
+$('chromeEdge').addEventListener('pointerenter', () => openChrome());
+$('chromeEdge').addEventListener('pointerdown', ev => {
+  // A pull DOWN from the edge, for a tablet, where there is no pointer to
+  // hover with. Taken on the edge strip only, so it can never be confused
+  // with a pan of the drawing.
+  const y0 = ev.clientY;
+  const id = ev.pointerId;
+  const move = e => {
+    if (e.pointerId !== id) return;
+    if (e.clientY - y0 > 12) { openChrome(); stop(); }
+  };
+  const stop = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', stop);
+    window.removeEventListener('pointercancel', stop);
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', stop);
+  window.addEventListener('pointercancel', stop);
+});
+$('chrome').addEventListener('pointerenter', () => { clearTimeout(chromeHold); });
+$('chrome').addEventListener('pointerleave', ev => {
+  // Mouse only. A finger lifting fires pointerleave, so on a tablet this
+  // closed the stack 420ms after every tap — taking the menu that had just
+  // been opened away with it. Touch closes by tapping the sheet, or pinning.
+  if (ev.pointerType && ev.pointerType !== 'mouse') return;
+  closeChrome({ delay: 420 });
+});
+// Using anything in the bars keeps them up; the menus in particular open
+// POPUPS that sit below the bar, and a close on leave would eat them.
+$('chrome').addEventListener('pointerdown', () => clearTimeout(chromeHold));
+$('chrome').addEventListener('focusin', () => clearTimeout(chromeHold));
+// The options bar is no longer inside #chrome — it has to outlive the slide,
+// because it belongs to the tool being used on the drawing. So reaching for it
+// has to cancel the close that leaving the stack just started, or it would
+// retract while the estimator is in its dropdown.
+$('toolOpts').addEventListener('pointerenter', () => clearTimeout(chromeHold));
+$('toolOpts').addEventListener('pointerdown', () => clearTimeout(chromeHold));
+$('toolOpts').addEventListener('focusin', () => clearTimeout(chromeHold));
+
+// The sheet is what you went back to looking at.
+$('stage').addEventListener('pointerdown', () => closeChrome());
+
+// No click listener here on purpose: the button carries data-act="toggle-chrome-pin"
+// and the menu dispatcher already runs it. Wiring both fired the toggle twice
+// on every press — pin then unpin — so the button did nothing at all.
 
 /** The floating options bar, parked under the button that owns it. */
 function syncToolOptions(mode) {
@@ -1710,7 +1983,12 @@ function placeToolOptions(mode) {
   let x = br.left - ar.left;
   x = Math.max(6, Math.min(x, ar.width - bw - 6));
   bar.style.left = `${x}px`;
-  bar.style.top = `${br.bottom - ar.top + 4}px`;
+  // With the stack slid away the button it hangs from is off the top of the
+  // window, and following it would park this bar at a negative offset where
+  // the tool's own options cannot be reached at all.
+  const stageTop = $('stage').getBoundingClientRect().top - ar.top;
+  const under = br.bottom - ar.top + 4;
+  bar.style.top = `${Math.max(stageTop + 6, under)}px`;
 }
 
 window.addEventListener('resize', () => placeToolOptions(controller.mode));
@@ -1931,7 +2209,13 @@ async function reacquireAfterSave(handle) {
     if (reopened.pageCount === app.pages.pageCount) {
       app.pages.setFromProject(reopened);
       pageImage = null;
-      await goToPage(app.currentPage);
+      // The version on screen is carried over explicitly. Without it this
+      // resolves "whatever you get when you do not ask", which is now the
+      // NEWEST — so saving while working on a sheet's own drawing swapped the
+      // drawing underneath the estimator and hid every item they had just
+      // taken off. Re-pointing the blob slices at the re-written file is
+      // bookkeeping; it must not move anybody.
+      await goToPage(app.currentPage, { version: versionView.revId });
       thumbs.refresh(app.currentPage);
     }
   } catch (err) {
@@ -2629,10 +2913,12 @@ async function runAction(act) {
       if (!app.pages.pageCount) { setStatus('Open a project first.'); break; }
       revisionsPanel.show('current');
       break;
-    case 'newest-versions': await setNewestMode(!newestMode()); break;
+    case 'toggle-chrome-pin': setChromePinned(!chromePinned()); break;
     case 'version-prev': stepSheetVersion(-1); break;
     case 'version-next': stepSheetVersion(1); break;
-    case 'version-own': await showSheetVersion(app.currentPage, ''); break;
+    case 'version-newest':
+      await showSheetVersion(app.currentPage, newestOf(app.currentPage));
+      break;
     case 'compare-overlay':
       if (overlayActive()) clearOverlay(); else await startOverlay();
       break;
@@ -3055,9 +3341,16 @@ document.addEventListener('keydown', ev => {
     // Escape walks back out of comparing, one layer at a time: the overlay
     // first, then the version, then the panel.
     if (overlayActive()) { ev.preventDefault(); clearOverlay(); return; }
-    if (browsingOtherVersion()) {
+    // A trace in progress owns Escape. This branch used to be reachable only
+    // when a revision had been deliberately raised; it is now true on the
+    // original of every reissued sheet, so Escape on a half-placed area threw
+    // the nine points away AND navigated to another drawing.
+    if (showingOldVersion() && !controller.chainLive) {
+      // Back to the newest. Escape used to go to the sheet's OWN drawing,
+      // which is now the oldest of the run — pressing "stop looking at this"
+      // would have left the oldest possible drawing on screen.
       ev.preventDefault();
-      showSheetVersion(app.currentPage, '');
+      showSheetVersion(app.currentPage, newestOf(app.currentPage));
       return;
     }
     if (revisionsPanel.open) { ev.preventDefault(); revisionsPanel.hide(); return; }
@@ -3116,6 +3409,9 @@ document.addEventListener('keydown', ev => {
       return;
     }
   }
+  // M for the menus. Toggles the PIN rather than peeking, because a keyboard
+  // press is a decision and a hover is a glance.
+  if (key === 'M') { ev.preventDefault(); setChromePinned(!chromePinned()); return; }
   if (key === 'F') { ev.preventDefault(); safeRun('zoom-fit'); }
   if (key === '1') { ev.preventDefault(); safeRun('zoom-100'); }
 });
@@ -3320,6 +3616,12 @@ syncUiModeMenu();
 // Settle the mode chrome before anything is open, so the empty state is not
 // briefly offering an Edit Mode button for a project that does not exist.
 syncModeUi();
+// The toolbars settle into pinned-or-floating before the first paint, with
+// the transition suppressed for one frame — otherwise every launch opens with
+// the whole stack visibly sliding away, which reads as a fault.
+appEl.classList.add('chrome-still');
+syncChrome();
+requestAnimationFrame(() => appEl.classList.remove('chrome-still'));
 MOBILE_Q.addEventListener('change', () => { syncMobileBar(); requestDraw(); });
 $('scrim').addEventListener('click', closeDrawers);
 syncMobileBar();
@@ -3447,7 +3749,7 @@ window.TakeoffApp = {
   // View Only — the same entry points the buttons call.
   setEditing, syncModeUi, VIEW_TOOLS,
   showSheetVersion, clearVersion, stepSheetVersion, stepSheet,
-  goToPageOwnVersion, setNewestMode, showLoosePage,
+  goToPageOwnVersion, showLoosePage, slideSheetVersion, showingOldVersion,
   startOverlay, clearOverlay, diffCurrentVersion, composeDiff,
   allRevisions, browsingOtherVersion, syncVersionUi,
   revisionCounts: () => revCountsBySheet,

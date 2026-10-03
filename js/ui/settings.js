@@ -40,6 +40,12 @@ export const DEFAULT_SETTINGS = {
   thumb_width: 190,
   items_width: 300,
   thumb_compact: false,
+  // The toolbars slide away by default and come back when reached for: five
+  // bars across the top of a drawing is a lot of furniture to read a plan
+  // through. A NEW key rather than a changed default, for the reason at the
+  // top of this file — every install that has opened Settings already has the
+  // whole object on disk, so a changed default reaches nobody.
+  chrome_pinned: false,
   distance_precision: '1/2',
   autosave_enabled: true,
   autosave_interval_minutes: 5,

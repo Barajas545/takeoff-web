@@ -1782,7 +1782,19 @@ export class ToolController extends EventTarget {
       this.emit('changed');
       return null;
     }
-    const created = this.project.addItem(this.getCurrentPage(), item, { label });
+    // Filed against the drawing it was traced on.
+    //
+    // `versionItems` keeps an item only where its rev_id matches the version
+    // on screen, and no rev_id means the sheet's own drawing. So an item drawn
+    // on a revision and left unstamped would disappear the instant it was
+    // finished — filed under a drawing the estimator was not looking at. This
+    // is the one place every finished item passes through, and it is the same
+    // stamp, off the same state, that a temporary dimension already gets.
+    const v = this.viewingVersion || {};
+    const stamped = v.revId
+      ? { ...item, rev_id: v.revId, rev_page: v.revPage }
+      : item;
+    const created = this.project.addItem(this.getCurrentPage(), stamped, { label });
     this.emit('changed');
     return created;
   }

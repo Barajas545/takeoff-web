@@ -181,7 +181,7 @@ button { font-family: inherit; }
   /* dvh so Safari's collapsing bottom bar cannot cover the last row */
   height: 100dvh;
   display: grid;
-  grid-template-rows: auto auto auto auto auto 1fr auto;
+  grid-template-rows: auto 1fr auto;
   position: relative;
 }
 /* Without this every row is floored at its min-content width: the 772px
@@ -191,17 +191,66 @@ button { font-family: inherit; }
 
 /* And every row is pinned, for the same reason the body's children are
    pinned to their columns further down. `display: none` takes an element
-   out of the grid entirely, so hiding the markup row let auto-placement
-   slide the body up into an `auto` row — it measured 0 tall, because the
-   canvas inside it is absolutely positioned — and left the 1fr row empty.
-   The drawing vanished and the toolbars looked perfectly fine. */
-.menubar    { grid-row: 1; }
-#toolbar    { grid-row: 2; }
-#markupBar  { grid-row: 3; }
-#versionBar { grid-row: 4; }
-#overlayBar { grid-row: 5; }
-.body       { grid-row: 6; }
-.statusbar  { grid-row: 7; }
+   out of the grid entirely, so hiding a row let auto-placement slide the
+   body up into an `auto` row — it measured 0 tall, because the canvas
+   inside it is absolutely positioned — and left the 1fr row empty. The
+   drawing vanished and the toolbars looked perfectly fine.
+
+   That is also why the five bars above the drawing are now ONE element:
+   inside #chrome they stack with flex, where `hidden` is safe, and the grid
+   never sees them. */
+#chrome     { grid-row: 1; }
+.body       { grid-row: 2; }
+.statusbar  { grid-row: 3; }
+
+/* ── the chrome stack ─────────────────────────────────────────────────── */
+
+.chrome {
+  display: flex; flex-direction: column;
+  min-width: 0;
+  position: relative; z-index: 60;
+}
+
+/* Unpinned: out of flow, so the row it sits in collapses to nothing and the
+   drawing gets the whole window. Nothing is hidden — hiding is what moved
+   the body and lost the canvas — it is simply not in the flow any more. */
+.app.chrome-float .chrome {
+  position: absolute; top: 0; left: 0; right: 0;
+  transform: translateY(-100%);
+  transition: transform .18s cubic-bezier(.2, .7, .3, 1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
+  border-bottom: 1px solid var(--border-hard);
+}
+.app.chrome-float.chrome-open .chrome { transform: translateY(0); }
+
+/* Nothing animates on the first paint, or every launch slides. */
+.app.chrome-float.chrome-still .chrome { transition: none; }
+
+/* The strip you pull it down from: four pixels of nothing at the very top,
+   with a grip that shows itself when the pointer gets near. Pinned, it is
+   not there at all — there is nothing to pull. */
+.chrome-edge {
+  position: absolute; top: 0; left: 0; right: 0; height: 5px;
+  z-index: 59; display: none;
+  touch-action: none;
+}
+.app.chrome-float .chrome-edge { display: block; }
+.app.chrome-float.chrome-open .chrome-edge { display: none; }
+.chrome-edge-grip {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 86px; height: 4px; border-radius: 0 0 5px 5px;
+  background: var(--border-hard);
+  opacity: .5; transition: opacity .15s, height .15s;
+}
+.chrome-edge:hover .chrome-edge-grip { opacity: 1; height: 7px; }
+
+.pin-btn {
+  background: transparent; border: 1px solid transparent; border-radius: 4px;
+  color: var(--text-faint); font-size: 12px; line-height: 1;
+  padding: 3px 5px; cursor: pointer; filter: grayscale(1); opacity: .55;
+}
+.pin-btn:hover { background: #2a2a2a; opacity: .9; }
+.pin-btn.on { filter: none; opacity: 1; border-color: var(--border-hard); }
 
 /* ── menu bar ─────────────────────────────────────────────────────────── */
 
@@ -344,6 +393,14 @@ button { font-family: inherit; }
 
 .ovbar { background: var(--chip-bg); }
 
+/* Wider than the ordinary range, because this one is read as a position and
+   not just dragged: the centre has to be findable by eye. */
+.tb-range.wide { width: 190px; }
+.ov-bal {
+  min-width: 68px; font-variant-numeric: tabular-nums;
+  color: var(--text-2); font-weight: 600;
+}
+
 .vb-sheet {
   font-size: 11.5px; font-weight: 600; color: var(--text);
   white-space: nowrap;
@@ -431,7 +488,37 @@ button { font-family: inherit; }
 .thumb {
   padding: 6px 8px; cursor: pointer;
   border-bottom: 1px solid #1c1c1c;
+  position: relative;
+  /* Vertical scrolling belongs to the list; the horizontal axis is ours, for
+     sliding a sheet back through its versions. */
+  touch-action: pan-y;
 }
+/* Follows the finger while it is being slid. No transition here — a
+   transition on the live drag is what makes a swipe feel like treacle. */
+.thumb-slide { position: relative; }
+.thumb.settling .thumb-slide { transition: transform .16s ease-out; }
+
+/* Showing something other than the newest drawing of this sheet. The frame
+   turns red, and it stays red while you page away and come back, because the
+   version you chose is still the one that sheet is on. */
+.thumb.oldver .thumb-img { border-color: var(--old-line, #e03c3c); }
+.thumb.oldver {
+  box-shadow: inset 3px 0 0 var(--old-line, #e03c3c);
+  background: rgba(190, 40, 40, .07);
+}
+.thumb.oldver .thumb-ver { color: #ff7a7a; }
+.thumb-ver {
+  font-size: 9px; font-weight: 700; letter-spacing: .3px;
+  color: var(--text-faint); white-space: nowrap;
+}
+/* The hint that a sheet has more than one drawing and can be slid. */
+.thumb-swipe {
+  position: absolute; inset: 0; pointer-events: none;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2px; opacity: 0; transition: opacity .15s;
+  font-size: 13px; color: var(--rev-fg);
+}
+.thumb.hasrev:hover .thumb-swipe { opacity: .55; }
 .thumb:hover { background: #1c1c1c; }
 .thumb.on { background: var(--select); }
 .thumb-img {
@@ -439,24 +526,54 @@ button { font-family: inherit; }
   border-radius: 3px; display: block; min-height: 40px;
 }
 .thumb.on .thumb-img { border-color: #6a95cf; }
+/* Two lines: the sheet NUMBER, which is what a callout names, and under it
+   the sheet NAME, which is what it is called in conversation. The name wraps
+   to its own line rather than sharing one — at 190px a shared line truncated
+   "Floor Plans" to "Flo…" on the sheets that matter most. */
 .thumb-cap {
-  display: flex; align-items: baseline; gap: 6px; margin-top: 4px;
+  display: grid; grid-template-columns: 1fr auto auto;
+  align-items: baseline; gap: 2px 6px; margin-top: 4px;
 }
 .thumb-no {
-  font-size: 11px; font-weight: 700; color: var(--text-2);
-  white-space: nowrap;
+  font-size: 11.5px; font-weight: 700; color: var(--text-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .thumb.on .thumb-no { color: #fff; }
 .thumb-name {
+  grid-column: 1 / -1;
   font-size: 10px; color: var(--text-faint);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.thumb.on .thumb-name { color: var(--text-2); }
 .thumb-badge {
   margin-left: auto; font-size: 9.5px; color: var(--accent-2);
   background: #16283a; border-radius: 3px; padding: 1px 4px;
 }
 .thumbs.compact .thumb-img { display: none; }
 .thumbs.compact .thumb { padding: 4px 8px; }
+
+/* ── not the newest drawing ───────────────────────────────────────────── */
+
+/* Big enough that it cannot be missed from across a desk, translucent enough
+   that it never hides a line of the drawing it is sitting on, and pinned to
+   the corner of the SHEET area rather than the window so a panel sliding open
+   cannot push it somewhere else. */
+.old-badge {
+  position: absolute; top: 10px; right: 14px; z-index: 30;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  pointer-events: none; user-select: none;
+}
+.old-badge[hidden] { display: none; }
+.old-word {
+  font-size: 44px; font-weight: 900; letter-spacing: 4px; line-height: .9;
+  color: rgba(255, 60, 60, .42);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+.old-sub {
+  font-size: 11px; font-weight: 700; letter-spacing: .5px;
+  color: rgba(255, 90, 90, .72);
+  background: rgba(0, 0, 0, .3); border-radius: 3px; padding: 1px 6px;
+}
 
 /* ── items panel ──────────────────────────────────────────────────────── */
 
