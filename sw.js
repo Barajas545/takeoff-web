@@ -2,51 +2,115 @@
  * Service worker — so the app runs with no signal.
  *
  * A takeoff happens in a site trailer, in a truck, or in a house with no
- * roof on it yet. The whole app is about 4 MB including pdf.js, which is
- * small enough to keep entirely, so after one visit on a connection it
- * opens and works offline for good.
+ * roof on it yet. So the whole program — the page, the stylesheet and every
+ * module js/main.js can load — is cached when this worker installs, all or
+ * nothing (PROGRAM, below). Once one visit on a connection has let that
+ * install finish, the app opens offline, including on a device that had
+ * never run it before. pdf.js, the materials catalog and the icons are added
+ * on top, best-effort (EXTRAS). The copy lasts until the browser clears the
+ * site's storage or the next version installs in its place.
  *
- * Project files are NOT cached and never could be: they are the estimator's
- * own documents, they reach the app through a file picker, and they run to
- * gigabytes. Only the program is cached.
+ * Project files are never put in this cache: they are the estimator's own
+ * documents and run to gigabytes. Plans saved for offline use are kept by
+ * the portal's Plans Library, in the origin-private file system, not here.
  *
  * Bump CACHE whenever the app changes, or an installed copy will keep
- * serving the old one.
+ * serving the old one. A new module goes in PROGRAM: tests/sw-precache.mjs
+ * fails when one main.js can reach is missing, and when an entry names a
+ * file that does not exist — that would fail every install.
  */
-const CACHE = 'ptt-web-v7';
+const CACHE = 'ptt-web-v9';
 
 /**
- * The shell, precached on install so the very first offline load works even
- * if the estimator never happened to open the Reports dialog while online.
- * Everything else — the rest of the modules, pdf.js, the catalog — is cached
- * as it is first used, which is what the fetch handler below is for.
+ * The program, precached on install: the page, the stylesheet, and every
+ * module js/main.js can load — its static import graph, plus the one module
+ * it only imports on demand.
+ *
+ * All of it, up front, because nothing else would cache it in time. The
+ * worker registers at `load`, after the page has fetched every module
+ * without it, so on a first visit the fetch handler sees none of them. With
+ * only the old seven-file shell precached, a device that had never run the
+ * app before could not open a saved plan offline: index.html and main.js
+ * came from the cache, ./core/takeoff-file.js and the rest got this worker's
+ * 503.
  *
  * Relative, every one of them: this app is served from a project subpath on
  * GitHub Pages, not from a domain root.
  */
-const SHELL = [
+const PROGRAM = [
   './',
   'index.html',
   'css/app.css',
   'js/main.js',
+  'js/core/canvas-limits.js',
+  'js/core/drafts.js',
+  'js/core/geom.js',
+  'js/core/measure.js',
+  'js/core/page-store.js',
+  'js/core/pdf-import.js',
+  'js/core/project.js',
+  'js/core/remote-file.js',
+  'js/core/revisions.js',
+  'js/core/scratch.js',
+  'js/core/takeoff-file.js',
+  'js/core/units.js',
+  'js/core/xlsx.js',
+  'js/core/zlib.js',
+  'js/render/callouts.js',
+  'js/render/labels.js',
+  'js/render/markers.js',
+  'js/render/renderer.js',
+  'js/render/theme.js',
+  'js/render/viewport.js',
+  'js/tools/controller.js',
+  'js/tools/markup.js',
+  'js/ui/callout-preview.js',
+  'js/ui/catalog.js',
+  'js/ui/dialogs.js',
+  'js/ui/items-panel.js',
+  'js/ui/report-html.js',
+  'js/ui/reports.js',
+  'js/ui/revisions-panel.js',
+  'js/ui/settings.js',
+  'js/ui/thumbnails.js',
+  'js/ui/version-bar.js',
+  'js/ui/assemblies.js',          // imported on demand by the materials manager
+];
+
+/**
+ * Worth having offline, not worth failing an install over: the PDF engine
+ * (starting a job from a PDF), the catalog behind the name box's suggestions,
+ * the manifest and the icons. pdf.js's cmaps and standard fonts are left to
+ * the fetch handler — only some PDFs ever ask for them.
+ */
+const EXTRAS = [
   'manifest.webmanifest',
   'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png',
+  'data/materials_catalog.json',
+  'vendor/pdfjs/build/pdf.min.js',
+  'vendor/pdfjs/build/pdf.worker.min.js',
 ];
 
 self.addEventListener('install', ev => {
   ev.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    // One at a time and forgiving: addAll rejects the whole install if any
-    // single entry 404s, which would leave the app with no worker at all.
-    // And revalidating rather than cache.add, because the browser's HTTP
-    // cache would otherwise hand the installer the very copy this new
-    // version exists to replace.
-    await Promise.all(SHELL.map(async u => {
+    // All or nothing. addAll stores none of it unless every request succeeds,
+    // and its rejection fails this install — so a version that cannot cache
+    // itself whole never replaces one that could, and the old worker keeps
+    // serving its own complete copy. `no-cache` revalidates against the
+    // server, or the browser's HTTP cache would hand this installer the very
+    // copies the new version exists to replace.
+    await cache.addAll(PROGRAM.map(u => new Request(u, { cache: 'no-cache' })));
+    // Best-effort, once the program is safely in: one of these failing costs
+    // a feature offline, not the app.
+    await Promise.all(EXTRAS.map(async u => {
       try {
         const res = await fetch(u, { cache: 'no-cache' });
         if (res && res.ok) await cache.put(u, res);
-      } catch { /* a shell entry that will not load must not fail install */ }
+      } catch { /* left to the fetch handler */ }
     }));
     await self.skipWaiting();
   })());
@@ -55,7 +119,10 @@ self.addEventListener('install', ev => {
 self.addEventListener('activate', ev => {
   ev.waitUntil((async () => {
     const names = await caches.keys();
-    await Promise.all(names.filter(n => n !== CACHE).map(n => caches.delete(n)));
+    // Same origin as the portal: delete only this app's old caches, never its "dcr-portal-*" one.
+    await Promise.all(names
+      .filter(n => n.startsWith('ptt-web-') && n !== CACHE)
+      .map(n => caches.delete(n)));
     await self.clients.claim();
   })());
 });

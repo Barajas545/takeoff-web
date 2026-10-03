@@ -53,6 +53,10 @@ const app = {
   currentPage: 0,
   fileHandle: null,
   fileName: '',
+  // The Plans Library copy the open project reads its sheets from, and the
+  // lock that keeps the portal from deleting it — null for any other file.
+  // See openLibraryCopy().
+  libraryCopy: null,
   // False is View Only, which is what a project opens in. See setEditing().
   editing: false,
 };
@@ -2039,7 +2043,15 @@ async function openProjectFile() {
   await loadProjectFile(file, handle);
 }
 
-async function loadProjectFile(file, handle = null) {
+/**
+ * Open any File-like project. Resolves true once it is on screen and false
+ * when it could not be opened. A failure has already been shown to the user
+ * by then, so the answer is only for adding to a successful open.
+ *
+ * `library` is given only for a Plans Library copy (see openLibraryCopy): the
+ * hold that keeps the portal from deleting that copy while it is open.
+ */
+async function loadProjectFile(file, handle = null, { library = null } = {}) {
   showProgress('Opening project…', 0, 1, file.name);
   try {
     // Only the header, the metadata and the page index are read here — about
@@ -2057,6 +2069,12 @@ async function loadProjectFile(file, handle = null) {
     });
     app.pages.setFromProject(opened);
     app.fileHandle = handle;
+    // The project in hand is this one from here on. A library copy the last
+    // one was read from is no longer open, so its lock goes now — not before,
+    // because a failed open leaves the last project open and still reading
+    // it. A library open brings its own hold, and the save check follows it.
+    if (app.libraryCopy && app.libraryCopy !== library) app.libraryCopy.release();
+    app.libraryCopy = library;
     app.fileName = file.name;
     app.fileSize = file.size;
     app.project.filePath = file.name;
@@ -2088,7 +2106,9 @@ async function loadProjectFile(file, handle = null) {
     await goToPage(Math.max(0, start));
     syncVersionUi({ rebuild: true });
     app.project.markSaved();
-    noteRecent(file);
+    // Not a library copy: Recent can only offer the OS file picker, and that
+    // cannot see the browser's private storage the copy lives in.
+    if (!library) noteRecent(file);
     syncTitle();
     await offerDraftRestore(file);
     const mb = (file.size / 1048576).toFixed(file.size > 1e9 ? 0 : 1);
@@ -2096,8 +2116,10 @@ async function loadProjectFile(file, handle = null) {
       `Opened ${file.name} — ${opened.pageCount} sheet${opened.pageCount === 1 ? '' : 's'}, ${mb} MB` +
       (opened.revisions.length ? `, ${opened.revisions.length} revision set(s)` : '')
     );
+    return true;
   } catch (err) {
     await D.alertDialog('Could not open', `${file.name}\n\n${err.message}`);
+    return false;
   } finally {
     hideProgress();
   }
@@ -2114,6 +2136,22 @@ async function saveProject({ saveAs = false } = {}) {
   // line — and refusing to save that loses real work with no message.
   if (!app.pages.pageCount && ![...app.project.allItems()].length) {
     setStatus('Nothing to save yet.');
+    return;
+  }
+
+  // A project opened from a Plans Library copy reads every untouched sheet
+  // out of that copy as it is written. If the portal has removed or replaced
+  // the copy since, those reads fail part-way through — or, where a download
+  // resolves before its bytes are read, the save reports success with the
+  // sheets missing and the draft dropped. So check before writing anything,
+  // and keep the work as a draft: the project stays dirty, the draft stays.
+  if (app.libraryCopy && !(await libraryCopyReadable(app.libraryCopy.file))) {
+    await saveDraftNow();
+    await D.alertDialog('Saved copy no longer on this device',
+      'The saved copy this project was opened from has been removed or replaced '
+      + 'on this device, so the project cannot be written from it. Your changes '
+      + 'are kept as a draft on this device — open the plan again (from the '
+      + 'Plans Library or SharePoint) to get them back.');
     return;
   }
 
@@ -2208,6 +2246,10 @@ async function reacquireAfterSave(handle) {
     const reopened = await openProject(file);
     if (reopened.pageCount === app.pages.pageCount) {
       app.pages.setFromProject(reopened);
+      // Every sheet now comes from the file just written, so a Plans Library
+      // copy the project was opened from is free to go — and the save check
+      // must not keep holding this project to it.
+      releaseLibraryCopy();
       pageImage = null;
       // The version on screen is carried over explicitly. Without it this
       // resolves "whatever you get when you do not ask", which is now the
@@ -2727,6 +2769,9 @@ function newProject() {
   app.currentPage = 0;
   app.fileHandle = null;
   app.fileName = '';
+  // The old project is gone, so a library copy it was read from is no
+  // longer open and the portal may tidy it away.
+  releaseLibraryCopy();
   controller.selected.clear();
   controller.cancel();
   showEmptyState();
@@ -2781,6 +2826,9 @@ async function runAction(act) {
     case 'new-project':
       if (!(await confirmDiscard())) return;
       newProject();
+      // Back at an empty start screen: a new version that arrived while the
+      // project was open can load now without costing anything.
+      reloadForUpdateIfIdle();
       break;
     case 'open-project': await openProjectFile(); break;
     case 'import-pdf': {
@@ -3528,7 +3576,11 @@ function syncHistoryButtons() {
   $('redoBtn').title = app.project.canRedo ? `Redo ${app.project.redoLabel}` : 'Nothing to redo';
 }
 
-function showEmptyState() { $('emptyState').hidden = false; }
+function showEmptyState() {
+  $('emptyState').hidden = false;
+  // Back at the start screen: list whatever the Plans Library holds now.
+  renderLibraryList();
+}
 function hideEmptyState() { $('emptyState').hidden = true; }
 
 function showProgress(label, done, total, sub = '') {
@@ -3643,6 +3695,9 @@ onSettingsChanged();
  * The file is never downloaded. It is opened over HTTP ranges exactly as it
  * would be from disk, which is what makes a 155 MB plan set open in about a
  * second on a phone.
+ *
+ * A record with source "library" is different: it names a copy the Plans
+ * Library already saved on this device, and goes to openLibraryCopy instead.
  */
 async function openFromPortal(id) {
   let rec = null;
@@ -3654,6 +3709,13 @@ async function openFromPortal(id) {
   try {
     history.replaceState(null, '', location.pathname + location.search);
   } catch { /* cosmetic */ }
+
+  // Saved on this device: no link, no network. Checked first because such a
+  // record carries no url, and the check below would turn it away.
+  if (rec && rec.source === 'library') {
+    await openLibraryCopy(rec);
+    return;
+  }
 
   if (!rec || !rec.url) {
     // Most often a reload after the key was consumed, not a fault.
@@ -3693,6 +3755,264 @@ function renewerFor(r) {
   };
 }
 
+// ── saved on this device: the portal's Plans Library ──────────────────────
+/**
+ * Plans the portal saved to this device so they open with no signal.
+ *
+ * The portal downloads each .takeoff into the origin-private file system,
+ * folder "plans-library", and both apps share an origin — so PTT reads those
+ * files directly. They belong to the portal: it keeps its own records in
+ * IndexedDB and publishes a small read-only index to localStorage, which is
+ * all the start-screen list is built from. PTT never writes the files, the
+ * folder or the index; a library copy is a mirror of the SharePoint version.
+ */
+const LIBRARY_INDEX_KEY = 'dcr.plansLibrary.v1';
+const LIBRARY_DIR = 'plans-library';
+const LIBRARY_FILE_RE = /^[A-Za-z0-9_-]+\.takeoff$/;
+const PORTAL_TOKEN_KEY = 'dcr_portal_token';
+
+let libraryOpening = false;
+
+/**
+ * Open a library copy — a record the portal handed over (source "library")
+ * or an entry from the start-screen list. Everything that can go wrong is
+ * shown here as a dialog; nothing is thrown to the caller.
+ */
+async function openLibraryCopy(entry) {
+  // A double-tap on a list entry must not start two opens of one file.
+  if (libraryOpening) return;
+  libraryOpening = true;
+  try {
+    // The name goes straight to getFileHandle, so nothing but a plain file
+    // name inside the library folder is ever looked up.
+    const name = typeof entry?.file === 'string' ? entry.file : '';
+    if (!LIBRARY_FILE_RE.test(name)) {
+      await D.alertDialog('Could not open', 'That saved plan link is not valid.');
+      return;
+    }
+    const f = await libraryFile(name);
+    if (!f) {
+      await D.alertDialog('Not on this device',
+        'This saved plan is no longer on this device. Open the Plans Library '
+        + 'in the portal to save it again.');
+      return;
+    }
+    const want = Number(entry.size);
+    if (want > 0 && f.size !== want) {
+      await D.alertDialog('Saved plan is incomplete',
+        'This saved plan did not finish downloading. Open the Plans Library in '
+        + 'the portal to finish or repeat the download.');
+      return;
+    }
+    // Wrapped only to carry the display name and the SharePoint version's
+    // date. No bytes are copied: PTT reads it by slices like a file from disk.
+    const file = new File([f], entry.name || f.name, {
+      type: 'application/octet-stream',
+      lastModified: Number(entry.lastModified) || f.lastModified,
+    });
+    // From here until another project replaces this one, the portal must
+    // not delete the copy. Taken in the same turn the File arrived in, and
+    // handed to loadProjectFile, which keeps it only if the open succeeds.
+    const hold = holdLibraryCopy(name, file);
+    let opened = false;
+    try {
+      // NO handle, deliberately. This copy is the SharePoint version and
+      // Save must never write into it — Save goes to Save As or a download,
+      // like any other file the portal opened.
+      opened = await loadProjectFile(file, null, { library: hold });
+    } finally {
+      // Not taken over by an open project, so nothing needs the copy kept.
+      if (app.libraryCopy !== hold) hold.release();
+    }
+    if (opened && entry.updateAvailable === true) {
+      setStatus('Opened your saved copy — a newer version is in SharePoint. '
+        + 'Update it from the Plans Library.');
+    }
+  } catch (err) {
+    await D.alertDialog('Could not open', err.message || String(err));
+  } finally {
+    libraryOpening = false;
+  }
+}
+
+/** The library copy's File, or null when it is not on this device. */
+async function libraryFile(name) {
+  if (typeof navigator.storage?.getDirectory !== 'function') return null;
+  try {
+    const root = await navigator.storage.getDirectory();
+    const dir = await root.getDirectoryHandle(LIBRARY_DIR);
+    const fh = await dir.getFileHandle(name);
+    return await fh.getFile();
+  } catch (err) {
+    if (err && err.name === 'NotFoundError') return null;
+    throw err;
+  }
+}
+
+/**
+ * Tell the portal this library copy is open, so it is not deleted under it.
+ *
+ * A SHARED Web Lock named 'dcr-plans-open:<file>': the portal skips or defers
+ * deleting any library file whose lock is held. It is kept until another
+ * project replaces this one (loadProjectFile), the project is closed
+ * (newProject) or a Save As moves its sheets to the new file
+ * (reacquireAfterSave) — and the browser drops it when the page goes away.
+ * Shared, because two windows may have the same plan open. The promise
+ * exists before the request, so release() works even before the lock is
+ * granted. Without Web Locks nothing is held and release() does nothing.
+ */
+function holdLibraryCopy(name, file) {
+  let release = () => {};
+  if (typeof navigator.locks?.request === 'function') {
+    const open = new Promise(resolve => { release = resolve; });
+    navigator.locks.request(`dcr-plans-open:${name}`, { mode: 'shared' }, () => open)
+      .catch(() => { /* no lock is no worse than a browser without Web Locks */ });
+  }
+  return { name, file, release };
+}
+
+/** The open project no longer reads from a library copy: let it go. */
+function releaseLibraryCopy() {
+  if (app.libraryCopy) app.libraryCopy.release();
+  app.libraryCopy = null;
+}
+
+/**
+ * Can the library copy still be read? One byte from each end is enough:
+ * reading a File whose file has since been deleted or replaced throws, and
+ * that is exactly what saving the project would run into part-way through.
+ */
+async function libraryCopyReadable(file) {
+  try {
+    await file.slice(0, 1).arrayBuffer();
+    await file.slice(Math.max(0, file.size - 1), file.size).arrayBuffer();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The signed-in portal user's id — the `sub` in the token's payload — or ''
+ * when there is no token or it cannot be read.
+ *
+ * Its expiry is deliberately not checked. This list exists for opening plans
+ * with no signal, which is exactly when a session has most likely lapsed; the
+ * owner match is there so one person's saved plans stay out of another's list
+ * on a shared device.
+ */
+function portalUserId() {
+  try {
+    const part = (localStorage.getItem(PORTAL_TOKEN_KEY) || '').split('.')[1];
+    if (!part) return '';
+    const b64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
+    const payload = JSON.parse(new TextDecoder().decode(
+      Uint8Array.from(bin, ch => ch.charCodeAt(0))));
+    const sub = payload ? payload.sub : null;
+    return typeof sub === 'string' || typeof sub === 'number' ? String(sub) : '';
+  } catch {
+    return '';
+  }
+}
+
+/** This user's finished library copies, sorted for the list; [] when none. */
+function libraryEntries() {
+  const me = portalUserId();
+  if (!me) return [];
+  let index = null;
+  try {
+    index = JSON.parse(localStorage.getItem(LIBRARY_INDEX_KEY) || 'null');
+  } catch {
+    return [];
+  }
+  if (!index || index.v !== 1 || !Array.isArray(index.entries)) return [];
+  const coll = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+  const code = e => String(e.projectCode ?? '').trim();
+  return index.entries
+    .filter(e => e && typeof e === 'object'
+      && e.status === 'ready'
+      && e.owner != null && String(e.owner) === me
+      // An entry that could never open is not offered at all.
+      && typeof e.file === 'string' && LIBRARY_FILE_RE.test(e.file))
+    .sort((a, b) => coll.compare(code(a), code(b))
+      || coll.compare(String(a.name ?? ''), String(b.name ?? '')));
+}
+
+/**
+ * Fill the start screen's "Saved on this device" list. The whole section is
+ * hidden when there is nothing to show — no portal sign-in, an index this
+ * cannot read, or simply no finished copies of this user's.
+ */
+function renderLibraryList() {
+  const box = $('esLibrary');
+  const list = $('esLibraryList');
+  if (!box || !list) return;
+  const entries = libraryEntries();
+  list.replaceChildren(...entries.map(libraryItem));
+  box.hidden = !entries.length;
+}
+
+/** One entry: which job, which file, and how old this copy is. */
+function libraryItem(entry) {
+  const code = String(entry.projectCode ?? '').trim();
+  const title = String(entry.projectTitle ?? '').trim();
+  const name = String(entry.name || entry.file);
+  const folder = String(entry.folder ?? '').trim();
+
+  const b = D.el('button', 'es-lib-item');
+  b.type = 'button';
+  b.appendChild(D.el('span', 'es-lib-title',
+    code && title ? `${code} — ${title}` : (code || title || name)));
+  // A backup and the main copy of one job can share a file name.
+  b.appendChild(D.el('span', 'es-lib-file', folder ? `${folder} / ${name}` : name));
+
+  const meta = D.el('span', 'es-lib-meta');
+  const facts = [librarySize(entry.size), libraryVersionDate(entry.lastModified)]
+    .filter(Boolean).join(' · ');
+  if (facts) meta.appendChild(D.el('span', null, facts));
+  if (entry.updateAvailable === true) {
+    meta.appendChild(D.el('span', 'es-lib-chip', 'Newer version in SharePoint'));
+  }
+  if (meta.childNodes.length) b.appendChild(meta);
+
+  b.addEventListener('click', async () => {
+    if (app.project.dirty && !(await confirmDiscard())) return;
+    await openLibraryCopy(entry);
+  });
+  return b;
+}
+
+function librarySize(bytes) {
+  const n = Number(bytes);
+  if (!(n > 0)) return '';
+  if (n >= 1073741824) return `${(n / 1073741824).toFixed(1)} GB`;
+  if (n >= 1048576) return `${(n / 1048576).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(n / 1024))} KB`;
+}
+
+function libraryVersionDate(ms) {
+  const n = Number(ms);
+  const d = new Date(n);
+  if (!(n > 0) || Number.isNaN(d.getTime())) return '';
+  return 'version of '
+    + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// The portal is usually open in another tab. When it saves, finishes or
+// removes a plan — or someone signs in or out there — the list follows. A
+// null key is the whole store being cleared.
+window.addEventListener('storage', ev => {
+  if (ev.key === null || ev.key === LIBRARY_INDEX_KEY || ev.key === PORTAL_TOKEN_KEY) {
+    renderLibraryList();
+  }
+});
+// Back from the Plans Library page: a page restored from the back/forward
+// cache missed every storage event fired while it was away.
+window.addEventListener('pageshow', ev => {
+  if (ev.persisted) renderLibraryList();
+});
+
 /* Checked synchronously: an async check would let the idle status below land
    on top of "Opening project…". */
 const HANDOFF = /(?:^|[#&])open=([^&]+)/.exec(location.hash || '');
@@ -3701,11 +4021,16 @@ if (HANDOFF) {
   openFromPortal(HANDOFF[1]).catch(async err => {
     setStatus('Could not open that project.');
     await D.alertDialog('Could not open', err.message || String(err));
+  }).finally(() => {
+    // Nothing opened — a used link, a saved copy no longer here — so this is
+    // the start screen after all, and it lists what is saved like any launch.
+    if (!$('emptyState').hidden) renderLibraryList();
   });
 } else {
   setStatus(canUseFsApi
     ? 'Open a .takeoff project, or start from a PDF.'
     : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.');
+  renderLibraryList();
 }
 requestDraw();
 
@@ -3716,20 +4041,51 @@ loadCatalog().then(n => {
   if (n) setStatus(`Materials catalog ready — ${n.toLocaleString('en-US')} items`);
 }).catch(() => {});
 
+/**
+ * A new version has taken over this page (see controllerchange below).
+ *
+ * Loading it means a reload, and a reload drops whatever is open — so it
+ * happens only when nothing would be lost: the start screen up, nothing
+ * unsaved, nothing opening or saving, no dialog waiting for an answer.
+ * Returns whether it is reloading.
+ */
+let updateWaiting = false;
+let updateReloading = false;
+
+function reloadForUpdateIfIdle() {
+  if (!updateWaiting || updateReloading) return false;
+  const idle = !$('emptyState').hidden && !app.project.dirty
+    && $('progress').hidden && !libraryOpening && !D.dialogsOpen();
+  if (!idle) return false;
+  updateReloading = true;
+  location.reload();
+  return true;
+}
+
 // Offline. Registered late and never awaited: a worker that fails to
 // register must not stop the app from opening a project.
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   // Was a worker already driving this page? If so, a NEW one taking over
   // means the app was updated underneath us and the HTML now on screen is
-  // the old one. Reload once so the markup, the stylesheet and the modules
-  // are all the same version — a mismatched set is how a page ends up with
+  // the old one. Reload so the markup, the stylesheet and the modules are
+  // all the same version — a mismatched set is how a page ends up with
   // buttons that cannot be clicked.
+  //
+  // But never out from under a project. The update can arrive from anywhere
+  // — the portal's hidden warm-up frame loading this app is enough — and
+  // with skipWaiting and clients.claim every open window gets it at once:
+  // a set of drawings being read would drop back to the start screen, and
+  // iOS shows no leave-page prompt. So from an idle start screen it reloads
+  // at once, as it always has; otherwise it says so and waits for the
+  // project to be closed (runAction 'new-project'), or for the next launch.
   const hadController = !!navigator.serviceWorker.controller;
-  let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadController || reloading) return;   // first install: nothing to replace
-    reloading = true;
-    location.reload();
+    if (!hadController || updateWaiting) return;   // first install: nothing to replace
+    updateWaiting = true;
+    if (!reloadForUpdateIfIdle()) {
+      setStatus('A new version of Professional Takeoff Tools is ready — it '
+        + 'loads when you close this project or reload the page.');
+    }
   });
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(new URL('sw.js', document.baseURI))

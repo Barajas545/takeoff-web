@@ -29,6 +29,7 @@ const PORTABLE = [
   'callout-refs',       // callout targets survive page inserts and deletes
   'scratch-store',      // temporary dimensions cannot reach a saved file
   'remote-file',        // HTTP-range reads, against a stub server
+  'sw-precache',        // the worker precaches every module main.js can load
   'catalog-search',     // the matcher (differential part needs its truth file)
   'revisions-logic',    // edge cases + the committed snapshot; live diff opt-in
 ];

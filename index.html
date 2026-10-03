@@ -334,6 +334,14 @@ try {
           <p class="es-hint">
             Drop a <code>.takeoff</code> or <code>.pdf</code> file anywhere on this window.
           </p>
+          <!-- Plans the portal's Plans Library saved to this device, so they
+               open with no signal. Filled by renderLibraryList() in
+               js/main.js from the portal's read-only index; hidden when there
+               is nothing of the signed-in user's to list. -->
+          <div class="es-lib" id="esLibrary" hidden>
+            <div class="es-lib-head"><span>Saved on this device</span><a class="es-lib-manage" href="../dcr-portal/plans-library.html">Plans Library</a></div>
+            <div class="es-lib-list" id="esLibraryList"></div>
+          </div>
         </div>
       </div>
       <!--

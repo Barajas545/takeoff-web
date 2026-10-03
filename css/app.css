@@ -722,6 +722,71 @@ button { font-family: inherit; }
   padding: 1px 4px; border-radius: 3px; color: var(--text-faint);
 }
 
+/* Saved on this device — the portal's Plans Library, for opening a plan with
+   no signal. Left-aligned inside the centred card. The list scrolls after
+   about six entries, and never past 40% of the window, so a long library
+   cannot push the card off the stage. Sizes come from the layout tokens, so
+   it follows the touch and standard layouts like the buttons above it. */
+.es-lib {
+  margin: 20px 0 0; padding-top: 14px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+.es-lib-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 8px;
+}
+.es-lib-head > span {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.es-lib-manage {
+  display: inline-flex; align-items: center; min-height: var(--icon-h);
+  padding: 2px 4px; border-radius: 4px;
+  font-size: 11.5px; font-weight: 600; color: var(--accent-2);
+  text-decoration: none; white-space: nowrap;
+}
+.es-lib-manage:hover { text-decoration: underline; }
+.es-lib-manage:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+.es-lib-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: min(380px, 40vh);
+  overflow-x: hidden; overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.es-lib-list::-webkit-scrollbar { width: 8px; }
+.es-lib-list::-webkit-scrollbar-thumb { background: #3c3c3c; border-radius: 4px; }
+/* flex-shrink 0 is not optional: the standard layout's --ctl-h is 0, and a
+   min-height of 0 lets a column flex item squash below its own text. */
+.es-lib-item {
+  display: block; width: 100%; flex-shrink: 0;
+  min-height: var(--ctl-h); padding: var(--ctl-pad);
+  background: var(--chip-bg); color: var(--text);
+  border: 1px solid var(--btn-press); border-radius: 6px;
+  font-size: 12.5px; line-height: 1.35; text-align: left; cursor: pointer;
+}
+.es-lib-item:hover { background: var(--btn-bg); }
+.es-lib-item:active { background: var(--btn-press); }
+/* Inset, or the scrolling list clips the ring at its edges. */
+.es-lib-item:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
+/* `anywhere`, not `break-word`: only `anywhere` lowers the min-content width,
+   and the card sizes itself to its content — a long file name would otherwise
+   widen it past a phone's screen instead of wrapping. */
+.es-lib-title, .es-lib-file { display: block; overflow-wrap: anywhere; }
+.es-lib-title { font-weight: 600; }
+.es-lib-file { margin-top: 1px; font-size: 11.5px; color: var(--text-dim); }
+.es-lib-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px;
+  margin-top: 2px; font-size: 11px; color: var(--text-dim);
+}
+.es-lib-chip {
+  padding: 0 6px; border-radius: 8px;
+  border: 1px solid rgba(224, 160, 80, .45);
+  background: rgba(224, 160, 80, .12); color: var(--warn);
+  font-size: 10px; font-weight: 600; line-height: 15px; white-space: nowrap;
+}
+
 .drop-veil[hidden] { display: none; }
 .drop-veil {
   position: absolute; inset: 12px; z-index: 30;
