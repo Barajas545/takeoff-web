@@ -51,6 +51,54 @@ export async function inflate(bytes) {
   return pako().inflate(bytes);
 }
 
+/**
+ * As much of the original as a TRUNCATED stream will give, up to `want`.
+ *
+ * inflate() above reads the whole stream through one Response, which
+ * REJECTS when the input stops mid-stream — so reading a 4 KB prefix of a
+ * sheet to get at its IHDR, which is what revisionPageSize wanted, could
+ * never work through it. A reader taken chunk by chunk keeps what already
+ * arrived and lets the error at the end stand for the tail: measured on a
+ * 400 KB incompressible body (deflating to 400,155 bytes, so the prefix is
+ * 1% of the stream), the whole-response read throws and this returns 4,089
+ * bytes — far more than the 24 an IHDR needs.
+ *
+ * Returns null when nothing at all could be read.
+ */
+export async function inflatePartial(bytes, want = 4096) {
+  if (!hasNative) {
+    try { return pako().inflate(bytes); } catch { return null; }
+  }
+  for (const format of ['deflate', 'deflate-raw']) {
+    const chunks = [];
+    let n = 0;
+    try {
+      const reader = new Blob([bytes]).stream()
+        .pipeThrough(new DecompressionStream(format)).getReader();
+      try {
+        while (n < want) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value && value.length) { chunks.push(value); n += value.length; }
+        }
+      } finally {
+        // Nothing downstream wants the rest, and an uncancelled reader on a
+        // stream that is about to error is an unhandled rejection.
+        try { await reader.cancel(); } catch { /* already gone */ }
+      }
+    } catch {
+      // The tail is missing, which is the whole point. Keep what arrived.
+    }
+    if (n) {
+      const out = new Uint8Array(n);
+      let at = 0;
+      for (const c of chunks) { out.set(c, at); at += c.length; }
+      return out;
+    }
+  }
+  return null;
+}
+
 /** bytes → a zlib stream Python's zlib.decompress reads without complaint. */
 export async function deflate(bytes) {
   if (hasNative) return pipe(bytes, new CompressionStream('deflate'));

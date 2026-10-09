@@ -11,6 +11,7 @@
 
 import * as D from './dialogs.js';
 import { DEFAULT_DPI } from '../core/units.js';
+import { PREVIEW_SIZES } from './callout-preview.js';
 
 const STORAGE_KEY = 'ptt.settings.v1';
 
@@ -153,6 +154,12 @@ export class Settings {
 
       const nav = D.field(form, 'Page keys', D.select(PAGE_NAV_PRESETS, v.page_nav_keys));
 
+      const preview = D.field(form, 'Detail preview',
+        D.select(PREVIEW_SIZES, v.preview_popup_size),
+        'How big the window opens when you tap a callout bubble. It is kept '
+        + 'inside the screen whichever you pick, and you can zoom and drag '
+        + 'the drawing inside it.');
+
       const precision = D.field(form, 'Measure precision',
         D.select(['Nearest Inch', 'Inches Only', '1/2', '1/8', '1/16'], v.distance_precision));
 
@@ -192,6 +199,7 @@ export class Settings {
             marker_scale: clamp(Number(marker.value) || 1, 0.6, 2.2),
             background_color: bg.value,
             page_nav_keys: nav.value,
+            preview_popup_size: preview.value,
             distance_precision: precision.value,
             ui_touch_mode: touch.checked,
             company_name: cName.value.trim(),

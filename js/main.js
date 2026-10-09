@@ -328,10 +328,23 @@ controller.addEventListener('changed', () => { requestDraw(); syncMobileBar(); }
  * question where you are standing.
  */
 const calloutPreview = new CalloutPreview({
-  pages: app.pages,
+  // A GETTER, not the store itself. newProject() and every open replace
+  // app.pages with a new PageStore, and this object literal would
+  // otherwise hold the one that existed at module load for ever — the
+  // assignment further down that meant to re-point it was writing a
+  // property the widget never reads, so the preview went on cropping the
+  // previous job's sheets, which is exactly what its comment feared.
+  get pages() { return app.pages; },
   sheetLabel: i => pageFinalLabel(i),
   goToSheet: i => { void goToPage(i); },
   sizeName: () => app.settings.get('preview_popup_size') || 'medium',
+  // His own wheel preference, the same two it means on the sheet.
+  wheelMode: () => app.settings.get('wheel_mode') || 'zoom',
+  zoomStep: () => app.settings.get('zoom_step_percent') || 15,
+  // A preview that has closed itself — the pointer left it, or Escape was
+  // pressed over one — must leave the canvas able to open the same bubble
+  // again. See Controller.clearHoverState.
+  hoverEnded: () => controller.clearHoverState(),
 });
 
 controller.addEventListener('callout-activated', ev => {
@@ -2759,7 +2772,6 @@ function newProject() {
   app.pages.clearCaches();          // release the old ImageBitmaps
   app.pages = new PageStore();
   thumbs.pages = app.pages;
-  calloutPreview.pages = app.pages; // or it keeps cropping the old project
   calloutPreview.hide();
   calloutPreview.clearCache();
   revCountsBySheet = new Map();
@@ -3119,6 +3131,9 @@ async function addBlankSheet() {
   const at = app.pages.pageCount ? app.currentPage + 1 : 0;
   app.pages.addPage({ kind: 'png', data: png, width: c.width, height: c.height }, at);
   app.project.notePagesInserted(at, 1);
+  // The preview's crops are keyed by page index, and every index after
+  // this one has just moved.
+  calloutPreview.clearCache();
   if (spec.label) app.project.setPageLabel(at, spec.label);
   if (spec.name) app.project.setPageName(at, spec.name);
   c.width = c.height = 0;
@@ -3143,6 +3158,7 @@ async function deleteCurrentPage() {
   const idx = app.currentPage;
   app.pages.removePage(idx);
   app.project.notePageRemoved(idx);
+  calloutPreview.clearCache();        // its crops are keyed by page index
   thumbs.refresh(Math.min(idx, app.pages.pageCount - 1));
   pageImage = null;
   await goToPage(Math.min(idx, app.pages.pageCount - 1));

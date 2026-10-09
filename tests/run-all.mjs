@@ -27,6 +27,8 @@ const PORTABLE = [
   'geom-checks',        // geometry and formatting against the Python's numbers
   'study-layout',       // the continuous-scroll layout maths
   'callout-refs',       // callout targets survive page inserts and deletes
+  'callout-view',       // the detail preview's window: fit, pan, zoom, decode
+  'page-store-cache',   // the byte cache cannot answer for another sheet
   'scratch-store',      // temporary dimensions cannot reach a saved file
   'remote-file',        // HTTP-range reads, against a stub server
   'sw-precache',        // the worker precaches every module main.js can load

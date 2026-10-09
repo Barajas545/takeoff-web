@@ -415,6 +415,22 @@ export class ToolController extends EventTarget {
     }
   }
 
+  /**
+   * Forget what the pointer was over.
+   *
+   * 'callout-hover' is emitted only when the item under the pointer
+   * CHANGES, and while the pointer is on the detail preview the canvas
+   * sees no movement at all. Without this, closing that preview and
+   * putting the pointer back on the SAME bubble emits nothing and opens
+   * nothing — the hover state still named it.
+   */
+  clearHoverState() {
+    if (this.hoverId == null && this.hoverVertex == null) return;
+    this.hoverId = null;
+    this.hoverVertex = null;
+    this.emit('changed');
+  }
+
   get ppf() {
     return this.project.pagePpf(this.getCurrentPage());
   }

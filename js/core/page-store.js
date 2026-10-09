@@ -57,6 +57,16 @@ export class PageStore {
     this._thumbs = new Map();
     this._pending = new Map();
     this._thumbPending = new Map();
+    // The last sheet inflated, kept whole. Reading one detail closely takes
+    // several crops of the same sheet as the user pans and zooms, and for a
+    // 'slice' source each pngBytes() re-read the Blob and re-inflated ~20 MB.
+    // One entry: bounded, and dropped whenever the page set moves under it.
+    /** @type {{index:number,bytes:Uint8Array,blob:Blob|null}|null} */
+    this._bytes = null;
+    /** @type {Map<number, Promise<Uint8Array>>} in-flight inflates */
+    this._bytesPending = new Map();
+    /** @type {WeakMap<object, Blob>} one Blob per already-in-memory sheet */
+    this._pngBlobs = new WeakMap();
     // Bumped whenever a page is inserted, removed or moved. A decode that
     // was already in flight when the set changed underneath it must not
     // write its result into what is now a different sheet's slot.
@@ -76,12 +86,24 @@ export class PageStore {
   }
 
   clearCaches() {
+    // A decode in flight has captured _gen and will file its result under
+    // the index it asked for. Swapping the project replaces `sources`
+    // wholesale, so that index now names a different sheet in a different
+    // job — the strongest reason there is for an in-flight read to stop
+    // trusting its own index, and the one case this counter was not
+    // covering. Without it an inflate straddling File > Open filed the OLD
+    // project's bytes under the NEW project's number, and nativeSize()
+    // then stamped the old sheet's dimensions onto the new source, where
+    // they outlived the bytes.
+    this._gen++;
     for (const bmp of this._lru.values()) bmp.close?.();
     for (const bmp of this._thumbs.values()) bmp.close?.();
     this._lru.clear();
     this._thumbs.clear();
     this._pending.clear();
     this._thumbPending.clear();
+    this._bytes = null;
+    this._bytesPending.clear();
     // The revision caches too. They are keyed `${set}:${page}` with no file in
     // the key, so opening a second project over the first would hand back the
     // FIRST one's revision sheets under the second one's numbers: a picture of
@@ -147,6 +169,9 @@ export class PageStore {
     }
     for (const [i, w] of thumbMoved) this._thumbs.delete(`${i}:${w}`);
     for (const [i, w, v] of thumbMoved) this._thumbs.set(`${i + delta}:${w}`, v);
+    // Keyed by index like the LRU, but worth no shifting: it holds one sheet.
+    this._bytes = null;
+    this._bytesPending.clear();
     this._pending.clear();
     this._thumbPending.clear();
   }
@@ -155,19 +180,113 @@ export class PageStore {
   async pngBytes(index) {
     const src = this.sources[index];
     if (!src) throw new Error(`No sheet ${index + 1}`);
+    // Already in memory: hand it straight back, and do NOT let it into the
+    // one-entry cache. Routing it through there made reading any imported
+    // sheet evict the kept inflate of the scanned sheet a preview was
+    // panning — paying a 20 MB re-read for a sheet that cost nothing.
+    // pngBlob keeps the Blob for these somewhere that cannot evict anything.
     if (src.kind === 'png') return src.data;
+    if (this._bytes && this._bytes.index === index) return this._bytes.bytes;
+    // One inflate per sheet, however many callers want it at once. The
+    // cache is only written when the inflate COMPLETES, so without this
+    // every caller that arrives first — the preview's crop, a prefetched
+    // neighbour, the sheets list — read the Blob and inflated 3-21 MB of
+    // its own. getPage and getThumbnail have always shared their work this
+    // way; this is the same map in the same shape.
+    const already = this._bytesPending.get(index);
+    if (already) return already;
+    const job = this._inflateSheet(index, src);
+    this._bytesPending.set(index, job);
+    try {
+      return await job;
+    } finally {
+      if (this._bytesPending.get(index) === job) this._bytesPending.delete(index);
+    }
+  }
+
+  /** @private The read itself. Always go through pngBytes. */
+  async _inflateSheet(index, src) {
+    const gen = this._gen;
+    // AWAIT it. `inflate` is async, and the code this replaced ended in
+    // `return inflate(...)`, where an async function's return awaited it for
+    // free. Assigning it to a variable does not: the cache then held a
+    // PROMISE where the bytes should be, which still read back correctly
+    // (an async return awaits that too) but made `_bytes.bytes.length`
+    // undefined, so residentBytes() reported NaN and pngBlob's identity
+    // check never matched.
+    let out;
     if (src.kind === 'slice') {
       const { inflate } = await import('./zlib.js');
-      return inflate(new Uint8Array(await src.data.arrayBuffer()));
-    }
-    if (src.kind === 'raw') {
+      out = await inflate(new Uint8Array(await src.data.arrayBuffer()));
+    } else if (src.kind === 'raw') {
       const { inflate } = await import('./zlib.js');
-      return inflate(src.data);
+      out = await inflate(src.data);
+    } else {
+      // A bitmap has no encoded form until it is asked for one.
+      const { part } = await encodePageSource({ kind: 'bitmap', data: src.data });
+      const { inflate } = await import('./zlib.js');
+      out = await inflate(part);
     }
-    // A bitmap has no encoded form until it is asked for one.
-    const { part } = await encodePageSource({ kind: 'bitmap', data: src.data });
-    const { inflate } = await import('./zlib.js');
-    return inflate(part);
+    // Pages may have been inserted, removed or moved while this was in
+    // flight, and then `index` no longer names the sheet these bytes came
+    // from. Hand them to the caller that asked; do not file them.
+    if (gen === this._gen) this._bytes = { index, bytes: out, blob: null };
+    return out;
+  }
+
+  /**
+   * The same bytes as an image/png Blob, kept.
+   *
+   * `new Blob([bytes])` COPIES the buffer, and reading one detail closely
+   * now takes a crop per settled gesture — each one was allocating a fresh
+   * copy of a 3-21 MB inflated sheet. A Blob holds no decoded pixels, so
+   * keeping it beside the bytes that are already being kept costs nothing
+   * new, and it is dropped by exactly the same rules.
+   */
+  async pngBlob(index) {
+    const src = this.sources[index];
+    if (src && src.kind === 'png') {
+      // Keyed by the SOURCE, not by an index: it cannot be stale after a
+      // page move, it cannot evict anything, and it goes when the source
+      // does.
+      let held = this._pngBlobs.get(src);
+      if (!held) {
+        held = new Blob([src.data], { type: 'image/png' });
+        this._pngBlobs.set(src, held);
+      }
+      return held;
+    }
+    const bytes = await this.pngBytes(index);
+    const held = this._bytes;
+    if (held && held.index === index && held.bytes === bytes) {
+      if (!held.blob) held.blob = new Blob([bytes], { type: 'image/png' });
+      return held.blob;
+    }
+    return new Blob([bytes], { type: 'image/png' });
+  }
+
+  /**
+   * How big a sheet really is, without decoding it.
+   *
+   * pageSize() falls back to getPage() — a full decode — for any source
+   * that does not already know its dimensions, which is every sheet of a
+   * file that has just been opened. The PNG says so in its IHDR, 16 bytes
+   * in, and a sheet about to be cropped has to be inflated anyway.
+   */
+  async nativeSize(index) {
+    const src = this.sources[index];
+    if (!src) return null;
+    // A ReducedPage reports its sheet's TRUE size, which is what this is.
+    const live = this._lru.get(index);
+    if (live && live.width && live.height) {
+      return { width: live.width, height: live.height };
+    }
+    if (src.width && src.height) return { width: src.width, height: src.height };
+    const nat = pngSize(await this.pngBytes(index));
+    if (nat && this.sources[index] === src) {
+      src.width = nat.width; src.height = nat.height;
+    }
+    return nat;
   }
 
   /**
@@ -184,8 +303,28 @@ export class PageStore {
     const inflight = this._pending.get(index);
     if (inflight) return inflight;
 
-    const job = this._decode(index).then(bmp => {
-      this._pending.delete(index);
+    const gen = this._gen;
+    let job;
+    const mine = () => this._pending.get(index) === job;
+    job = this._decode(index).then(bmp => {
+      // Only if it is still OURS. clearCaches and _shiftCaches both empty
+      // this map, so a job registered AFTER a page change sits under the
+      // same key — deleting it here left a decode in flight that nothing
+      // knew about, and the next ask started a second one. pngBytes guards
+      // its own map exactly this way.
+      if (mine()) this._pending.delete(index);
+      // A sheet was inserted, removed or moved — or another project was
+      // opened — while this was decoding, so `index` no longer means what
+      // it meant when the job started. pngBytes and getThumbnail have both
+      // checked this for a long time; this one never did, and it is the
+      // worst place to miss it, because it files a DRAWING under that index
+      // and stamps the sheet's dimensions on whatever source is there now,
+      // where they outlive the pixels. Deleting a sheet during a prefetch
+      // was enough.
+      if (bmp && gen !== this._gen) {
+        queueMicrotask(() => bmp.close?.());
+        return null;
+      }
       if (bmp) {
         const src = this.sources[index];
         if (src) { src.width = bmp.width; src.height = bmp.height; }
@@ -194,7 +333,7 @@ export class PageStore {
       }
       return bmp;
     }).catch(err => {
-      this._pending.delete(index);
+      if (mine()) this._pending.delete(index);
       throw err;
     });
     this._pending.set(index, job);
@@ -309,10 +448,18 @@ export class PageStore {
     // The IHDR is 16 bytes into the PNG, but the PNG is deflated. zlib has no
     // random access, so the smallest honest read is a prefix big enough to
     // inflate the first chunk out of — 4 KB covers it on every real sheet.
-    const { inflate } = await import('./zlib.js');
+    // inflatePartial, not inflate: a 4 KB prefix of a sheet IS a truncated
+    // deflate stream, and inflate() reads the whole thing through one
+    // Response, which rejects. So this path has been dead in every build —
+    // first because the Promise was never awaited, and then, once it was,
+    // because the read it awaited could only ever throw. A chunked read
+    // keeps what arrived before the end ran out, which on a real sheet is
+    // thousands of bytes where 24 would do.
+    const { inflatePartial } = await import('./zlib.js');
     let size = null;
     try {
-      size = pngSize(inflate(new Uint8Array(await blob.slice(0, 4096).arrayBuffer())));
+      size = pngSize(await inflatePartial(
+        new Uint8Array(await blob.slice(0, 4096).arrayBuffer()), 64));
     } catch {
       size = null;                       // a truncated stream tells us nothing
     }
@@ -346,28 +493,10 @@ export class PageStore {
     const src = this.sources[index];
     if (!src || !Array.isArray(zone) || zone.length < 4) return null;
 
-    // A resident full-size sheet is the fast path: crop it in ~1ms rather
-    // than re-reading and re-inflating megabytes we already have.
-    const live = this._lru.get(index);
-    const known = live || (src.width && src.height ? src : null);
-
-    let nat = null;
-    if (known) nat = { width: known.width, height: known.height };
-    let bytes = null;
-    if (!nat) {
-      bytes = await this.pngBytes(index);
-      nat = pngSize(bytes);
-    }
+    const nat = await this.nativeSize(index);
     if (!nat) return null;
 
-    const x0 = Math.max(0, Math.min(1, Number(zone[0]) || 0));
-    const y0 = Math.max(0, Math.min(1, Number(zone[1]) || 0));
-    const x1 = Math.max(0, Math.min(1, Number(zone[2]) || 0));
-    const y1 = Math.max(0, Math.min(1, Number(zone[3]) || 0));
-    const sx = Math.floor(Math.min(x0, x1) * nat.width);
-    const sy = Math.floor(Math.min(y0, y1) * nat.height);
-    const sw = Math.max(1, Math.round(Math.abs(x1 - x0) * nat.width));
-    const sh = Math.max(1, Math.round(Math.abs(y1 - y0) * nat.height));
+    const { sx, sy, sw, sh } = cropGeometry(zone, nat);
     if (sw < 2 || sh < 2) return null;          // an empty zone is no preview
 
     const scale = Math.min(1, maxWidth / sw);
@@ -377,17 +506,25 @@ export class PageStore {
           resizeQuality: 'high' }
       : undefined;
 
+    // A resident full-size sheet is the fast path: crop it in ~1ms rather
+    // than re-reading and re-inflating megabytes we already have.
+    const live = this._lru.get(index);
     if (live) {
-      // Already decoded for the canvas — take the rectangle out of it.
       const inner = live.bitmap || live;
       const k = live.reduced ? inner.width / live.width : 1;
-      return createImageBitmap(inner, Math.floor(sx * k), Math.floor(sy * k),
-                               Math.max(1, Math.round(sw * k)),
-                               Math.max(1, Math.round(sh * k)), opts);
+      // ...unless it is a REDUCED sheet holding fewer pixels than were
+      // asked for. iOS caps a canvas, so on the device this preview is
+      // read on, the big sheets are exactly the ones held at less than
+      // their own resolution: cropping from there would answer a request
+      // for a sharp detail with a soft one, for ever. The encoded page
+      // still has every pixel, so go and get them.
+      if (sw * k >= Math.min(maxWidth, sw) - 1) {
+        return createImageBitmap(inner, Math.floor(sx * k), Math.floor(sy * k),
+                                 Math.max(1, Math.round(sw * k)),
+                                 Math.max(1, Math.round(sh * k)), opts);
+      }
     }
-    if (!bytes) bytes = await this.pngBytes(index);
-    const blob = new Blob([bytes], { type: 'image/png' });
-    return createImageBitmap(blob, sx, sy, sw, sh, opts);
+    return createImageBitmap(await this.pngBlob(index), sx, sy, sw, sh, opts);
   }
 
   _evict(keep) {
@@ -512,6 +649,16 @@ export class PageStore {
     for (const b of this._lru.values()) n += b.width * b.height * 4;
     for (const b of this._thumbs.values()) n += b.width * b.height * 4;
     for (const b of this._revLru.values()) n += b.width * b.height * 4;
+    // The kept sheet counts too. It is the largest single thing this store
+    // holds that is not a decoded page — 3-21 MB of inflated PNG — and it
+    // was invisible to the only function that reports what is resident.
+    // ...and the Blob beside them, which is a SECOND copy of the sheet:
+    // `new Blob([bytes])` snapshots the buffer, which is the whole reason
+    // keeping one is worth it.
+    if (this._bytes) {
+      n += this._bytes.bytes.length;
+      if (this._bytes.blob) n += this._bytes.blob.size;
+    }
     return n;
   }
 }
@@ -582,6 +729,26 @@ function thumbKeyIndex(key) {
 /** The width out of a `${index}:${width}` thumbnail cache key. */
 function thumbKeyWidth(key) {
   return String(key).slice(String(key).indexOf(':') + 1);
+}
+
+/**
+ * A 0..1 zone on a sheet, as whole sheet pixels.
+ *
+ * The ONE definition. The callout preview draws the bitmap it gets back at
+ * a position it works out from this rectangle, so a second copy of the
+ * arithmetic — floor here, round there — would slide the picture under
+ * the drawing it claims to be, by an error that grows with every zoom step.
+ */
+export function cropGeometry(zone, nat) {
+  const x0 = Math.max(0, Math.min(1, Number(zone[0]) || 0));
+  const y0 = Math.max(0, Math.min(1, Number(zone[1]) || 0));
+  const x1 = Math.max(0, Math.min(1, Number(zone[2]) || 0));
+  const y1 = Math.max(0, Math.min(1, Number(zone[3]) || 0));
+  const sx = Math.floor(Math.min(x0, x1) * nat.width);
+  const sy = Math.floor(Math.min(y0, y1) * nat.height);
+  const sw = Math.max(1, Math.round(Math.abs(x1 - x0) * nat.width));
+  const sh = Math.max(1, Math.round(Math.abs(y1 - y0) * nat.height));
+  return { sx, sy, sw, sh };
 }
 
 /** Width and height out of a PNG's IHDR, without decoding a single pixel. */

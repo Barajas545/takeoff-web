@@ -1043,7 +1043,12 @@ input, select, textarea { font-size: max(var(--field-fs), 12px); }
 .cpv {
   position: fixed; z-index: 78;
   display: flex; flex-direction: column;
-  max-width: min(92vw, 840px);
+  /* The two clamps have to agree. previewBudget() reserves a FIXED 2*EDGE
+     = 20px of window; a percentage reserve undercuts that on any window
+     wider than 500px, and .cpv is overflow:hidden, so the canvas it had
+     just sized to fit was quietly CLIPPED instead — including 'Huge' and
+     'Extra large' on an iPad in portrait. */
+  max-width: min(calc(100vw - 20px), 1100px);
   background: var(--chip-bg, #232323);
   border: 1px solid var(--border-hard);
   border-radius: 10px;
@@ -1062,19 +1067,77 @@ input, select, textarea { font-size: max(var(--field-fs), 12px); }
 .cpv-title {
   font-size: 12px; font-weight: 600; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* The title owns the slack, so the close button is pinned right whether
+     or not the zoom controls are there — they are hidden for "No preview"
+     and "No area selected", and moving margin-left:auto onto them had left
+     the X stranded against the title in both. */
+  flex: 1 1 auto; min-width: 0;
+}
+/* Zoom lives in the head: the foot is already the width of "Go to sheet"
+   plus a hint, and a 320px preview has no room for a second row of it. */
+.cpv-zoomer {
+  display: flex; align-items: center; gap: 5px;
+  flex: 0 0 auto;
+}
+.cpv-zb {
+  /* The same floor as every other icon button in this app: 38px with the
+     touch layout on, which is the DEFAULT layout, and which is what this
+     feature is being read on. */
+  min-width: max(26px, var(--icon-h, 0px));
+  min-height: max(26px, var(--icon-h, 0px));
+  padding: 0 5px;
+  background: none; border: 0; border-radius: 6px;
+  color: var(--text-dim); font-family: inherit; font-size: 14px;
+  line-height: 1; cursor: pointer;
+}
+.cpv-zb:hover:not(:disabled) { background: var(--btn-hover); color: var(--text); }
+.cpv-zb:disabled { opacity: .35; cursor: default; }
+.cpv-pct {
+  min-width: 42px; text-align: center;
+  font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums;
 }
 .cpv-x {
-  margin-left: auto; flex: 0 0 auto;
-  min-width: 30px; min-height: 30px;
+  flex: 0 0 auto;
+  /* The same floor as the zoom buttons beside it and the button below. */
+  min-width: max(30px, var(--icon-h, 0px));
+  min-height: max(30px, var(--icon-h, 0px));
   background: none; border: 0; border-radius: 6px;
   color: var(--text-dim); font-size: 13px; cursor: pointer;
 }
 .cpv-x:hover { background: var(--btn-hover); color: var(--text); }
+/* The gesture surface. The handlers are bound HERE, not to the picture
+   inside it, so that a finger landing on the padding beside a narrow
+   drawing counts as part of the pinch it is half of — and touch-action
+   does not inherit, so the properties that make that safe have to be on
+   this element. Without them iOS keeps its own double-tap-to-zoom over
+   the padding ring, which is exactly where the hint tells him to double
+   tap, and zooms the whole app instead of resetting the view. */
 .cpv-body {
   display: grid; place-items: center;
   padding: 8px; background: #f4f4f4; min-width: 220px; min-height: 90px;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .cpv-body canvas { display: block; border-radius: 3px; }
+/* The window onto the sheet. touch-action:none because every gesture in
+   here is ours — without it iOS pans the page and pinches the whole app
+   while the estimator is trying to move the drawing. */
+.cpv-view {
+  position: relative; overflow: hidden; border-radius: 3px;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  cursor: grab;
+}
+.cpv-view:active { cursor: grabbing; }
+/* A badge in the corner, not a veil. It is shown whenever the decoded
+   rectangle does not reach the edges of the window, which during a pan is
+   most of the time — covering the drawing he is dragging towards would be
+   worse than the blank strip it is apologising for. */
+.cpv-wait {
+  position: absolute; right: 8px; bottom: 8px;
+  padding: 3px 9px; border-radius: 10px;
+  background: rgba(0, 0, 0, .55); color: #fff;
+  font-size: 11px; pointer-events: none;
+}
 .cpv-msg {
   min-width: 220px; min-height: 60px;
   display: grid; place-items: center;

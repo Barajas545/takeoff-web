@@ -5,8 +5,8 @@
  * handful of small `slice()`s — opening the estimator's 2.3 GB job costs about
  * 2 KB, and each sheet is fetched only when it is drawn. HTTP has had exactly
  * that operation since 1999, so a project on a server needs no download at
- * all: one Range request per slice. Opening the 155 MB Cooper Road plan set
- * over the network reads the same ~2 KB it reads from disk.
+ * all: one Range request per slice. Opening a 155 MB plan set over the
+ * network reads the same ~2 KB it reads from disk.
  *
  * That is why this exists rather than `await res.blob()`. Downloading first
  * would undo decision 1 of the whole port — nothing reads the whole file — and
