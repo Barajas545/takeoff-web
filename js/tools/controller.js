@@ -1361,7 +1361,11 @@ export class ToolController extends EventTarget {
       if (isAreaType(m.type) && pts.length >= 3) {
         if (pointInPolygon(pt[0], pt[1], pts)) return { item: m, vertexIndex: -1 };
         if (nearAnySegment(pt, pts, erad, true)) return { item: m, vertexIndex: -1 };
-      } else if (['distance', 'polyline', 'linear_count', 'pitch'].includes(m.type)
+      } else if (['distance', 'polyline', 'linear_count', 'pitch',
+        // Painted as a line, so grabbable as a line. Its VERTICES were
+        // already reachable from the loop above while nothing was painted at
+        // all — an invisible item that could be dragged.
+        'ref_distance'].includes(m.type)
                  && pts.length >= 2) {
         if (nearAnySegment(pt, pts, erad, false)) return { item: m, vertexIndex: -1 };
       } else if (m.type === 'page_ref' && pts.length >= 1) {

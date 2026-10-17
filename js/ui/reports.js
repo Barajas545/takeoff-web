@@ -49,7 +49,7 @@ const TYPE_LABEL = {
 };
 
 /** Types that produce no export row of their own. Their materials still do. */
-const NO_ROW_TYPES = new Set(['textnote', 'page_ref', 'pitch']);
+const NO_ROW_TYPES = new Set(['textnote', 'page_ref', 'pitch', 'ref_distance']);
 
 // ── the flat row model ────────────────────────────────────────────────────
 

@@ -34,6 +34,7 @@ const PORTABLE = [
   'sw-precache',        // the worker precaches every module main.js can load
   'catalog-search',     // the matcher (differential part needs its truth file)
   'revisions-logic',    // edge cases + the committed snapshot; live diff opt-in
+  'ref-distance',       // it is drawn, distinctly, and keeps its own scale
 ];
 
 // NEEDS THE LIBRARY: these read the estimator's real projects, which is the

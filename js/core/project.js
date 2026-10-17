@@ -30,13 +30,30 @@ export { STANDALONE_PAGE };
 
 const UNDO_DEPTH = 60;
 
+/**
+ * Types that are never re-valued with the sheet.
+ *
+ * One member, and it is not an oversight: a reference distance is a reading
+ * taken at a scale the estimator picked for that line alone, so "re-value
+ * everything on this sheet" is precisely the operation it has to survive.
+ */
+export const KEEPS_OWN_SCALE = new Set(['ref_distance']);
+
 /** Item types the takeoff panel and the estimate never include. */
-export const NON_TAKEOFF_TYPES = new Set(['distance', 'textnote', 'page_ref', 'pitch']);
+// 'ref_distance' is the desktop's reference distance: a one-off
+// measurement at a scale of its own, taken to read a detail without
+// recalibrating the sheet. It is never a quantity, and this build
+// opens the same files, so it must never be one here either.
+export const NON_TAKEOFF_TYPES = new Set(['distance', 'textnote', 'page_ref', 'pitch', 'ref_distance']);
 
 /** Every item type the canvas can hold. */
 export const ITEM_TYPES = [
   'distance', 'area', 'slope_area', 'pitch', 'polyline', 'count',
   'window', 'door', 'linear_count', 'grid', 'tile', 'page_ref', 'textnote',
+  // Drawn, saved, selected, dragged and deleted like anything else on the
+  // sheet — just never counted. Leaving it out of this list did not keep the
+  // files away; it only meant nothing here was written expecting one.
+  'ref_distance',
 ];
 
 // IDENTITY. The desktop format has NO id on a measurement item — Python uses
@@ -63,6 +80,14 @@ export function newId(prefix = 'i') {
 // computed on the sheet it landed on, and the two would disagree with nothing
 // to say which is right. Recovering it fresh on every load from the item's own
 // value and geometry is always self-consistent, and self-heals.
+//
+// That self-healing is the whole licence for stripping the key, so it has to
+// hold for EVERY type whose value is a real-world measurement — the
+// reference distance above all, whose stamp is the only record of a scale no
+// sheet knows. It did not: recoverPpf had no case for it, so a save here
+// wrote the line back without its ppf and the next open read a detail traced
+// at 1" = 1 ft against the 1/4" plan it sits on. See the ref_distance case
+// in recoverPpf, which is what makes stripping it safe here.
 const RUNTIME_KEYS = ['_uid', 'ppf', 'ppf_recovered', 'scale_label', 'self_intersects'];
 
 /** Deep copy of a store with every runtime-only key removed. */
@@ -333,6 +358,13 @@ export class Project extends EventTarget {
       this.metadata.pixels_per_foot = ppf;
       const label = scaleLabelFor(ppf, this.dpi);
       for (const it of this.itemsOn(pageKey)) {
+        // Except the one type whose scale is deliberately NOT this sheet's.
+        // A reference distance is a detail read at a scale picked for that
+        // line alone; re-stamping one writes the sheet's scale onto it and
+        // the chip then prints the exact lie the object exists to prevent.
+        // It is also the only item here that keeps its own `scale` label, so
+        // the two would disagree on the same line.
+        if (KEEPS_OWN_SCALE.has(it.type)) continue;
         it.ppf = ppf;
         it.scale_label = label;
       }
@@ -959,6 +991,10 @@ function spliceArray(arr, at, count, fill) {
 /** Types whose stored value is a real-world measurement, so scale matters. */
 const MEASURED_TYPES = new Set([
   'area', 'slope_area', 'grid', 'tile', 'distance', 'polyline', 'linear_count',
+  // The one type whose scale is deliberately NOT the sheet's. When its own
+  // cannot be recovered there is nothing left to fall back on that is even
+  // approximately right, so it belongs here before any other type does.
+  'ref_distance',
 ]);
 
 // A recovered ppf outside this band is arithmetic noise from a degenerate
@@ -1001,7 +1037,12 @@ export function recoverPpf(item) {
       break;
     }
     case 'distance':
-    case 'polyline': {
+    case 'polyline':
+    // The reference distance inverts exactly like a plain one — two points
+    // in pixels, one length in feet — and it is the ONE type that cannot
+    // fall back to the page when the inversion is missing, because the whole
+    // object exists to say it was not measured at the page's scale.
+    case 'ref_distance': {
       if (pts.length < 2) return null;
       const px = pathLength(pts);
       if (!(px > 0)) return null;

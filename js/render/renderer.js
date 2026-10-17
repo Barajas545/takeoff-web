@@ -37,7 +37,21 @@ import { pitchLabel } from '../tools/controller.js';
 const SELECTION_OUTLINE_TYPES = new Set([
   'area', 'slope_area', 'grid', 'tile',
   'distance', 'polyline', 'linear_count', 'pitch', 'textnote',
+  'ref_distance',
 ]);
+
+/**
+ * The reference distance, as the desktop draws it.
+ *
+ * Three signals say "this one is not in the job", and all three have to
+ * survive the crossing or the tablet shows something that reads as takeoff:
+ * the DASH (the desktop's glLineStipple(3, 0x3333) is six screen pixels on,
+ * six off), the pale steel blue it carries in the file as its own colour, and
+ * the caption over its read-out — REF_DIST_CAPTION, character for character,
+ * because the printed sheet and both canvases quote it.
+ */
+const REF_DIST_DASH_PX = 6;
+const REF_DIST_CAPTION = 'REFERENCE — not in the takeoff';
 
 // Counting a tile run tolerates 60,000; DRAWING one stops far sooner.
 const TILE_DRAW_CAP = 5000;
@@ -53,7 +67,9 @@ function calloutParts(m) {
   const [head, ...rest] = String(m.label).split('/');
   return { detail: head.trim(), sheet: sheet || rest.join('/').trim() };
 }
-import { itemPpf, formatFt, formatDistancePrecision, DEFAULT_PPF } from '../core/units.js';
+import {
+  itemPpf, formatFt, formatDistancePrecision, refScaleWords, DEFAULT_PPF,
+} from '../core/units.js';
 import {
   polygonArea, areaCentroid, pathLength, boundingBox, pointsAlongPath,
 } from '../core/geom.js';
@@ -272,8 +288,16 @@ export class Renderer {
     // A TEMPORARY dimension is drawn dashed, and it has to LOOK temporary —
     // an estimator who mistakes one for takeoff will go looking for it in the
     // estimate. The dash is in screen pixels so it stays a dash at any zoom.
-    const restoreDash = m.scratch ? ctx.getLineDash() : null;
+    //
+    // A reference distance dashes for the neighbouring reason: it is a real
+    // measurement, but of a detail at its own scale and no part of the job.
+    // Same rule, same screen-pixel dash.
+    const dashed = !!m.scratch || m.type === 'ref_distance';
+    const restoreDash = dashed ? ctx.getLineDash() : null;
     if (m.scratch) ctx.setLineDash([w(7), w(5)]);
+    else if (m.type === 'ref_distance') {
+      ctx.setLineDash([w(REF_DIST_DASH_PX), w(REF_DIST_DASH_PX)]);
+    }
 
     switch (m.type) {
       case 'distance': {
@@ -284,6 +308,21 @@ export class Renderer {
         ctx.moveTo(pts[0][0], pts[0][1]);
         ctx.lineTo(pts[1][0], pts[1][1]);
         ctx.stroke();
+        break;
+      }
+      case 'ref_distance': {
+        // 2.0 and not the 2.5 a distance gets: the lower weight is part of
+        // saying this is not a quantity. `break`, not the `return` its
+        // neighbours use, so the dash below is always put back — a dash left
+        // on the context turns the next real measurement into a fake one.
+        if (pts.length >= 2) {
+          ctx.lineWidth = w(2.0);
+          ctx.strokeStyle = rgba(c, 1);
+          ctx.beginPath();
+          ctx.moveTo(pts[0][0], pts[0][1]);
+          ctx.lineTo(pts[1][0], pts[1][1]);
+          ctx.stroke();
+        }
         break;
       }
       case 'pitch': {
@@ -357,10 +396,10 @@ export class Renderer {
       default:
         break;
     }
-    // Put the dash back, or every item drawn after a temporary one inherits
-    // it — and real takeoff that looks temporary is the same mistake in the
+    // Put the dash back, or every item drawn after a dashed one inherits it
+    // — and real takeoff that looks temporary is the same mistake in the
     // other direction.
-    if (m.scratch) ctx.setLineDash(restoreDash || []);
+    if (dashed) ctx.setLineDash(restoreDash || []);
   }
 
   _drawGridLines(ctx, m, c, w) {
@@ -454,6 +493,10 @@ export class Renderer {
 
     switch (m.type) {
       case 'distance':
+      // The desktop puts his own arrowheads on both of these; this renderer
+      // has one endpoint mark and draws it on both, so the two types still
+      // agree with each other here the way they do there.
+      case 'ref_distance':
         if (pts.length >= 2) {
           for (const p of [pts[0], pts[1]]) {
             const [x, y] = S(p);
@@ -654,7 +697,9 @@ export class Renderer {
         const [x, y] = vp.toScreen(anchor[0], anchor[1]);
         drawLabel(ctx, text, x, y, rgb, {
           alpha: 220,
-          header: m.type === 'pitch' ? 'Pitch / Angle' : null,
+          header: m.type === 'pitch' ? 'Pitch / Angle'
+            : m.type === 'ref_distance' ? REF_DIST_CAPTION
+              : null,
         });
       }
     }
@@ -666,6 +711,17 @@ export class Renderer {
       case 'distance': {
         const txt = formatDistancePrecision(own.value, m.precision || '1/2');
         return nameLine ? `${nameLine}${txt}${notesHint}${tag}` : `${txt}${notesHint}${tag}`;
+      }
+      case 'ref_distance': {
+        // The distance AND the scale it was read at, in one box, in the
+        // desktop's words and with its separator. A reference measurement
+        // whose scale is invisible is the trap this item exists to close —
+        // and a phone that showed the length alone would reopen it on a
+        // second screen. No name, no notes hint, no shape tag: it has none
+        // of those, and _labelTextFor's other cases take them as arguments
+        // precisely because every other type does.
+        const txt = formatDistancePrecision(own.value, m.precision || '1/2');
+        return `${txt}   ·   ${refScaleWords(m, this.pageDpi)}`;
       }
       case 'pitch': {
         // The desktop stores rise-per-12 in `value`; only slope_area has a
@@ -1088,7 +1144,11 @@ function labelAnchorFor(m) {
   const pts = m.points || [];
   if (!pts.length) return [0, 0];
   if (isAreaType(m.type)) return areaCentroid(pts);
-  if (m.type === 'distance' || m.type === 'pitch') {
+  // The midpoint, which is where the desktop puts all three. The fallback
+  // below picks pts[length / 2] — on a two-point line that is the far END,
+  // so the read-out would hang off the tip of the line instead of sitting on
+  // it.
+  if (m.type === 'distance' || m.type === 'pitch' || m.type === 'ref_distance') {
     return pts.length >= 2 ? mid(pts[0], pts[1]) : pts[0];
   }
   return pts[Math.floor(pts.length / 2)];

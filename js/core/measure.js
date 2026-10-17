@@ -11,7 +11,9 @@ import {
   tileLayout, TILE_COUNT_CAP, slopeFactor, selfIntersects, areaCentroid,
   centroid, boundingBox,
 } from './geom.js';
-import { itemPpf, formatQty, formatFt, DEFAULT_PPF } from './units.js';
+import {
+  itemPpf, formatQty, formatFt, formatDistancePrecision, DEFAULT_PPF,
+} from './units.js';
 
 /**
  * What each item type measures, and the unit its value is in.
@@ -82,6 +84,11 @@ export function computeValue(item) {
 
     case 'polyline':
     case 'distance':
+    // At ITS OWN ppf, which itemPpf has already read off the item above.
+    // Without this case a dragged reference line kept the length it used to
+    // have — which is word for word why the desktop's _recalc_measurement
+    // had to grow a branch of its own for this type.
+    case 'ref_distance':
       return pathLength(pts) / ppf;
 
     case 'linear_count': {
@@ -288,6 +295,13 @@ export function refreshLabel(item) {
       break;
     case 'linear_count':
       item.label = `${Math.trunc(own.value)} items`;
+      break;
+    case 'ref_distance':
+      // To the half inch, not formatFt's whole inch: what this type measures
+      // is a DETAIL, where the half inch is the reason he zoomed in on it.
+      // The desktop writes this same string into `label`, so a line dragged
+      // here and reopened there does not read two different lengths.
+      item.label = formatDistancePrecision(own.value, item.precision || '1/2');
       break;
     default:
       break;   // distance recomputes live; count/window/door keep their names

@@ -58,6 +58,11 @@ const IMPORTABLE = [
   'core/revisions.js',
   'core/scratch.js',
   'render/viewport.js', 'render/theme.js', 'render/markers.js', 'render/callouts.js',
+  // The renderer and its two label modules touch no DOM at module scope —
+  // they take a context, they do not go looking for one — and leaving them
+  // out meant a renderer importing a name that does not exist parsed clean
+  // here and failed in the browser, which is the one thing this file is for.
+  'render/renderer.js', 'render/labels.js', 'render/layout.js',
   'tools/markup.js', 'tools/controller.js',
 ];
 for (const rel of IMPORTABLE) {

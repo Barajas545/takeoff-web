@@ -9,11 +9,11 @@ import { CalloutPreview } from './ui/callout-preview.js';
 import { resolveUiMode } from './ui/settings.js';
 import { RemoteFile } from './core/remote-file.js';
 import { PageStore } from './core/page-store.js';
-import { Project } from './core/project.js';
+import { Project, KEEPS_OWN_SCALE } from './core/project.js';
 import { importPdf, canvasToPng } from './core/pdf-import.js';
 import {
   SCALE_PRESETS, EXTENDED_SCALES, computePixelsPerFoot, scaleLabelFor,
-  DEFAULT_DPI, DEFAULT_PPF, formatFtIn,
+  DEFAULT_DPI, DEFAULT_PPF, formatFtIn, refScaleWords,
 } from './core/units.js';
 import { recompute } from './core/measure.js';
 import { boundingBox } from './core/geom.js';
@@ -1643,7 +1643,12 @@ $('scaleSelect').addEventListener('change', async ev => {
  */
 async function setSheetScale(ppf) {
   const existing = (app.project.measurements[app.currentPage] || [])
-    .filter(m => m.type !== 'pitch' && (m.points || []).length);
+    // A pitch is an angle, not a length, and a reference distance is not at
+    // this sheet's scale and will not be re-valued with it (KEEPS_OWN_SCALE).
+    // Counting either one would offer to re-value work that no answer here
+    // touches.
+    .filter(m => m.type !== 'pitch' && !KEEPS_OWN_SCALE.has(m.type)
+      && (m.points || []).length);
   if (existing.length) {
     const answer = await D.showDialog(close => {
       const body = D.el('div');
@@ -2566,6 +2571,16 @@ async function openProperties(item) {
   // Reachable from the items panel, which never touches the canvas hit test,
   // so the pointer gates do not cover it.
   if (controller.readOnly) { setStatus(controller.readOnlyReason); return; }
+  // A reference distance has no name, floor, trade, category or unit cost —
+  // not blank ones, NONE. That is the desktop's _finalize_ref_distance, and
+  // its reason holds here too: a field that exists is a field some report
+  // will eventually read. There is nothing on it to edit, so the dialog says
+  // the one thing it does carry instead of offering to price it.
+  if (item.type === 'ref_distance') {
+    setStatus(`Reference distance — ${refScaleWords(item, app.project.dpi)}, `
+      + 'and no part of the takeoff.');
+    return;
+  }
   if (item.type === 'standalone') {
     const patch = await D.askStandalone(item);
     if (patch) app.project.updateItem(item._uid, patch);
@@ -2659,9 +2674,14 @@ function showItemMenu(item, ev) {
     b.addEventListener('click', () => { menu.hidden = true; fn(); });
     menu.appendChild(b);
   };
-  add('Properties…', () => openProperties(item));
-  add('Associated materials…', () => openMaterials(item));
-  menu.appendChild(document.createElement('hr'));
+  // The two rows that would give a reference distance a name or a price are
+  // not offered on one — see openProperties. Hide, Isolate, Zoom to and
+  // Delete are, because it is an object on the sheet like any other.
+  if (item.type !== 'ref_distance') {
+    add('Properties…', () => openProperties(item));
+    add('Associated materials…', () => openMaterials(item));
+    menu.appendChild(document.createElement('hr'));
+  }
   add(item.visible === false ? 'Show' : 'Hide',
     () => { app.project.setVisible([item._uid], item.visible === false); itemsPanel.refresh(); });
   add('Isolate this item', () => {

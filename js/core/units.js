@@ -60,6 +60,28 @@ export const EXTENDED_SCALES = [
 export const DEFAULT_PPF = computePixelsPerFoot(DEFAULT_DPI, 0.25, 1.0);   // 37.5
 
 /**
+ * How close two pixels-per-foot figures have to be to mean the same drawing
+ * scale — pdf_fast_viewer.py's SCALE_SAME_FRAC, and PROPORTIONAL, not the
+ * absolute half a pixel per foot this used.
+ *
+ * Half a px/ft is tight at 150 dpi and far too loose at 96, where 1" = 40 ft
+ * and 1" = 50 ft sit 0.48 apart: a sheet calibrated to 50 could not be called
+ * 50, and 40's label went onto every item drawn on it. That is the desktop's
+ * own account of the bug it fixed here, and this port had kept the bug.
+ *
+ * It is also what let the two builds say different things out loud. A
+ * reference distance calibrated to 37.9 px/ft on a 150 dpi job read
+ * `1/4" scale` in the browser and `37.9 px/ft` on the desktop — on the one
+ * object whose entire purpose is the scale printed beside it.
+ */
+const SCALE_SAME_FRAC = 0.005;
+
+function sameScale(want, ppf) {
+  return Math.abs(want - ppf)
+    <= Math.max(0.01, SCALE_SAME_FRAC * Math.max(want, ppf));
+}
+
+/**
  * Short human-readable drawing scale for a pixels-per-foot value.
  * Falls back to a px/ft figure for a calibrated scale, so the item still
  * records how it was measured.
@@ -67,22 +89,125 @@ export const DEFAULT_PPF = computePixelsPerFoot(DEFAULT_DPI, 0.25, 1.0);   // 37
 export function scaleLabelFor(ppf, dpi = DEFAULT_DPI) {
   for (const [label, inches, feet] of SCALE_PRESETS) {
     if (inches == null) continue;
-    if (Math.abs(computePixelsPerFoot(dpi, inches, feet) - ppf) < 0.5) {
+    if (sameScale(computePixelsPerFoot(dpi, inches, feet), ppf)) {
       const base = label.split('  (')[0].trim();
       return feet === 1.0 ? base.split(' = ')[0].trim() : base;
     }
   }
   for (const [label, inches, feet] of EXTENDED_SCALES) {
-    if (Math.abs(computePixelsPerFoot(dpi, inches, feet) - ppf) < 0.5) {
+    if (sameScale(computePixelsPerFoot(dpi, inches, feet), ppf)) {
       return feet === 1.0 ? label.split(' = ')[0].trim() : label;
     }
   }
   return `${ppf.toFixed(1)} px/ft`;
 }
 
+/**
+ * Invert a scale LABEL back to pixels per foot at this dpi, or null when it
+ * is not a name either build writes. The inverse of scaleLabelFor, walking
+ * the same two lists in the same order, so a name cannot mean two numbers.
+ *
+ * LOSSY IN BOTH DIRECTIONS, which is why a shape must carry a figure of its
+ * own: scaleLabelFor snaps anything within half a percent onto a preset
+ * name, and this hands back that preset's exact figure, so 37.687 -> '1/4"'
+ * -> 37.5 and a 1000 sq ft area comes back 1010.
+ */
+export function ppfOfScaleLabel(label, dpi = DEFAULT_DPI) {
+  const s = String(label || '').trim();
+  if (!s) return null;
+  const px = s.match(/^\s*([\d.]+)\s*px\s*\/\s*ft/i);
+  if (px) {
+    const v = Number(px[1]);
+    return Number.isFinite(v) ? v : null;
+  }
+  const d = Number(dpi);
+  if (!(d > 0)) return null;
+  for (const list of [SCALE_PRESETS, EXTENDED_SCALES]) {
+    for (const [label_, inches, feet] of list) {
+      if (inches == null) continue;
+      const base = label_.split('  (')[0].trim();
+      const short = base.split(' =')[0].trim();
+      if (s === base || s === short || s === `${short} = ${feet} ft`) {
+        return computePixelsPerFoot(d, inches, feet);
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * The WORDS for a scale, from an exact figure, the words the shape itself
+ * recorded, and the dpi that turns one into the other.
+ *
+ * THE RECORDED WORDS WIN WHENEVER THEY NAME THE FIGURE. A figure recovered
+ * onto an old shape restores a number that was always behind its label; it
+ * is not a new opinion about what the shape is, and it must not re-describe
+ * it. Deriving the words from the figure instead renames six items in his
+ * library from the "28.0 px/ft" / "28.2 px/ft" he wrote down to '3/16"'.
+ *
+ * A label that CONTRADICTS the figure is overridden by the figure, which is
+ * the whole point of a stamp.
+ *
+ * Ported from pdf_fast_viewer.py scale_words_for; tests/ref-distance.mjs
+ * runs that function against this one on every build.
+ */
+export function scaleWordsFor(stamp, label, dpi = DEFAULT_DPI) {
+  const lab = String(label || '').trim();
+  const s = Number(stamp);
+  const d = Number(dpi);
+  if (!(s > 0) || !(d > 0)) return lab;
+  if (lab) {
+    const named = ppfOfScaleLabel(lab, d);
+    if (named && sameScale(Number(named), s)) return lab;
+  }
+  return scaleLabelFor(s, d);
+}
+
 /** True when this page's scale came from the calibrate tool, not a preset. */
 export function isCalibrated(ppf, dpi = DEFAULT_DPI) {
   return scaleLabelFor(ppf, dpi).endsWith('px/ft');
+}
+
+/**
+ * The ppf the item itself accounts for, or 0 when it accounts for none.
+ *
+ * NOT itemPpf. That one answers "what scale do I DRAW this at" and falls
+ * back to the page, which is the one answer that must never be printed as an
+ * item's own: naming the sheet's scale on a line measured at a different one
+ * is precisely the trap the reference distance exists to close.
+ *
+ * `ppf_recovered === false` is _backfillItems saying that nothing on the item
+ * could be inverted and the number now sitting in `ppf` came from the sheet.
+ * So that flag, and not the presence of a number, is what says whether there
+ * is a record. Undefined means the file carried a real stamp.
+ */
+export function itemOwnPpf(item) {
+  if (!item || item.ppf_recovered === false) return 0;
+  const p = Number(item.ppf);
+  return Number.isFinite(p) && p > 0 ? p : 0;
+}
+
+/**
+ * What a reference distance's own label says its scale is.
+ *
+ * A port of the desktop's `ref_scale_words`, word for word, so the same line
+ * cannot describe itself two different ways on two screens. The STAMP first
+ * and the recorded `scale` label second — which is _item_scale_label's
+ * order — and "scale not recorded" when it carries neither, because no
+ * record is NOT the same thing as the sheet's current scale.
+ *
+ * `1/4"` is a scale and wants the word; `1" = 10 ft` and `28.2 px/ft` already
+ * say what they are and would read as nonsense with it.
+ */
+export function refScaleWords(item, dpi = DEFAULT_DPI) {
+  // scaleWordsFor decides, so the browser and the desktop cannot come to
+  // different words for one line: the stamp is the figure, the recorded
+  // words are the words unless they contradict it.
+  const lab = scaleWordsFor(itemOwnPpf(item),
+                            (item && item.scale) || '', dpi);
+  if (!lab) return 'scale not recorded';
+  if (lab.includes('=') || lab.includes('px/ft')) return lab;
+  return `${lab} scale`;
 }
 
 // Calibration guard rails. A blank entry, a zero, a two-pixel line or an
