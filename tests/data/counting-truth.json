@@ -14,14 +14,18 @@
   "_REV_DATE_RE",
   "_REV_NUMBER_NAME_RE",
   "_ai_total",
+  "_flow_words",
+  "_mat_merge",
   "_mat_parent",
   "_materials_change_words",
   "_materials_words",
   "_more_words",
-  "_net_text",
+  "_price_key",
   "_rev_name",
   "_rev_page_label",
+  "_round6",
   "_takeoff_identity",
+  "_takeoff_lineage",
   "is_takeoff_item",
   "normalize_sheet_label",
   "page_sort_key",
@@ -34,6 +38,7 @@
   "takeoff_move_words",
   "takeoff_qty",
   "takeoff_qty_text",
+  "takeoff_quantity_entries",
   "takeoff_quantity_words",
   "takeoff_shape_qty",
   "takeoff_sum_text"
@@ -16631,7 +16636,7 @@
      [
       0,
       "r-m",
-      "300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) will leave"
+      "300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 250 sq ft of Garage Slab, 200 sq ft of Driveway (with 20 CY of Base, 60 LF of Forms and 1 more material: 1 each), 120 sq ft of Footing and 3 more (190 sq ft, with 1 material: 2 CY) will leave"
      ],
      [
       1,
@@ -16717,7 +16722,7 @@
       0,
       "r-m",
       [
-       "M1 will count from ASI 5 instead of its own drawing.\n\nIn your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) will leave.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way.\n\nThere is no takeoff on that drawing yet, so this sheet will contribute nothing until you take it off."
+       "M1 will count from ASI 5 instead of its own drawing.\n\nIn your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 250 sq ft of Garage Slab, 200 sq ft of Driveway (with 20 CY of Base, 60 LF of Forms and 1 more material: 1 each), 120 sq ft of Footing and 3 more (190 sq ft, with 1 material: 2 CY) will leave.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way.\n\nThere is no takeoff on that drawing yet, so this sheet will contribute nothing until you take it off."
       ]
      ],
      [
@@ -16751,7 +16756,7 @@
       "r-m",
       true,
       [
-       "M1 now counts from ASI 5 instead of its own drawing \u2014 in your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) leave."
+       "M1 now counts from ASI 5 instead of its own drawing \u2014 in your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 250 sq ft of Garage Slab, 200 sq ft of Driveway (with 20 CY of Base, 60 LF of Forms and 1 more material: 1 each), 120 sq ft of Footing and 3 more (190 sq ft, with 1 material: 2 CY) leave."
       ]
      ],
      [
@@ -17590,7 +17595,7 @@
      [
       0,
       "r-m",
-      "300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) will leave"
+      "300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 250 sq ft of Garage Slab, 200 sq ft of Driveway (with 20 CY of Base, 60 LF of Forms and 1 more material: 1 each), 120 sq ft of Footing and 3 more (190 sq ft, with 1 material: 2 CY) will leave"
      ],
      [
       1,
@@ -17676,7 +17681,7 @@
       0,
       "r-m",
       [
-       "M1 will count from ASI 5 instead of its own drawing.\n\nIn your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) will leave.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way.\n\nThere is no takeoff on that drawing yet, so this sheet will contribute nothing until you take it off."
+       "M1 will count from ASI 5 instead of its own drawing.\n\nIn your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 250 sq ft of Garage Slab, 200 sq ft of Driveway (with 20 CY of Base, 60 LF of Forms and 1 more material: 1 each), 120 sq ft of Footing and 3 more (190 sq ft, with 1 material: 2 CY) will leave.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way.\n\nThere is no takeoff on that drawing yet, so this sheet will contribute nothing until you take it off."
       ]
      ],
      [
@@ -17710,7 +17715,7 @@
       "r-m",
       true,
       [
-       "M1 now counts from ASI 5 instead of its own drawing \u2014 in your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) leave."
+       "M1 now counts from ASI 5 instead of its own drawing \u2014 in your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 250 sq ft of Garage Slab, 200 sq ft of Driveway (with 20 CY of Base, 60 LF of Forms and 1 more material: 1 each), 120 sq ft of Footing and 3 more (190 sq ft, with 1 material: 2 CY) leave."
       ]
      ],
      [

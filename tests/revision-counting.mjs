@@ -33,7 +33,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   CountingModel, applyBooking, pyFixed, pyRound, pyG, takeoffQtyText,
-  takeoffQty, takeoffMoveWords, isTakeoffItem,
+  takeoffQty, takeoffMoveWords, takeoffQuantityWords, isTakeoffItem,
 } from '../js/core/counting.js';
 import {
   revisionShortName, workingVersionOf, newestVersionOf, sheetVersions,
@@ -91,6 +91,75 @@ console.log('-- Python-exact numbers --');
     revisionShortName({ description: 'Revision 10' }, 1, []), 'REV 1');
   const a = { description: 'Bulletin' }, b = { description: 'bulletin' };
   eq('one name: two revisions cannot share one', revisionShortName(a, 1, [a, b]), 'REV 1');
+}
+
+// ═══ 1b. the sentence's lists (desktop FIX7 step 3) ════════════════════
+console.log('-- one item, one line; never netted --');
+{
+  const pic = rows => new Map(rows.map((r, i) => [i, [r[0], [r[1], r[2]]]]));
+  // ADV-2: Wall T5 20 -> 29 and Wall T6 29 -> 20 were "and 2 more (no net
+  // change)" -- 18 sq ft between two separately priced walls.
+  const walls = [1, 2, 3, 4, 5, 6].map(k => ({ type: 'area', name: `Wall T${k}` }));
+  const b6 = pic(walls.map((m, i) => [m, [13, 13, 13, 13, 20, 29][i], 'sq ft']));
+  const a6 = pic(walls.map((m, i) => [m, [8, 8, 8, 8, 29, 20][i], 'sq ft']));
+  eq('a swap between two items is named, the biggest first, the rest unnetted',
+    takeoffMoveWords(b6, a6, true),
+    'Wall T5 20 → 29 sq ft, Wall T6 29 → 20 sq ft, Wall T1 13 → 8 sq ft, '
+    + 'Wall T2 13 → 8 sq ft and 2 more: 10 sq ft will leave');
+  // a small swap in the rest: priced alike it is summed both ways ...
+  const w = [1, 2, 3, 4, 5, 6].map(k => ({ type: 'area', name: `W${k}`, unit_cost: 2 }));
+  const bs = pic(w.map((m, i) => [m, [40, 40, 40, 40, 13, 20][i], 'sq ft']));
+  const as = pic(w.map((m, i) => [m, [13, 13, 13, 13, 20, 13][i], 'sq ft']));
+  eq('a rest priced alike says what came in and what left',
+    takeoffMoveWords(bs, as),
+    'W1 40 → 13 sq ft, W2 40 → 13 sq ft, W3 40 → 13 sq ft, W4 40 → 13 sq ft '
+    + 'and 2 more: 7 sq ft comes in, 7 sq ft leaves');
+  // ... and priced apart it is NAMED: the cap is not for hiding a swap
+  w[5].unit_cost = 3.5;
+  eq('a rest priced apart is named in full', takeoffMoveWords(bs, as),
+    'W1 40 → 13 sq ft, W2 40 → 13 sq ft, W3 40 → 13 sq ft, W4 40 → 13 sq ft, '
+    + 'W5 13 → 20 sq ft, W6 20 → 13 sq ft');
+  // N7: three items of one name are one line
+  const three = [0, 1, 2].map(k => ({ type: 'area', name: 'Wall', points: [[k, 0]] }));
+  eq('one name, one line', takeoffMoveWords(new Map(), pic(three.map(m => [m, 2, 'sq ft']))),
+    '6 sq ft of Wall comes in');
+  // N7: the same item re-shaped (an undo installs a copy) is one change...
+  const p0 = { type: 'count', name: 'Post', points: [[1, 1], [2, 2], [3, 3]] };
+  const p1 = { ...p0, points: [[1, 1], [2, 2]] };
+  eq('an undone count click is one change',
+    takeoffMoveWords(new Map([[1, [p0, [3, 'EA']]]]), new Map([[2, [p1, [2, 'EA']]]])),
+    'Post 3 → 2 EA');
+  // ...but takeoff on another drawing is another piece of takeoff
+  eq('another drawing is not the same item',
+    takeoffMoveWords(new Map([[1, [p0, [3, 'EA']]]]),
+      new Map([[2, [{ ...p1, rev_id: 'r1', rev_page: 0 }, [2, 'EA']]]])),
+    '3 EA of Post leaves; 2 EA of Post comes in');
+  // a change of materials alone is a change
+  const s0 = { type: 'area', name: 'Slab', points: [[0, 0]] };
+  const s1 = { ...s0, associated_items: [{ name: 'Dumpster', qty: 1, qty_mode: 'total', unit: 'each' }] };
+  eq('a material added is said', takeoffMoveWords(new Map([[1, [s0, [25, 'sq ft']]]]),
+    new Map([[2, [s1, [25, 'sq ft']]]])), 'Slab 25 sq ft (1 each of Dumpster comes in)');
+  // two items of one name moving opposite ways are never one line
+  const i0 = { type: 'area', name: 'Wall', points: [[0, 0]] };
+  const i1 = { type: 'area', name: 'Wall', points: [[9, 9]] };
+  eq('opposite ways stay two lines',
+    takeoffMoveWords(new Map([[1, [i0, [4, 'sq ft']]], [2, [i1, [6, 'sq ft']]]]),
+      new Map([[1, [i0, [6, 'sq ft']]], [2, [i1, [4, 'sq ft']]]])),
+    'Wall 4 → 6 sq ft, Wall 6 → 4 sq ft');
+  // materials past their limit: the biggest named, the rest unnetted
+  const m0 = { type: 'area', name: 'Slab', points: [[0, 0]], value: 10,
+    associated_items: [['Mesh', 1], ['Wire', 0.5], ['Rebar', 2]]
+      .map(([n, q]) => ({ name: n, qty: q, qty_mode: 'per_unit', unit: 'LF' })) };
+  eq('materials: biggest named, the rest unnetted',
+    takeoffMoveWords(new Map([[1, [m0, [10, 'sq ft']]]]),
+      new Map([[1, [{ ...m0, value: 4 }, [4, 'sq ft']]]])),
+    'Slab 10 → 4 sq ft (Rebar 20 → 8 LF, Mesh 10 → 4 LF and 1 more material: 3 LF leaves)');
+  // the per-drawing words: two shapes of one item are one entry
+  eq('two shapes of one item on a drawing are one entry', takeoffQuantityWords([
+    { type: 'area', name: 'Item 23', group_id: 'g', group_child: true, value: 5.8 },
+    { type: 'area', name: 'Item 26', value: 3.2 },
+    { type: 'area', name: 'Item 23', group_id: 'g', group_child: true, value: 5.8 }]),
+  '11.6 sq ft of Item 23, Item 26 3.2 sq ft');
 }
 
 // ═══ one scenario through the port ══════════════════════════════════════

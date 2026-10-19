@@ -88,6 +88,10 @@ WIN_STUBS = {
     "_count_asked", "_counted_seen", "_watch_said",
     # the deferred price sentences (the watch takes back one made untrue)
     "_price_queue",
+    # what the status line holds and the totals it described (a sentence
+    # about totals that have moved since is never appended to): a record
+    # of the line, no number
+    "_note_money_line",
 }
 
 # GLPageWidget: the item's drawing, and the multi-shape arithmetic.
@@ -445,6 +449,9 @@ class Win(NS["WinBase"]):
         pass
 
     def _rebase_counted_seen(self, page):
+        pass
+
+    def _note_money_line(self, text):
         pass
 
     def __getattr__(self, name):

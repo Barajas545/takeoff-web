@@ -198,20 +198,43 @@ function moreWords(n, qtys, extra = '') {
 }
 
 /**
+ * [[name, unit, qty, run]] — the takeoff in `items` ONE ENTRY PER ITEM AS
+ * HE SEES IT (desktop takeoff_quantity_entries): every shape of one name and
+ * unit added up, by what is traced on its own drawing, first one first.
+ * `run` when every shape in the entry is a run of an item that spans sheets.
+ */
+export function takeoffQuantityEntries(items) {
+  const ents = [];
+  const at = new Map();
+  for (const m of items || []) {
+    if (!isTakeoffType(m)) continue;
+    const [q, u] = takeoffShapeQty(m);
+    const nm = itemName(m);
+    const k = JSON.stringify([nm, u]);
+    if (at.has(k)) {
+      const e = ents[at.get(k)];
+      ents[at.get(k)] = [nm, u, e[2] + q, e[3] && truthy(m.group_child)];
+    } else {
+      at.set(k, ents.length);
+      ents.push([nm, u, q, truthy(m.group_child)]);
+    }
+  }
+  return ents;
+}
+
+/**
  * The takeoff in `items` by name and QUANTITY — "Deck 500 sq ft, Walls
  * 250 LF and 2 more (18.1 sq ft)" — because a sentence about money that
  * says "1 item" says nothing. Every shape by what is traced on its own
- * drawing, the first shape of a multi-sheet item included. '' when there is
+ * drawing, the first shape of a multi-sheet item included. One item, one
+ * line: two shapes of one name are one entry, added up. '' when there is
  * no takeoff in it.
  */
 export function takeoffQuantityWords(items, limit = 4) {
   const rows = [];
   const qtys = [];
-  for (const m of items || []) {
-    if (!isTakeoffType(m)) continue;
-    const [q, u] = takeoffShapeQty(m);
-    const nm = itemName(m);
-    if (m.group_child) rows.push(`${takeoffQtyText(q, u)} of ${nm}`);
+  for (const [nm, u, q, run] of takeoffQuantityEntries(items)) {
+    if (run) rows.push(`${takeoffQtyText(q, u)} of ${nm}`);
     else rows.push(`${nm} ${takeoffQtyText(q, u)}`);
     qtys.push([q, u]);
   }
@@ -238,7 +261,7 @@ export function takeoffSumText(qtys) {
  * the drawing it was traced on and its geometry (desktop _takeoff_identity).
  * An undo restores copies, so a move is matched by this and not by object.
  */
-export function takeoffIdentity(m) {
+function identityParts(m) {
   m = m || {};
   let pts = '';
   try {
@@ -253,7 +276,84 @@ export function takeoffIdentity(m) {
   }
   return [pyStr(m.type || ''), String(m.name || ''), String(m.rev_id || ''),
     pyStr(m.rev_page), String(m.group_id || ''), truthy(m.group_child) ? '1' : '0',
-    pts].join('\u0000');
+    pts];
+}
+
+export function takeoffIdentity(m) {
+  return identityParts(m).join('\u0000');
+}
+
+/**
+ * What a piece of takeoff is apart from its geometry (desktop
+ * _takeoff_lineage): the SAME item before and after an edit to its shape.
+ * Ctrl+Z of a count click put back a two-point Post, and matched by identity
+ * alone it read "3 EA of Post leaves; 2 EA of Post comes in".
+ */
+export function takeoffLineage(m) {
+  return identityParts(m).slice(0, -1).join('\u0000');
+}
+
+/** Python _round6: six places, 0 for anything unreadable or NaN. */
+function round6(v) {
+  const f = pyFloat(orZero(v));
+  if (!f.ok || Number.isNaN(f.n)) return 0;
+  const r = pyRound(f.n, 6);
+  return Number.isNaN(r) ? 0 : r;
+}
+
+/** desktop _mat_merge: one row per material and unit, first one first. */
+function matMerge(mats) {
+  const out = [];
+  const at = new Map();
+  for (const [n, q, u] of mats || []) {
+    const k = JSON.stringify([n, u]);
+    if (at.has(k)) {
+      const i = at.get(k);
+      out[i] = [n, out[i][1] + q, u];
+    } else {
+      at.set(k, out.length);
+      out.push([n, q, u]);
+    }
+  }
+  return out;
+}
+
+/** desktop _flow_words: what entered and what left, never netted. */
+function flowWords(ins, outs, future = false) {
+  const bits = [];
+  for (const [qtys, verbs] of [[ins, ['comes in', 'come in', 'will come in']],
+    [outs, ['leaves', 'leave', 'will leave']]]) {
+    const t = takeoffSumText(qtys);
+    if (t) {
+      bits.push(`${t} ${future ? verbs[2]
+        : (new Set(qtys.map(x => x[1])).size === 1 ? verbs[0] : verbs[1])}`);
+    }
+  }
+  return bits;
+}
+
+/**
+ * desktop _price_key: what one unit of item `m` costs, as something two
+ * items can share — the unit, the rate and what it is a rate per, and the
+ * materials riding it. Compared for EQUALITY only, so any canonical form.
+ */
+function priceKey(m, u) {
+  m = m || {};
+  const mats = [];
+  for (const ai of m.associated_items || []) {
+    if (!ai || typeof ai !== 'object' || Array.isArray(ai)) continue;
+    const mode = ('qty_mode' in ai) ? ai.qty_mode
+      : (('qty_per' in ai) ? 'per_unit' : 'total');
+    mats.push(JSON.stringify([String(truthy(ai.name) ? ai.name : '').trim(),
+      String(truthy(('unit' in ai) ? ai.unit : 'each') ? (('unit' in ai) ? ai.unit : 'each') : ''),
+      String(mode),
+      round6(('qty' in ai) ? ai.qty : (('qty_per' in ai) ? ai.qty_per : 0)),
+      round6(ai.unit_cost)]));
+  }
+  mats.sort();
+  return JSON.stringify([String(u || ''), round6(m.unit_cost), 'rate_unit' in m,
+    String(truthy(m.rate_unit) ? m.rate_unit : ''),
+    String(truthy(m.catalog_unit) ? m.catalog_unit : ''), mats]);
 }
 
 /**
@@ -263,51 +363,75 @@ export function takeoffIdentity(m) {
  *
  *   "1,318.6 sq ft of Slab leaves; 576.7 sq ft of Garage Slab comes in;
  *    Wall M 13 → 4 sq ft"
+ *
+ * ONE ITEM, ONE LINE: items of one name and unit are one line, and an item
+ * whose shape changed is one change (matched by takeoffLineage). A change
+ * of the materials riding an item is a change too. Past `limit` the BIGGEST
+ * moves are named and the rest says what came in and what left separately —
+ * never netted; a rest that moves both ways between differently priced
+ * items (priceKey) is named in full.
  */
 export function takeoffMoveWords(before, after, future = false, limit = 4) {
-  const row = (k, src) => {
-    const [m, [q, u]] = src.get(k);
-    return `${takeoffQtyText(q, u)} of ${itemName(m)}`
-      + materialsWords(takeoffMaterials(m, matParent(m, q)));
-  };
-  const cut = (ks, src) => {
-    let out = ks.slice(0, limit).map(k => row(k, src)).join(', ');
-    if (ks.length > limit) {
-      const rest = ks.slice(limit);
-      const mats = [];
-      for (const k of rest) {
-        const [m, [q]] = src.get(k);
-        mats.push(...takeoffMaterials(m, matParent(m, q)));
+  const mats = (m, q) => takeoffMaterials(m, matParent(m, q));
+  const sig = e => matMerge(mats(e[0], e[1][0]))
+    .filter(([, x]) => round6(x))
+    .map(([n, x, u]) => JSON.stringify([n, u, round6(x)])).sort().join('\u0001');
+  const moved = (b, a) => !(b[1][0] === a[1][0] && b[1][1] === a[1][1]) || sig(b) !== sig(a);
+  const lines = (keys, src) => {
+    const out = [];
+    const at = new Map();
+    for (const k of keys) {
+      const [m, [q, u]] = src.get(k);
+      const key = JSON.stringify([itemName(m), u]);
+      if (at.has(key)) {
+        const ln = out[at.get(key)];
+        ln[2] = ln[2] + q;
+        ln[3].push(...mats(m, q));
+      } else {
+        at.set(key, out.length);
+        out.push([itemName(m), u, q, [...mats(m, q)]]);
       }
-      let extra = '';
-      if (mats.length) {
-        const ms = takeoffSumText(mats.map(([, q, u]) => [q, u]));
-        extra = `with ${mats.length} material${mats.length === 1 ? '' : 's'}${ms ? `: ${ms}` : ''}`;
-      }
-      out += moreWords(rest.length, rest.map(k => src.get(k)[1]), extra);
     }
     return out;
   };
-  const same = (a, b) => a[0] === b[0] && a[1] === b[1];
+  const cut = (ls0) => {
+    let ls = ls0;
+    if (ls.length > limit) ls = [...ls].sort((x, y) => (-Math.abs(x[2])) - (-Math.abs(y[2])));
+    let out = ls.slice(0, limit).map(([n, u, q, x]) => `${takeoffQtyText(q, u)} of ${n}`
+      + materialsWords(matMerge(x))).join(', ');
+    if (ls.length > limit) {
+      const rest = ls.slice(limit);
+      const mts = [];
+      for (const ln of rest) mts.push(...matMerge(ln[3]));
+      let extra = '';
+      if (mts.length) {
+        const ms = takeoffSumText(mts.map(([, q, u]) => [q, u]));
+        extra = `with ${mts.length} material${mts.length === 1 ? '' : 's'}${ms ? `: ${ms}` : ''}`;
+      }
+      out += moreWords(rest.length, rest.map(ln => [ln[2], ln[1]]), extra);
+    }
+    return out;
+  };
   let gone = [...before.keys()].filter(k => !after.has(k));
   let came = [...after.keys()].filter(k => !before.has(k));
-  const chg = [...after.keys()].filter(k => before.has(k) && !same(before.get(k)[1], after.get(k)[1]))
+  const chg = [...after.keys()].filter(k => before.has(k) && moved(before.get(k), after.get(k)))
     .map(k => [before.get(k), after.get(k)]);
-  if (gone.length && came.length) {
+  for (const ident of [takeoffIdentity, takeoffLineage]) {
+    if (!(gone.length && came.length)) break;
     const waiting = new Map();
     for (const k of came) {
-      const id = takeoffIdentity(after.get(k)[0]);
+      const id = ident(after.get(k)[0]);
       if (!waiting.has(id)) waiting.set(id, []);
       waiting.get(id).push(k);
     }
     const left = [];
     const paired = new Set();
     for (const k of gone) {
-      const hit = waiting.get(takeoffIdentity(before.get(k)[0]));
+      const hit = waiting.get(ident(before.get(k)[0]));
       if (hit && hit.length) {
         const k2 = hit.shift();
         paired.add(k2);
-        if (!same(before.get(k)[1], after.get(k2)[1])) chg.push([before.get(k), after.get(k2)]);
+        if (moved(before.get(k), after.get(k2))) chg.push([before.get(k), after.get(k2)]);
       } else {
         left.push(k);
       }
@@ -317,22 +441,84 @@ export function takeoffMoveWords(before, after, future = false, limit = 4) {
   }
   const bits = [];
   if (gone.length) {
-    bits.push(`${cut(gone, before)} ${gone.length === 1
+    const gl = lines(gone, before);
+    bits.push(`${cut(gl)} ${gl.length === 1
       ? (future ? 'will leave' : 'leaves') : (future ? 'will leave' : 'leave')}`);
   }
   if (came.length) {
-    bits.push(`${cut(came, after)} ${came.length === 1
+    const cl = lines(came, after);
+    bits.push(`${cut(cl)} ${cl.length === 1
       ? (future ? 'will come in' : 'comes in') : (future ? 'will come in' : 'come in')}`);
   }
   if (chg.length) {
-    const one = ([[m0, [a, u]], [m1, [b, u2]]]) => (u === u2
-      ? `${itemName(m1)} ${takeoffQtyText(a)} → ${takeoffQtyText(b, u)}`
-      : `${itemName(m1)} ${takeoffQtyText(a, u)} → ${takeoffQtyText(b, u2)}`)
-      + materialsChangeWords(m0, a, m1, b);
-    let out = chg.slice(0, limit).map(one).join(', ');
-    if (chg.length > limit) {
-      const rest = chg.slice(limit);
-      out += ` and ${rest.length} more (${netText(rest.map(p => [p[0][1], p[1][1]]))})`;
+    // One line per item as he sees it, and per direction.
+    let cls = [];
+    const at = new Map();
+    for (const [[m0, [a, u]], [m1, [b, u2]]] of chg) {
+      let way = null;
+      if (u === u2) {
+        const d = round6(b - a);
+        way = (d > 0 ? 1 : 0) - (d < 0 ? 1 : 0);
+      }
+      const key = JSON.stringify([itemName(m1), u, u2, way]);
+      const pk = [priceKey(m0, u), priceKey(m1, u2)];
+      if (at.has(key)) {
+        const ln = cls[at.get(key)];
+        ln[3] = ln[3] + a;
+        ln[4] = ln[4] + b;
+        ln[5].push(...mats(m0, a));
+        ln[6].push(...mats(m1, b));
+        for (const p of pk) ln[7].add(p);
+      } else {
+        at.set(key, cls.length);
+        cls.push([itemName(m1), u, u2, a, b, [...mats(m0, a)], [...mats(m1, b)], new Set(pk)]);
+      }
+    }
+    const one = ([n, u, u2, a, b, x0, x1]) => {
+      let t;
+      if (u !== u2) t = `${n} ${takeoffQtyText(a, u)} → ${takeoffQtyText(b, u2)}`;
+      else if (a === b) t = `${n} ${takeoffQtyText(b, u)}`;
+      else t = `${n} ${takeoffQtyText(a)} → ${takeoffQtyText(b, u)}`;
+      return t + materialsChangeWords(x0, x1, 2, future);
+    };
+    const size = ln => (ln[1] === ln[2] ? Math.abs(ln[4] - ln[3]) : Math.abs(ln[3]) + Math.abs(ln[4]));
+    let rest = [];
+    const ins = [];
+    const outs = [];
+    const mins = [];
+    const mouts = [];
+    if (cls.length > limit) {
+      cls = [...cls].sort((x, y) => (-size(x)) - (-size(y)));
+      rest = cls.slice(limit);
+      for (const [, u, u2, a, b, x0, x1] of rest) {
+        if (u === u2) {
+          const d = round6(b - a);
+          if (d > 0) ins.push([d, u]);
+          else if (d < 0) outs.push([-d, u]);
+        } else {
+          if (round6(a)) outs.push([a, u]);
+          if (round6(b)) ins.push([b, u2]);
+        }
+        const d0 = new Map(matMerge(x0).map(([mn, mq, mu]) => [JSON.stringify([mn, mu]), [mq, mu]]));
+        const d1 = new Map(matMerge(x1).map(([mn, mq, mu]) => [JSON.stringify([mn, mu]), [mq, mu]]));
+        for (const mk of [...d1.keys(), ...[...d0.keys()].filter(k => !d1.has(k))]) {
+          const mu = (d1.get(mk) || d0.get(mk))[1];
+          const d = round6((d1.has(mk) ? d1.get(mk)[0] : 0) - (d0.has(mk) ? d0.get(mk)[0] : 0));
+          if (d > 0) mins.push([d, mu]);
+          else if (d < 0) mouts.push([-d, mu]);
+        }
+      }
+      const prices = new Set();
+      for (const ln of rest) for (const p of ln[7]) prices.add(p);
+      if ((ins.length || mins.length) && (outs.length || mouts.length) && prices.size > 1) rest = [];
+    }
+    const shown = cls.slice(0, cls.length - rest.length);
+    let out = shown.map(one).join(', ');
+    if (rest.length) {
+      const fw = flowWords(ins, outs, future);
+      const mw = flowWords(mins, mouts, future);
+      out += ` and ${rest.length} more${fw.length ? `: ${fw.join(', ')}` : ''}`
+        + `${mw.length ? ` (materials: ${mw.join(', ')})` : ''}`;
     }
     bits.push(out);
   }
@@ -391,39 +577,49 @@ function materialsWords(mats, limit = 2) {
   return ` (with ${body})`;
 }
 
-/** "net -9 sq ft" for [[[a, u], [b, u2]]]; "no net change" when nothing does. */
-function netText(pairs) {
-  const net = new Map();
-  for (const [[a, u], [b, u2]] of pairs) {
-    net.set(u, (net.get(u) || 0) - pyFloat(orZero(a)).n);
-    net.set(u2, (net.get(u2) || 0) + pyFloat(orZero(b)).n);
-  }
-  const s = takeoffSumText([...net.entries()].map(([u, q]) => [pyRound(q, 6), u]));
-  return s ? `net ${s}` : 'no net change';
-}
-
-/** " (Rebar #4 14.3 → 4.4 LF)": the per-unit materials of a changed item. */
-function materialsChangeWords(m0, a, m1, b, limit = 2) {
-  const x0 = takeoffMaterials(m0, matParent(m0, a));
-  const x1 = takeoffMaterials(m1, matParent(m1, b));
-  const rows = [];
-  const pairs = [];
-  for (let i = 0; i < Math.min(x0.length, x1.length); i++) {
-    const [, q0, u0] = x0[i];
-    const [n1, q1, u1] = x1[i];
-    if (pyRound(q0, 6) === pyRound(q1, 6) && u0 === u1) continue;
-    rows.push(u0 === u1
-      ? `${n1} ${takeoffQtyText(q0)} → ${takeoffQtyText(q1, u1)}`
-      : `${n1} ${takeoffQtyText(q0, u0)} → ${takeoffQtyText(q1, u1)}`);
-    pairs.push([[q0, u0], [q1, u1]]);
+/**
+ * " (Rebar #4 14.3 → 4.4 LF, 1 each of Dumpster 20yd leaves)" (desktop
+ * _materials_change_words): an item's materials before (`x0`) and after
+ * (`x1`), material by material. Past `limit` the biggest are named and the
+ * rest say what entered and what left, never netted; a rest that moves both
+ * ways is named in full.
+ */
+function materialsChangeWords(x0in, x1in, limit = 2, future = false) {
+  const x0 = matMerge(x0in);
+  const x1 = matMerge(x1in);
+  const d0 = new Map(x0.map(([n, q, u]) => [JSON.stringify([n, u]), [n, q, u]]));
+  const d1 = new Map(x1.map(([n, q, u]) => [JSON.stringify([n, u]), [n, q, u]]));
+  let rows = [];
+  for (const k of [...d1.keys(), ...[...d0.keys()].filter(kk => !d1.has(kk))]) {
+    const e0 = d0.get(k);
+    const e1 = d1.get(k);
+    const [n, , u] = e1 || e0;
+    let t;
+    if (e0 && e1) {
+      if (round6(e0[1]) === round6(e1[1])) continue;
+      t = `${n} ${takeoffQtyText(e0[1])} → ${takeoffQtyText(e1[1], u)}`;
+    } else if (e1) {
+      if (!round6(e1[1])) continue;
+      t = `${takeoffQtyText(e1[1], u)} of ${n} ${future ? 'will come in' : 'comes in'}`;
+    } else {
+      if (!round6(e0[1])) continue;
+      t = `${takeoffQtyText(e0[1], u)} of ${n} ${future ? 'will leave' : 'leaves'}`;
+    }
+    rows.push([round6((e1 ? e1[1] : 0) - (e0 ? e0[1] : 0)), u, t]);
   }
   if (!rows.length) return '';
-  let out = rows.slice(0, limit).join(', ');
   if (rows.length > limit) {
-    const n = rows.length - limit;
-    out += ` and ${n} more material${n === 1 ? '' : 's'} (${netText(pairs.slice(limit))})`;
+    rows = [...rows].sort((x, y) => (-Math.abs(x[0])) - (-Math.abs(y[0])));
+    const rest = rows.slice(limit);
+    const ins = rest.filter(r => r[0] > 0).map(r => [r[0], r[1]]);
+    const outs = rest.filter(r => r[0] < 0).map(r => [-r[0], r[1]]);
+    if (!(ins.length && outs.length)) {
+      const n = rest.length;
+      return ` (${rows.slice(0, limit).map(r => r[2]).join(', ')} and ${n} more material${n === 1 ? '' : 's'}`
+        + `${(ins.length || outs.length) ? `: ${flowWords(ins, outs, future).join(', ')}` : ''})`;
+    }
   }
-  return ` (${out})`;
+  return ` (${rows.map(r => r[2]).join(', ')})`;
 }
 
 /** "3 items", "1 item and 2 shapes of items that span sheets", "nothing". */
@@ -958,7 +1154,7 @@ export class CountingModel {
     const there = takeoffQuantityWords(counted);
     return `What you just took off on ${this.versionName(rid)}${just ? ` (${just})` : ''} is not `
       + `in your totals: ${this.pageLabel(page)} counts from ${this.versionName(was)}, `
-      + (there ? `where ${there} ${counted.length === 1 ? 'is' : 'are'} in your totals`
+      + (there ? `where ${there} ${takeoffQuantityEntries(counted).length === 1 ? 'is' : 'are'} in your totals`
         : 'which holds nothing that counts')
       + '.';
   }
