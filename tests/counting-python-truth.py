@@ -901,6 +901,33 @@ def scenarios():
         },
     })
 
+    # 9. A revision PARKED until it is imported again -- what a crash restore
+    #    leaves when its drawings never reached the file. A sheet booked to it
+    #    counts its own drawing meanwhile, and the takeoff on the parked
+    #    drawing waits: no sentence may tell him to open that drawing and
+    #    press Count this version -- it is not in the job. A sheet with
+    #    takeoff on a LIVE revision as well still hears it.
+    S.append({
+        "name": "a revision waiting to be imported again", "pageCount": 3,
+        "metadata": {
+            "page_labels": ["P1", "P2", "P3"],
+            "sheet_version": {"1": "r-park"},
+            "revisions": [_rev("r-live", "05/01/2026", "ASI 3", 2,
+                               match={"2": 0})],
+            "revisions_pending_images": [
+                {"id": "r-park", "date": "06/01/2026", "description": "ASI 4",
+                 "source": "asi4.pdf", "match": {"1": 0}}],
+        },
+        "measurements": {
+            "0": [_area("Own P1", 10)],
+            "1": [_area("Own P2", 20),
+                  _area("Parked P2", 30, rev_id="r-park", rev_page=0)],
+            "2": [_area("Own P3", 40),
+                  _area("Parked P3", 50, rev_id="r-park", rev_page=1),
+                  _area("Live P3", 60, rev_id="r-live", rev_page=0)],
+        },
+    })
+
     # Every scenario in both orders: the order setting changes which drawing
     # is newest, never what counts.
     out = []

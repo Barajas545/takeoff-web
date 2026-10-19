@@ -891,7 +891,7 @@ export class CountingModel {
    */
   watchSentence(prev) {
     const now = this.countedState();
-    const said = [];
+    let said = [];
     for (const [k, [wid, nHere, nOther]] of Object.entries(now)) {
       const p = prev ? prev[k] : undefined;
       if (p !== undefined && p[0] !== wid) continue;     // the book moved: said by its mover
@@ -901,6 +901,21 @@ export class CountingModel {
       }
     }
     if (!said.length) return '';
+    // A drawing that is not in the job YET -- its revision parked until it
+    // is imported again -- can be neither opened nor counted: that sheet is
+    // said by the import-again sentence (desktop _mark_revisions_changed).
+    const pend = new Set((this.md.revisions_pending_images || [])
+      .filter(q => q && typeof q === 'object').map(q => String(q.id)));
+    if (pend.size) {
+      const bk = this.md.sheet_version || {};
+      said = said.filter(([page, wid]) => {
+        if (pend.has(String(bk[String(page)] || ''))) return false;
+        const others = new Set(this.items(page).filter(isTakeoffType).map(itemRevId));
+        others.delete(wid);
+        return ![...others].every(r => pend.has(r));
+      });
+      if (!said.length) return '';
+    }
     const bits = [];
     for (const [page, wid, emptied] of said.slice(0, 3)) {
       const rids = [...new Set(this.items(page).filter(isTakeoffType).map(itemRevId))]
