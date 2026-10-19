@@ -655,26 +655,51 @@ export class CountingModel {
     return takeoffMoveWords(b, a, future);
   }
 
-  /** Map {revId: items} on one sheet; a run is not an item of its own. */
+  /**
+   * Map {revId: items} on the DRAWINGS of one sheet; a run is not an item of
+   * its own, and an item whose page is no drawing of the sheet now is on no
+   * version of it (takeoffOnDrawings).
+   */
   itemsByVersion(page) {
     const out = new Map();
-    for (const m of this.items(page)) {
-      if (!isTakeoffType(m) || truthy(m.group_child)) continue;
-      const rid = itemRevId(m);
-      out.set(rid, (out.get(rid) || 0) + 1);
+    for (const [rid, [a]] of this.takeoffOnDrawings(page).byRev) {
+      if (a) out.set(rid, a);
     }
     return out;
   }
 
-  /** [items, runs] of takeoff on one drawing of a sheet. */
-  takeoffAmount(page, rid) {
-    let items = 0, runs = 0;
-    const r = String(rid || '');
+  /**
+   * The takeoff on one sheet by the DRAWING it was traced on (desktop
+   * `_takeoff_on_drawings`): {byRev: Map{revId: [items, runs]}, waiting:
+   * [items, runs]}. A piece stamped with a page of a revision is that
+   * revision's only while the page is its drawing of this sheet
+   * (itemOnDrawing, the canvas's own question); otherwise it waits. A
+   * revision not in the job at all (deleted, or waiting to be imported
+   * again) has no pages to ask: its takeoff stays under its id.
+   */
+  takeoffOnDrawings(page) {
+    const byRev = new Map();
+    let wItems = 0, wRuns = 0;
+    const live = new Set(this.revs.map(r => String(r.id)));
     for (const m of this.items(page)) {
-      if (!isTakeoffType(m) || itemRevId(m) !== r) continue;
-      if (truthy(m.group_child)) runs += 1; else items += 1;
+      if (!isTakeoffType(m)) continue;
+      const run = truthy(m.group_child);
+      const rid = itemRevId(m);
+      if (rid && live.has(rid) && !this.itemOnDrawing(page, rid, m)) {
+        if (run) wRuns += 1; else wItems += 1;
+        continue;
+      }
+      const [a, b] = byRev.get(rid) || [0, 0];
+      byRev.set(rid, run ? [a, b + 1] : [a + 1, b]);
     }
-    return [items, runs];
+    return { byRev, waiting: [wItems, wRuns] };
+  }
+
+  /** [items, runs] of takeoff on one drawing of a sheet — the drawing `rid`
+   *  shows for it NOW. */
+  takeoffAmount(page, rid) {
+    const got = this.takeoffOnDrawings(page).byRev.get(String(rid || ''));
+    return got ? [got[0], got[1]] : [0, 0];
   }
 
   /** The takeoff on `page` that is in the totals now. */
@@ -1102,11 +1127,13 @@ export class CountingModel {
       const vers = this.sheetVersions(i);
       const shown = vers.length > 1 ? this.newestVersionOf(i) : '';
       const counted = this.workingVersionOf(i);
+      // Takeoff by the drawing it was traced on (takeoffOnDrawings): a piece
+      // whose page is no drawing of this sheet now is on no version of it —
+      // it waits, and the tip says so apart.
+      const { byRev, waiting } = this.takeoffOnDrawings(i);
       const raw = new Map();
-      for (const m of this.items(i)) {
-        if (!isTakeoffType(m)) continue;
-        const rid = itemRevId(m);
-        raw.set(rid, (raw.get(rid) || 0) + 1);
+      for (const [rid, [a, b]] of byRev) {
+        if (a + b) raw.set(rid, a + b);
       }
       const warn = raw.size > 0 && counted !== shown;
       if (!(shown || org || warn)) continue;
@@ -1132,12 +1159,12 @@ export class CountingModel {
         kind = 'rev'; text = tag; short = stag;
       }
       out[i] = { kind, text, short, added: org !== null, shows,
-        tip: this.sheetTileTip(i, vers, shown, counted, org, raw, warn, known) };
+        tip: this.sheetTileTip(i, vers, shown, counted, org, raw, warn, known, waiting) };
     }
     return out;
   }
 
-  sheetTileTip(page, vers, shown, counted, org, raw, warn, known) {
+  sheetTileTip(page, vers, shown, counted, org, raw, warn, known, waiting = [0, 0]) {
     const nm = this.pageLabel(page);
     const lines = [];
     if (org) {
@@ -1165,8 +1192,11 @@ export class CountingModel {
       if (runs > 0) bits.push(`${runs} shape${runs === 1 ? '' : 's'} of items that span sheets`);
       return bits.join(' and ') || 'nothing';
     };
+    const w = waiting || [0, 0];
+    const nWait = (w[0] || 0) + (w[1] || 0);
     if (!raw.size) {
-      lines.push('Nothing taken off this sheet yet.');
+      lines.push(nWait ? 'Nothing taken off any drawing of this sheet.'
+        : 'Nothing taken off this sheet yet.');
     } else {
       lines.push(`Counting: ${where(counted)} — ${raw.get(counted) ? amount(counted) : 'nothing is taken off it'}.`);
       const others = [...raw.keys()].filter(r => r !== counted)
@@ -1174,6 +1204,9 @@ export class CountingModel {
           || (a < b ? -1 : a > b ? 1 : 0));
       for (const rid of others.slice(0, 4)) lines.push(`Not counted: ${amount(rid)} on ${where(rid)}.`);
       if (others.length > 4) lines.push(`…and takeoff on ${others.length - 4} more drawings, not counted.`);
+    }
+    if (nWait) {
+      lines.push(`Waiting: ${amountWords(w[0] || 0, w[1] || 0)}, traced on a page that is no drawing of this sheet now — it counts nowhere until that page is placed.`);
     }
     if (warn) {
       const how = (shown && !this.versionTakeoffSizeOk(page, shown))

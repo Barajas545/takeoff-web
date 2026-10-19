@@ -871,7 +871,7 @@
       ],
       "originDate": "",
       "byVersion": {
-       "r-asi1": 2,
+       "r-asi1": 1,
        "": 1
       },
       "label": "A2.0"
@@ -1029,9 +1029,7 @@
       ],
       "ranked": [],
       "originDate": "",
-      "byVersion": {
-       "r-asi1": 1
-      },
+      "byVersion": {},
       "label": "A5.0"
      },
      {
@@ -1097,7 +1095,7 @@
        "r-asi1",
        0
       ],
-      "tip": "REVISED \u2014 the list shows ASI 1 \u00b7 02/10/2026, the newest of the 2 drawings of this sheet.\nCounting: ASI 1 \u00b7 02/10/2026 \u2014 2 items.\nNot counted: 1 item on its own drawing (the original set)."
+      "tip": "REVISED \u2014 the list shows ASI 1 \u00b7 02/10/2026, the newest of the 2 drawings of this sheet.\nCounting: ASI 1 \u00b7 02/10/2026 \u2014 1 item.\nNot counted: 1 item on its own drawing (the original set).\nWaiting: 1 item, traced on a page that is no drawing of this sheet now \u2014 it counts nowhere until that page is placed."
      },
      "2": {
       "kind": "warn",
@@ -1502,7 +1500,7 @@
       5,
       0,
       [
-       "What you just took off on ASI 1 (Outlets 3 EA) is not in your totals: A5.0 counts from its own drawing, which holds nothing that counts.\n\nA5.0 will count from ASI 1 instead of its own drawing.\n\nYour totals do not change: nothing taken off either drawing counts differently.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+       "What you just took off on ASI 1 (Outlets 3 EA) is not in your totals: A5.0 counts from its own drawing, which holds nothing that counts.\n\nA5.0 will count from ASI 1 instead of its own drawing.\n\nYour totals do not change: nothing taken off either drawing counts differently.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way.\n\nThere is no takeoff on that drawing yet, so this sheet will contribute nothing until you take it off."
       ],
       [
        "A5.0 still counts from its own drawing. What you take off on ASI 1 (Outlets 3 EA) is kept and marked NOT COUNTED \u2014 it is not in your totals. Count this version, on the version bar, changes that."
@@ -2901,7 +2899,7 @@
       ],
       "originDate": "",
       "byVersion": {
-       "r-asi1": 2,
+       "r-asi1": 1,
        "": 1
       },
       "label": "A2.0"
@@ -3059,9 +3057,7 @@
       ],
       "ranked": [],
       "originDate": "",
-      "byVersion": {
-       "r-asi1": 1
-      },
+      "byVersion": {},
       "label": "A5.0"
      },
      {
@@ -3127,7 +3123,7 @@
        "r-asi1",
        0
       ],
-      "tip": "REVISED \u2014 the list shows ASI 1 \u00b7 02/10/2026, the newest of the 2 drawings of this sheet.\nCounting: ASI 1 \u00b7 02/10/2026 \u2014 2 items.\nNot counted: 1 item on its own drawing (the original set)."
+      "tip": "REVISED \u2014 the list shows ASI 1 \u00b7 02/10/2026, the newest of the 2 drawings of this sheet.\nCounting: ASI 1 \u00b7 02/10/2026 \u2014 1 item.\nNot counted: 1 item on its own drawing (the original set).\nWaiting: 1 item, traced on a page that is no drawing of this sheet now \u2014 it counts nowhere until that page is placed."
      },
      "2": {
       "kind": "warn",
@@ -3532,7 +3528,7 @@
       5,
       0,
       [
-       "What you just took off on ASI 1 (Outlets 3 EA) is not in your totals: A5.0 counts from its own drawing, which holds nothing that counts.\n\nA5.0 will count from ASI 1 instead of its own drawing.\n\nYour totals do not change: nothing taken off either drawing counts differently.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+       "What you just took off on ASI 1 (Outlets 3 EA) is not in your totals: A5.0 counts from its own drawing, which holds nothing that counts.\n\nA5.0 will count from ASI 1 instead of its own drawing.\n\nYour totals do not change: nothing taken off either drawing counts differently.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way.\n\nThere is no takeoff on that drawing yet, so this sheet will contribute nothing until you take it off."
       ],
       [
        "A5.0 still counts from its own drawing. What you take off on ASI 1 (Outlets 3 EA) is kept and marked NOT COUNTED \u2014 it is not in your totals. Count this version, on the version bar, changes that."
@@ -10024,9 +10020,7 @@
        ]
       ],
       "originDate": "",
-      "byVersion": {
-       "r-s": 1
-      },
+      "byVersion": {},
       "label": "W1"
      },
      {
@@ -10084,7 +10078,7 @@
        "r-s",
        1
       ],
-      "tip": "REVISED \u2014 the list shows Swap \u00b7 08/01/2026, the newest of the 2 drawings of this sheet.\nCounting: Swap \u00b7 08/01/2026 \u2014 1 item."
+      "tip": "REVISED \u2014 the list shows Swap \u00b7 08/01/2026, the newest of the 2 drawings of this sheet.\nNothing taken off any drawing of this sheet.\nWaiting: 1 item, traced on a page that is no drawing of this sheet now \u2014 it counts nowhere until that page is placed."
      },
      "1": {
       "kind": "rev",
@@ -10562,9 +10556,7 @@
        ]
       ],
       "originDate": "",
-      "byVersion": {
-       "r-s": 1
-      },
+      "byVersion": {},
       "label": "W1"
      },
      {
@@ -10622,7 +10614,7 @@
        "r-s",
        1
       ],
-      "tip": "REVISED \u2014 the list shows Swap \u00b7 08/01/2026, the newest of the 2 drawings of this sheet.\nCounting: Swap \u00b7 08/01/2026 \u2014 1 item."
+      "tip": "REVISED \u2014 the list shows Swap \u00b7 08/01/2026, the newest of the 2 drawings of this sheet.\nNothing taken off any drawing of this sheet.\nWaiting: 1 item, traced on a page that is no drawing of this sheet now \u2014 it counts nowhere until that page is placed."
      },
      "1": {
       "kind": "rev",
