@@ -10,8 +10,15 @@
   "REV_NAME_MAX",
   "STANDALONE_PAGE",
   "_ORIGINAL_RANK",
+  "_OWN_KEY",
   "_REV_DATE_RE",
   "_REV_NUMBER_NAME_RE",
+  "_ai_total",
+  "_mat_parent",
+  "_materials_change_words",
+  "_materials_words",
+  "_more_words",
+  "_net_text",
   "_rev_name",
   "_rev_page_label",
   "_takeoff_identity",
@@ -22,10 +29,13 @@
   "resolve_latest_sheets",
   "revision_rank",
   "revision_short_name",
+  "shape_own",
+  "takeoff_materials",
   "takeoff_move_words",
   "takeoff_qty",
   "takeoff_qty_text",
   "takeoff_quantity_words",
+  "takeoff_shape_qty",
   "takeoff_sum_text"
  ],
  "scenarios": [
@@ -11479,7 +11489,7 @@
        }
       },
       "said": [
-       "F2 now counts from ASI 4 \u2014 the drawing you are taking off; Probe 12.5 sq ft comes into your totals. Nothing was taken off any of its other drawings, so no other total moved."
+       "F2 now counts from ASI 4 \u2014 the drawing you are taking off; in your totals: 12.5 sq ft of Probe comes in. Nothing was taken off any of its other drawings, so no other total moved."
       ]
      },
      {
@@ -11508,7 +11518,7 @@
        }
       },
       "said": [
-       "F3 now counts from ASI 4 \u2014 the drawing you are taking off; Probe 12.5 sq ft comes into your totals. Nothing was taken off any of its other drawings, so no other total moved."
+       "F3 now counts from ASI 4 \u2014 the drawing you are taking off; in your totals: 12.5 sq ft of Probe comes in. Nothing was taken off any of its other drawings, so no other total moved."
       ]
      },
      {
@@ -11537,7 +11547,7 @@
        }
       },
       "said": [
-       "F4 now counts from ASI 4 \u2014 the drawing you are taking off; Probe 12.5 sq ft comes into your totals. Nothing was taken off any of its other drawings, so no other total moved."
+       "F4 now counts from ASI 4 \u2014 the drawing you are taking off; in your totals: 12.5 sq ft of Probe comes in. Nothing was taken off any of its other drawings, so no other total moved."
       ]
      },
      {
@@ -11548,7 +11558,7 @@
       "book": null,
       "bookedOver": {},
       "said": [
-       "F5 now counts from its own drawing \u2014 the drawing you are taking off; Probe 12.5 sq ft comes into your totals. Nothing was taken off any of its other drawings, so no other total moved."
+       "F5 now counts from its own drawing \u2014 the drawing you are taking off; in your totals: 12.5 sq ft of Probe comes in. Nothing was taken off any of its other drawings, so no other total moved."
       ]
      },
      {
@@ -12526,7 +12536,7 @@
        }
       },
       "said": [
-       "F2 now counts from ASI 4 \u2014 the drawing you are taking off; Probe 12.5 sq ft comes into your totals. Nothing was taken off any of its other drawings, so no other total moved."
+       "F2 now counts from ASI 4 \u2014 the drawing you are taking off; in your totals: 12.5 sq ft of Probe comes in. Nothing was taken off any of its other drawings, so no other total moved."
       ]
      },
      {
@@ -12555,7 +12565,7 @@
        }
       },
       "said": [
-       "F3 now counts from ASI 4 \u2014 the drawing you are taking off; Probe 12.5 sq ft comes into your totals. Nothing was taken off any of its other drawings, so no other total moved."
+       "F3 now counts from ASI 4 \u2014 the drawing you are taking off; in your totals: 12.5 sq ft of Probe comes in. Nothing was taken off any of its other drawings, so no other total moved."
       ]
      },
      {
@@ -12584,7 +12594,7 @@
        }
       },
       "said": [
-       "F4 now counts from ASI 4 \u2014 the drawing you are taking off; Probe 12.5 sq ft comes into your totals. Nothing was taken off any of its other drawings, so no other total moved."
+       "F4 now counts from ASI 4 \u2014 the drawing you are taking off; in your totals: 12.5 sq ft of Probe comes in. Nothing was taken off any of its other drawings, so no other total moved."
       ]
      },
      {
@@ -12595,7 +12605,7 @@
       "book": null,
       "bookedOver": {},
       "said": [
-       "F5 now counts from its own drawing \u2014 the drawing you are taking off; Probe 12.5 sq ft comes into your totals. Nothing was taken off any of its other drawings, so no other total moved."
+       "F5 now counts from its own drawing \u2014 the drawing you are taking off; in your totals: 12.5 sq ft of Probe comes in. Nothing was taken off any of its other drawings, so no other total moved."
       ]
      },
      {
@@ -13556,7 +13566,7 @@
      [
       2,
       [
-       "H3: nothing is left on its own drawing, the drawing it counts from, so it adds nothing to your totals now. The takeoff on Bulletin 9 (Beam 99 LF) is not counted \u2014 open that drawing and press Count this version to count it."
+       "H3: nothing is left on its own drawing, the drawing it counts from, so it adds nothing to your totals now. The takeoff on Bulletin 9 (Beam 30 LF) is not counted \u2014 open that drawing and press Count this version to count it."
       ]
      ]
     ],
@@ -14260,7 +14270,7 @@
      [
       2,
       [
-       "H3: nothing is left on its own drawing, the drawing it counts from, so it adds nothing to your totals now. The takeoff on Bulletin 9 (Beam 99 LF) is not counted \u2014 open that drawing and press Count this version to count it."
+       "H3: nothing is left on its own drawing, the drawing it counts from, so it adds nothing to your totals now. The takeoff on Bulletin 9 (Beam 30 LF) is not counted \u2014 open that drawing and press Count this version to count it."
       ]
      ]
     ],
@@ -14406,6 +14416,3494 @@
           "rev",
           0,
           1
+         ]
+        }
+       }
+      ],
+      "notes": {
+       "sheets": 3,
+       "from_revisions": 2,
+       "unmatched": 0,
+       "duplicates": [],
+       "undated": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "a revision waiting to be imported again (date)",
+    "pageCount": 3,
+    "metadata": {
+     "page_labels": [
+      "P1",
+      "P2",
+      "P3"
+     ],
+     "sheet_version": {
+      "1": "r-park"
+     },
+     "revisions": [
+      {
+       "id": "r-live",
+       "date": "05/01/2026",
+       "description": "ASI 3",
+       "notes": "",
+       "source": "r-live.pdf",
+       "visible": true,
+       "archived": false,
+       "page_labels": [
+        "X0",
+        "X1"
+       ],
+       "match": {
+        "2": 0
+       },
+       "extra": {},
+       "pages": 2
+      }
+     ],
+     "revisions_pending_images": [
+      {
+       "id": "r-park",
+       "date": "06/01/2026",
+       "description": "ASI 4",
+       "source": "asi4.pdf",
+       "match": {
+        "1": 0
+       }
+      }
+     ]
+    },
+    "measurements": {
+     "0": [
+      {
+       "type": "area",
+       "name": "Own P1",
+       "label": "Own P1",
+       "value": 10.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      }
+     ],
+     "1": [
+      {
+       "type": "area",
+       "name": "Own P2",
+       "label": "Own P2",
+       "value": 20.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Parked P2",
+       "label": "Parked P2",
+       "value": 30.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "rev_id": "r-park",
+       "rev_page": 0
+      }
+     ],
+     "2": [
+      {
+       "type": "area",
+       "name": "Own P3",
+       "label": "Own P3",
+       "value": 40.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Parked P3",
+       "label": "Parked P3",
+       "value": 50.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "rev_id": "r-park",
+       "rev_page": 1
+      },
+      {
+       "type": "area",
+       "name": "Live P3",
+       "label": "Live P3",
+       "value": 60.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "rev_id": "r-live",
+       "rev_page": 0
+      }
+     ]
+    },
+    "order": "date"
+   },
+   "truth": {
+    "name": "a revision waiting to be imported again (date)",
+    "items": [
+     {
+      "page": 0,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 1,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 1,
+      "i": 1,
+      "takeoff": true,
+      "counts": false,
+      "run": false,
+      "waiting": "a revision since removed",
+      "waitingLong": "traced on a revision since removed from the project \u2014 it counts nowhere, and no drawing shows it"
+     },
+     {
+      "page": 2,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 2,
+      "i": 1,
+      "takeoff": true,
+      "counts": false,
+      "run": false,
+      "waiting": "a revision since removed",
+      "waitingLong": "traced on a revision since removed from the project \u2014 it counts nowhere, and no drawing shows it"
+     },
+     {
+      "page": 2,
+      "i": 2,
+      "takeoff": true,
+      "counts": false,
+      "run": false,
+      "waiting": "",
+      "waitingLong": ""
+     }
+    ],
+    "counted": [
+     [
+      0,
+      0,
+      10.0,
+      "sq ft"
+     ],
+     [
+      1,
+      0,
+      20.0,
+      "sq ft"
+     ],
+     [
+      2,
+      0,
+      40.0,
+      "sq ft"
+     ]
+    ],
+    "sums": {
+     "sq ft": 70.0
+    },
+    "pages": [
+     {
+      "working": "",
+      "newest": "",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        0
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [],
+      "originDate": "",
+      "byVersion": {
+       "": 1
+      },
+      "label": "P1"
+     },
+     {
+      "working": "",
+      "newest": "",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        1
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [],
+      "originDate": "",
+      "byVersion": {
+       "": 1,
+       "r-park": 1
+      },
+      "label": "P2"
+     },
+     {
+      "working": "",
+      "newest": "r-live",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        2
+       ],
+       [
+        "r-live",
+        "ASI 3",
+        0
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [
+       [
+        [
+         1,
+         [
+          2026,
+          5,
+          1
+         ],
+         0
+        ],
+        "r-live"
+       ]
+      ],
+      "originDate": "",
+      "byVersion": {
+       "": 1,
+       "r-park": 1,
+       "r-live": 1
+      },
+      "label": "P3"
+     }
+    ],
+    "tiles": {
+     "2": {
+      "kind": "warn",
+      "text": "\u26a0 ASI 3",
+      "short": "\u26a0ASI 3",
+      "added": false,
+      "shows": [
+       "r-live",
+       0
+      ],
+      "tip": "REVISED \u2014 the list shows ASI 3 \u00b7 05/01/2026, the newest of the 2 drawings of this sheet.\nCounting: its own drawing (the original set) \u2014 1 item.\nNot counted: 1 item on ASI 3 \u00b7 05/01/2026.\nNot counted: 1 item on a revision since removed.\n\u26a0 What counts is not the drawing shown. Nothing in your totals has changed. To count the drawing shown instead, open the sheet and press Count this version on the version bar \u2014 you are shown the change before it is made."
+     }
+    },
+    "names": {
+     "r-live": {
+      "name": "ASI 3",
+      "hidden": "ASI 3",
+      "number": 1,
+      "title": "ASI 3 \u00b7 05/01/2026",
+      "version": "ASI 3"
+     },
+     "r-not-here": {
+      "name": "removed revision",
+      "hidden": "removed revision",
+      "number": 0,
+      "title": "removed revision",
+      "version": "removed revision"
+     }
+    },
+    "effect": [
+     [
+      0,
+      "",
+      ""
+     ],
+     [
+      1,
+      "",
+      ""
+     ],
+     [
+      2,
+      "",
+      ""
+     ],
+     [
+      2,
+      "r-live",
+      "40 sq ft of Own P3 will leave; 60 sq ft of Live P3 will come in"
+     ]
+    ],
+    "dropEffect": [
+     [
+      "r-live",
+      ""
+     ]
+    ],
+    "book": [
+     {
+      "page": 0,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": {
+       "1": "r-park"
+      },
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 1,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": {
+       "1": "r-park"
+      },
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 2,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": {
+       "1": "r-park"
+      },
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 2,
+      "rev": "r-live",
+      "revPage": 0,
+      "booked": false,
+      "book": {
+       "1": "r-park"
+      },
+      "bookedOver": {},
+      "said": []
+     }
+    ],
+    "keyOrder": [
+     "0",
+     "1",
+     "2"
+    ],
+    "ask": [
+     [
+      0,
+      "",
+      []
+     ],
+     [
+      1,
+      "",
+      []
+     ],
+     [
+      2,
+      "",
+      []
+     ],
+     [
+      2,
+      "r-live",
+      [
+       "P3 will count from ASI 3 instead of its own drawing.\n\nIn your totals: 40 sq ft of Own P3 will leave; 60 sq ft of Live P3 will come in.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ]
+     ]
+    ],
+    "after": [
+     [
+      1,
+      1,
+      [
+       "What you just took off on removed revision (Parked P2 30 sq ft) is not in your totals: P2 counts from its own drawing, where Own P2 20 sq ft is in your totals.\n\nP2 will count from removed revision instead of its own drawing.\n\nYour totals do not change: nothing taken off either drawing counts differently.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ],
+      [
+       "P2 still counts from its own drawing. What you take off on removed revision (Parked P2 30 sq ft) is kept and marked NOT COUNTED \u2014 it is not in your totals. Count this version, on the version bar, changes that."
+      ]
+     ],
+     [
+      2,
+      1,
+      [
+       "What you just took off on removed revision (Parked P3 50 sq ft) is not in your totals: P3 counts from its own drawing, where Own P3 40 sq ft is in your totals.\n\nP3 will count from removed revision instead of its own drawing.\n\nYour totals do not change: nothing taken off either drawing counts differently.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ],
+      [
+       "P3 still counts from its own drawing. What you take off on removed revision (Parked P3 50 sq ft) is kept and marked NOT COUNTED \u2014 it is not in your totals. Count this version, on the version bar, changes that."
+      ]
+     ],
+     [
+      2,
+      2,
+      [
+       "What you just took off on ASI 3 (Live P3 60 sq ft) is not in your totals: P3 counts from its own drawing, where Own P3 40 sq ft is in your totals.\n\nP3 will count from ASI 3 instead of its own drawing.\n\nIn your totals: 40 sq ft of Own P3 will leave; 60 sq ft of Live P3 will come in.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ],
+      [
+       "P3 still counts from its own drawing. What you take off on ASI 3 (Live P3 60 sq ft) is kept and marked NOT COUNTED \u2014 it is not in your totals. Count this version, on the version bar, changes that."
+      ]
+     ]
+    ],
+    "setSaid": [
+     [
+      0,
+      "",
+      false,
+      []
+     ],
+     [
+      1,
+      "",
+      true,
+      [
+       "P2 now counts from its own drawing instead of removed revision \u2014 your totals did not change."
+      ]
+     ],
+     [
+      2,
+      "",
+      false,
+      []
+     ],
+     [
+      2,
+      "r-live",
+      true,
+      [
+       "P3 now counts from ASI 3 instead of its own drawing \u2014 in your totals: 40 sq ft of Own P3 leaves; 60 sq ft of Live P3 comes in."
+      ]
+     ]
+    ],
+    "lone": [],
+    "leftOut": "",
+    "watch": [
+     [
+      0,
+      []
+     ],
+     [
+      1,
+      []
+     ],
+     [
+      2,
+      [
+       "P3: nothing is left on its own drawing, the drawing it counts from, so it adds nothing to your totals now. The takeoff on removed revision (Parked P3 50 sq ft), ASI 3 (Live P3 60 sq ft) is not counted \u2014 open that drawing and press Count this version to count it."
+      ]
+     ]
+    ],
+    "latest": {
+     "date": {
+      "rows": [
+       {
+        "sheet": "P1",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         0
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "P2",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         1
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          1
+         ]
+        }
+       },
+       {
+        "sheet": "P3",
+        "source": "ASI 3",
+        "date": "05/01/2026",
+        "from": [
+         "rev",
+         0,
+         0
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          2
+         ],
+         "1": [
+          "rev",
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "X1",
+        "source": "ASI 3",
+        "date": "05/01/2026",
+        "from": [
+         "rev",
+         0,
+         1
+        ],
+        "versions": 1,
+        "kind": "new",
+        "usedCol": 1,
+        "cols": {
+         "1": [
+          "rev",
+          0,
+          1
+         ]
+        }
+       }
+      ],
+      "notes": {
+       "sheets": 4,
+       "from_revisions": 2,
+       "unmatched": 1,
+       "duplicates": [],
+       "undated": 0
+      }
+     },
+     "column": {
+      "rows": [
+       {
+        "sheet": "P1",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         0
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "P2",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         1
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          1
+         ]
+        }
+       },
+       {
+        "sheet": "P3",
+        "source": "ASI 3",
+        "date": "05/01/2026",
+        "from": [
+         "rev",
+         0,
+         0
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          2
+         ],
+         "1": [
+          "rev",
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "X1",
+        "source": "ASI 3",
+        "date": "05/01/2026",
+        "from": [
+         "rev",
+         0,
+         1
+        ],
+        "versions": 1,
+        "kind": "new",
+        "usedCol": 1,
+        "cols": {
+         "1": [
+          "rev",
+          0,
+          1
+         ]
+        }
+       }
+      ],
+      "notes": {
+       "sheets": 4,
+       "from_revisions": 2,
+       "unmatched": 1,
+       "duplicates": [],
+       "undated": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "a revision waiting to be imported again (column)",
+    "pageCount": 3,
+    "metadata": {
+     "page_labels": [
+      "P1",
+      "P2",
+      "P3"
+     ],
+     "sheet_version": {
+      "1": "r-park"
+     },
+     "revisions": [
+      {
+       "id": "r-live",
+       "date": "05/01/2026",
+       "description": "ASI 3",
+       "notes": "",
+       "source": "r-live.pdf",
+       "visible": true,
+       "archived": false,
+       "page_labels": [
+        "X0",
+        "X1"
+       ],
+       "match": {
+        "2": 0
+       },
+       "extra": {},
+       "pages": 2
+      }
+     ],
+     "revisions_pending_images": [
+      {
+       "id": "r-park",
+       "date": "06/01/2026",
+       "description": "ASI 4",
+       "source": "asi4.pdf",
+       "match": {
+        "1": 0
+       }
+      }
+     ]
+    },
+    "measurements": {
+     "0": [
+      {
+       "type": "area",
+       "name": "Own P1",
+       "label": "Own P1",
+       "value": 10.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      }
+     ],
+     "1": [
+      {
+       "type": "area",
+       "name": "Own P2",
+       "label": "Own P2",
+       "value": 20.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Parked P2",
+       "label": "Parked P2",
+       "value": 30.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "rev_id": "r-park",
+       "rev_page": 0
+      }
+     ],
+     "2": [
+      {
+       "type": "area",
+       "name": "Own P3",
+       "label": "Own P3",
+       "value": 40.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Parked P3",
+       "label": "Parked P3",
+       "value": 50.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "rev_id": "r-park",
+       "rev_page": 1
+      },
+      {
+       "type": "area",
+       "name": "Live P3",
+       "label": "Live P3",
+       "value": 60.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "rev_id": "r-live",
+       "rev_page": 0
+      }
+     ]
+    },
+    "order": "column"
+   },
+   "truth": {
+    "name": "a revision waiting to be imported again (column)",
+    "items": [
+     {
+      "page": 0,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 1,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 1,
+      "i": 1,
+      "takeoff": true,
+      "counts": false,
+      "run": false,
+      "waiting": "a revision since removed",
+      "waitingLong": "traced on a revision since removed from the project \u2014 it counts nowhere, and no drawing shows it"
+     },
+     {
+      "page": 2,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 2,
+      "i": 1,
+      "takeoff": true,
+      "counts": false,
+      "run": false,
+      "waiting": "a revision since removed",
+      "waitingLong": "traced on a revision since removed from the project \u2014 it counts nowhere, and no drawing shows it"
+     },
+     {
+      "page": 2,
+      "i": 2,
+      "takeoff": true,
+      "counts": false,
+      "run": false,
+      "waiting": "",
+      "waitingLong": ""
+     }
+    ],
+    "counted": [
+     [
+      0,
+      0,
+      10.0,
+      "sq ft"
+     ],
+     [
+      1,
+      0,
+      20.0,
+      "sq ft"
+     ],
+     [
+      2,
+      0,
+      40.0,
+      "sq ft"
+     ]
+    ],
+    "sums": {
+     "sq ft": 70.0
+    },
+    "pages": [
+     {
+      "working": "",
+      "newest": "",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        0
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [],
+      "originDate": "",
+      "byVersion": {
+       "": 1
+      },
+      "label": "P1"
+     },
+     {
+      "working": "",
+      "newest": "",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        1
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [],
+      "originDate": "",
+      "byVersion": {
+       "": 1,
+       "r-park": 1
+      },
+      "label": "P2"
+     },
+     {
+      "working": "",
+      "newest": "r-live",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        2
+       ],
+       [
+        "r-live",
+        "ASI 3",
+        0
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [
+       [
+        [
+         0,
+         [
+          0,
+          0,
+          0
+         ],
+         0
+        ],
+        "r-live"
+       ]
+      ],
+      "originDate": "",
+      "byVersion": {
+       "": 1,
+       "r-park": 1,
+       "r-live": 1
+      },
+      "label": "P3"
+     }
+    ],
+    "tiles": {
+     "2": {
+      "kind": "warn",
+      "text": "\u26a0 ASI 3",
+      "short": "\u26a0ASI 3",
+      "added": false,
+      "shows": [
+       "r-live",
+       0
+      ],
+      "tip": "REVISED \u2014 the list shows ASI 3 \u00b7 05/01/2026, the newest of the 2 drawings of this sheet.\nCounting: its own drawing (the original set) \u2014 1 item.\nNot counted: 1 item on ASI 3 \u00b7 05/01/2026.\nNot counted: 1 item on a revision since removed.\n\u26a0 What counts is not the drawing shown. Nothing in your totals has changed. To count the drawing shown instead, open the sheet and press Count this version on the version bar \u2014 you are shown the change before it is made."
+     }
+    },
+    "names": {
+     "r-live": {
+      "name": "ASI 3",
+      "hidden": "ASI 3",
+      "number": 1,
+      "title": "ASI 3 \u00b7 05/01/2026",
+      "version": "ASI 3"
+     },
+     "r-not-here": {
+      "name": "removed revision",
+      "hidden": "removed revision",
+      "number": 0,
+      "title": "removed revision",
+      "version": "removed revision"
+     }
+    },
+    "effect": [
+     [
+      0,
+      "",
+      ""
+     ],
+     [
+      1,
+      "",
+      ""
+     ],
+     [
+      2,
+      "",
+      ""
+     ],
+     [
+      2,
+      "r-live",
+      "40 sq ft of Own P3 will leave; 60 sq ft of Live P3 will come in"
+     ]
+    ],
+    "dropEffect": [
+     [
+      "r-live",
+      ""
+     ]
+    ],
+    "book": [
+     {
+      "page": 0,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": {
+       "1": "r-park"
+      },
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 1,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": {
+       "1": "r-park"
+      },
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 2,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": {
+       "1": "r-park"
+      },
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 2,
+      "rev": "r-live",
+      "revPage": 0,
+      "booked": false,
+      "book": {
+       "1": "r-park"
+      },
+      "bookedOver": {},
+      "said": []
+     }
+    ],
+    "keyOrder": [
+     "0",
+     "1",
+     "2"
+    ],
+    "ask": [
+     [
+      0,
+      "",
+      []
+     ],
+     [
+      1,
+      "",
+      []
+     ],
+     [
+      2,
+      "",
+      []
+     ],
+     [
+      2,
+      "r-live",
+      [
+       "P3 will count from ASI 3 instead of its own drawing.\n\nIn your totals: 40 sq ft of Own P3 will leave; 60 sq ft of Live P3 will come in.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ]
+     ]
+    ],
+    "after": [
+     [
+      1,
+      1,
+      [
+       "What you just took off on removed revision (Parked P2 30 sq ft) is not in your totals: P2 counts from its own drawing, where Own P2 20 sq ft is in your totals.\n\nP2 will count from removed revision instead of its own drawing.\n\nYour totals do not change: nothing taken off either drawing counts differently.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ],
+      [
+       "P2 still counts from its own drawing. What you take off on removed revision (Parked P2 30 sq ft) is kept and marked NOT COUNTED \u2014 it is not in your totals. Count this version, on the version bar, changes that."
+      ]
+     ],
+     [
+      2,
+      1,
+      [
+       "What you just took off on removed revision (Parked P3 50 sq ft) is not in your totals: P3 counts from its own drawing, where Own P3 40 sq ft is in your totals.\n\nP3 will count from removed revision instead of its own drawing.\n\nYour totals do not change: nothing taken off either drawing counts differently.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ],
+      [
+       "P3 still counts from its own drawing. What you take off on removed revision (Parked P3 50 sq ft) is kept and marked NOT COUNTED \u2014 it is not in your totals. Count this version, on the version bar, changes that."
+      ]
+     ],
+     [
+      2,
+      2,
+      [
+       "What you just took off on ASI 3 (Live P3 60 sq ft) is not in your totals: P3 counts from its own drawing, where Own P3 40 sq ft is in your totals.\n\nP3 will count from ASI 3 instead of its own drawing.\n\nIn your totals: 40 sq ft of Own P3 will leave; 60 sq ft of Live P3 will come in.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ],
+      [
+       "P3 still counts from its own drawing. What you take off on ASI 3 (Live P3 60 sq ft) is kept and marked NOT COUNTED \u2014 it is not in your totals. Count this version, on the version bar, changes that."
+      ]
+     ]
+    ],
+    "setSaid": [
+     [
+      0,
+      "",
+      false,
+      []
+     ],
+     [
+      1,
+      "",
+      true,
+      [
+       "P2 now counts from its own drawing instead of removed revision \u2014 your totals did not change."
+      ]
+     ],
+     [
+      2,
+      "",
+      false,
+      []
+     ],
+     [
+      2,
+      "r-live",
+      true,
+      [
+       "P3 now counts from ASI 3 instead of its own drawing \u2014 in your totals: 40 sq ft of Own P3 leaves; 60 sq ft of Live P3 comes in."
+      ]
+     ]
+    ],
+    "lone": [],
+    "leftOut": "",
+    "watch": [
+     [
+      0,
+      []
+     ],
+     [
+      1,
+      []
+     ],
+     [
+      2,
+      [
+       "P3: nothing is left on its own drawing, the drawing it counts from, so it adds nothing to your totals now. The takeoff on removed revision (Parked P3 50 sq ft), ASI 3 (Live P3 60 sq ft) is not counted \u2014 open that drawing and press Count this version to count it."
+      ]
+     ]
+    ],
+    "latest": {
+     "date": {
+      "rows": [
+       {
+        "sheet": "P1",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         0
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "P2",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         1
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          1
+         ]
+        }
+       },
+       {
+        "sheet": "P3",
+        "source": "ASI 3",
+        "date": "05/01/2026",
+        "from": [
+         "rev",
+         0,
+         0
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          2
+         ],
+         "1": [
+          "rev",
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "X1",
+        "source": "ASI 3",
+        "date": "05/01/2026",
+        "from": [
+         "rev",
+         0,
+         1
+        ],
+        "versions": 1,
+        "kind": "new",
+        "usedCol": 1,
+        "cols": {
+         "1": [
+          "rev",
+          0,
+          1
+         ]
+        }
+       }
+      ],
+      "notes": {
+       "sheets": 4,
+       "from_revisions": 2,
+       "unmatched": 1,
+       "duplicates": [],
+       "undated": 0
+      }
+     },
+     "column": {
+      "rows": [
+       {
+        "sheet": "P1",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         0
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "P2",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         1
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          1
+         ]
+        }
+       },
+       {
+        "sheet": "P3",
+        "source": "ASI 3",
+        "date": "05/01/2026",
+        "from": [
+         "rev",
+         0,
+         0
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          2
+         ],
+         "1": [
+          "rev",
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "X1",
+        "source": "ASI 3",
+        "date": "05/01/2026",
+        "from": [
+         "rev",
+         0,
+         1
+        ],
+        "versions": 1,
+        "kind": "new",
+        "usedCol": 1,
+        "cols": {
+         "1": [
+          "rev",
+          0,
+          1
+         ]
+        }
+       }
+      ],
+      "notes": {
+       "sheets": 4,
+       "from_revisions": 2,
+       "unmatched": 1,
+       "duplicates": [],
+       "undated": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "materials, a long list and a shared item (date)",
+    "pageCount": 3,
+    "metadata": {
+     "page_labels": [
+      "M1",
+      "M2",
+      "M3"
+     ],
+     "revisions": [
+      {
+       "id": "r-m",
+       "date": "10/05/2026",
+       "description": "ASI 5",
+       "notes": "",
+       "source": "r-m.pdf",
+       "visible": true,
+       "archived": false,
+       "page_labels": [
+        "X0",
+        "X1"
+       ],
+       "match": {
+        "0": 0,
+        "1": 1
+       },
+       "extra": {},
+       "pages": 2
+      }
+     ]
+    },
+    "measurements": {
+     "0": [
+      {
+       "type": "area",
+       "name": "Slab",
+       "label": "Slab",
+       "value": 300.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "associated_items": [
+        {
+         "name": "Dumpster 20yd",
+         "qty": 1,
+         "qty_mode": "total",
+         "unit": "each",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        },
+        {
+         "name": "Rebar #4",
+         "qty": 1.1,
+         "qty_mode": "per_unit",
+         "unit": "LF",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        }
+       ]
+      },
+      {
+       "type": "area",
+       "name": "Footing",
+       "label": "Footing",
+       "value": 120.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Stem Wall",
+       "label": "Stem Wall",
+       "value": 90.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Garage Slab",
+       "label": "Garage Slab",
+       "value": 250.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Porch",
+       "label": "Porch",
+       "value": 60.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Walk",
+       "label": "Walk",
+       "value": 40.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "associated_items": [
+        {
+         "name": "Gravel",
+         "qty": 0.05,
+         "qty_mode": "per_unit",
+         "unit": "CY",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        }
+       ]
+      },
+      {
+       "type": "area",
+       "name": "Driveway",
+       "label": "Driveway",
+       "value": 200.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "associated_items": [
+        {
+         "name": "Base",
+         "qty": 0.1,
+         "qty_mode": "per_unit",
+         "unit": "CY",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        },
+        {
+         "name": "Forms",
+         "qty": 60,
+         "qty_mode": "total",
+         "unit": "LF",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        },
+        {
+         "name": "Pump",
+         "qty": 1,
+         "qty_mode": "total",
+         "unit": "each",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        }
+       ]
+      }
+     ],
+     "1": [
+      {
+       "type": "area",
+       "name": "Wall",
+       "label": "Wall",
+       "value": 13.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "own_value": 4.0,
+       "group_id": "g-w",
+       "group_count": 2,
+       "rev_id": "r-m",
+       "rev_page": 1,
+       "associated_items": [
+        {
+         "name": "Studs",
+         "qty": 0.75,
+         "qty_mode": "per_unit",
+         "unit": "EA",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        },
+        {
+         "name": "Nails",
+         "qty": 2,
+         "qty_mode": "total",
+         "unit": "box",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        }
+       ]
+      }
+     ],
+     "2": [
+      {
+       "type": "area",
+       "name": "Wall",
+       "label": "Wall",
+       "value": 9.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "group_id": "g-w",
+       "group_child": true
+      }
+     ]
+    },
+    "order": "date"
+   },
+   "truth": {
+    "name": "materials, a long list and a shared item (date)",
+    "items": [
+     {
+      "page": 0,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 1,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 2,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 3,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 4,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 5,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 6,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 1,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": false,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 2,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     }
+    ],
+    "counted": [
+     [
+      0,
+      0,
+      300.0,
+      "sq ft"
+     ],
+     [
+      0,
+      1,
+      120.0,
+      "sq ft"
+     ],
+     [
+      0,
+      2,
+      90.0,
+      "sq ft"
+     ],
+     [
+      0,
+      3,
+      250.0,
+      "sq ft"
+     ],
+     [
+      0,
+      4,
+      60.0,
+      "sq ft"
+     ],
+     [
+      0,
+      5,
+      40.0,
+      "sq ft"
+     ],
+     [
+      0,
+      6,
+      200.0,
+      "sq ft"
+     ],
+     [
+      1,
+      0,
+      9.0,
+      "sq ft"
+     ]
+    ],
+    "sums": {
+     "sq ft": 1069.0
+    },
+    "pages": [
+     {
+      "working": "",
+      "newest": "r-m",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        0
+       ],
+       [
+        "r-m",
+        "ASI 5",
+        0
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [
+       [
+        [
+         1,
+         [
+          2026,
+          10,
+          5
+         ],
+         0
+        ],
+        "r-m"
+       ]
+      ],
+      "originDate": "",
+      "byVersion": {
+       "": 7
+      },
+      "label": "M1"
+     },
+     {
+      "working": "",
+      "newest": "r-m",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        1
+       ],
+       [
+        "r-m",
+        "ASI 5",
+        1
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [
+       [
+        [
+         1,
+         [
+          2026,
+          10,
+          5
+         ],
+         0
+        ],
+        "r-m"
+       ]
+      ],
+      "originDate": "",
+      "byVersion": {
+       "r-m": 1
+      },
+      "label": "M2"
+     },
+     {
+      "working": "",
+      "newest": "",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        2
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [],
+      "originDate": "",
+      "byVersion": {},
+      "label": "M3"
+     }
+    ],
+    "tiles": {
+     "0": {
+      "kind": "warn",
+      "text": "\u26a0 ASI 5",
+      "short": "\u26a0ASI 5",
+      "added": false,
+      "shows": [
+       "r-m",
+       0
+      ],
+      "tip": "REVISED \u2014 the list shows ASI 5 \u00b7 10/05/2026, the newest of the 2 drawings of this sheet.\nCounting: its own drawing (the original set) \u2014 7 items.\n\u26a0 What counts is not the drawing shown. Nothing in your totals has changed. To count the drawing shown instead, open the sheet and press Count this version on the version bar \u2014 you are shown the change before it is made."
+     },
+     "1": {
+      "kind": "warn",
+      "text": "\u26a0 ASI 5",
+      "short": "\u26a0ASI 5",
+      "added": false,
+      "shows": [
+       "r-m",
+       1
+      ],
+      "tip": "REVISED \u2014 the list shows ASI 5 \u00b7 10/05/2026, the newest of the 2 drawings of this sheet.\nCounting: its own drawing (the original set) \u2014 nothing is taken off it.\nNot counted: 1 item on ASI 5 \u00b7 10/05/2026.\n\u26a0 What counts is not the drawing shown. Nothing in your totals has changed. To count the drawing shown instead, open the sheet and press Count this version on the version bar \u2014 you are shown the change before it is made."
+     }
+    },
+    "names": {
+     "r-m": {
+      "name": "ASI 5",
+      "hidden": "ASI 5",
+      "number": 1,
+      "title": "ASI 5 \u00b7 10/05/2026",
+      "version": "ASI 5"
+     },
+     "r-not-here": {
+      "name": "removed revision",
+      "hidden": "removed revision",
+      "number": 0,
+      "title": "removed revision",
+      "version": "removed revision"
+     }
+    },
+    "effect": [
+     [
+      0,
+      "",
+      ""
+     ],
+     [
+      0,
+      "r-m",
+      "300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) will leave"
+     ],
+     [
+      1,
+      "",
+      ""
+     ],
+     [
+      1,
+      "r-m",
+      "Wall 9 \u2192 13 sq ft (Studs 6.8 \u2192 9.8 EA)"
+     ],
+     [
+      2,
+      "",
+      ""
+     ]
+    ],
+    "dropEffect": [
+     [
+      "r-m",
+      ""
+     ]
+    ],
+    "book": [
+     {
+      "page": 0,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 0,
+      "rev": "r-m",
+      "revPage": 0,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 1,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 1,
+      "rev": "r-m",
+      "revPage": 1,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 2,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     }
+    ],
+    "keyOrder": [
+     "0",
+     "1",
+     "2"
+    ],
+    "ask": [
+     [
+      0,
+      "",
+      []
+     ],
+     [
+      0,
+      "r-m",
+      [
+       "M1 will count from ASI 5 instead of its own drawing.\n\nIn your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) will leave.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way.\n\nThere is no takeoff on that drawing yet, so this sheet will contribute nothing until you take it off."
+      ]
+     ],
+     [
+      1,
+      "",
+      []
+     ],
+     [
+      1,
+      "r-m",
+      [
+       "M2 will count from ASI 5 instead of its own drawing.\n\nIn your totals: Wall 9 \u2192 13 sq ft (Studs 6.8 \u2192 9.8 EA).\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ]
+     ],
+     [
+      2,
+      "",
+      []
+     ]
+    ],
+    "after": [],
+    "setSaid": [
+     [
+      0,
+      "",
+      false,
+      []
+     ],
+     [
+      0,
+      "r-m",
+      true,
+      [
+       "M1 now counts from ASI 5 instead of its own drawing \u2014 in your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) leave."
+      ]
+     ],
+     [
+      1,
+      "",
+      false,
+      []
+     ],
+     [
+      1,
+      "r-m",
+      true,
+      [
+       "M2 now counts from ASI 5 instead of its own drawing \u2014 in your totals: Wall 9 \u2192 13 sq ft (Studs 6.8 \u2192 9.8 EA)."
+      ]
+     ],
+     [
+      2,
+      "",
+      false,
+      []
+     ]
+    ],
+    "lone": [
+     [
+      1,
+      "r-m",
+      1,
+      0
+     ]
+    ],
+    "leftOut": "Not in your totals: Wall 4 sq ft on 1 sheet (M2) stays out of your totals \u2014 taken off on a drawing that sheet does not count from. The \u26a0 tiles in the Pages list mark it.",
+    "watch": [
+     [
+      0,
+      []
+     ],
+     [
+      2,
+      []
+     ]
+    ],
+    "latest": {
+     "date": {
+      "rows": [
+       {
+        "sheet": "M1",
+        "source": "ASI 5",
+        "date": "10/05/2026",
+        "from": [
+         "rev",
+         0,
+         0
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          0
+         ],
+         "1": [
+          "rev",
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "M2",
+        "source": "ASI 5",
+        "date": "10/05/2026",
+        "from": [
+         "rev",
+         0,
+         1
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          1
+         ],
+         "1": [
+          "rev",
+          0,
+          1
+         ]
+        }
+       },
+       {
+        "sheet": "M3",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         2
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          2
+         ]
+        }
+       }
+      ],
+      "notes": {
+       "sheets": 3,
+       "from_revisions": 2,
+       "unmatched": 0,
+       "duplicates": [],
+       "undated": 0
+      }
+     },
+     "column": {
+      "rows": [
+       {
+        "sheet": "M1",
+        "source": "ASI 5",
+        "date": "10/05/2026",
+        "from": [
+         "rev",
+         0,
+         0
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          0
+         ],
+         "1": [
+          "rev",
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "M2",
+        "source": "ASI 5",
+        "date": "10/05/2026",
+        "from": [
+         "rev",
+         0,
+         1
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          1
+         ],
+         "1": [
+          "rev",
+          0,
+          1
+         ]
+        }
+       },
+       {
+        "sheet": "M3",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         2
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          2
+         ]
+        }
+       }
+      ],
+      "notes": {
+       "sheets": 3,
+       "from_revisions": 2,
+       "unmatched": 0,
+       "duplicates": [],
+       "undated": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "materials, a long list and a shared item (column)",
+    "pageCount": 3,
+    "metadata": {
+     "page_labels": [
+      "M1",
+      "M2",
+      "M3"
+     ],
+     "revisions": [
+      {
+       "id": "r-m",
+       "date": "10/05/2026",
+       "description": "ASI 5",
+       "notes": "",
+       "source": "r-m.pdf",
+       "visible": true,
+       "archived": false,
+       "page_labels": [
+        "X0",
+        "X1"
+       ],
+       "match": {
+        "0": 0,
+        "1": 1
+       },
+       "extra": {},
+       "pages": 2
+      }
+     ]
+    },
+    "measurements": {
+     "0": [
+      {
+       "type": "area",
+       "name": "Slab",
+       "label": "Slab",
+       "value": 300.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "associated_items": [
+        {
+         "name": "Dumpster 20yd",
+         "qty": 1,
+         "qty_mode": "total",
+         "unit": "each",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        },
+        {
+         "name": "Rebar #4",
+         "qty": 1.1,
+         "qty_mode": "per_unit",
+         "unit": "LF",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        }
+       ]
+      },
+      {
+       "type": "area",
+       "name": "Footing",
+       "label": "Footing",
+       "value": 120.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Stem Wall",
+       "label": "Stem Wall",
+       "value": 90.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Garage Slab",
+       "label": "Garage Slab",
+       "value": 250.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Porch",
+       "label": "Porch",
+       "value": 60.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0
+      },
+      {
+       "type": "area",
+       "name": "Walk",
+       "label": "Walk",
+       "value": 40.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "associated_items": [
+        {
+         "name": "Gravel",
+         "qty": 0.05,
+         "qty_mode": "per_unit",
+         "unit": "CY",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        }
+       ]
+      },
+      {
+       "type": "area",
+       "name": "Driveway",
+       "label": "Driveway",
+       "value": 200.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "associated_items": [
+        {
+         "name": "Base",
+         "qty": 0.1,
+         "qty_mode": "per_unit",
+         "unit": "CY",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        },
+        {
+         "name": "Forms",
+         "qty": 60,
+         "qty_mode": "total",
+         "unit": "LF",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        },
+        {
+         "name": "Pump",
+         "qty": 1,
+         "qty_mode": "total",
+         "unit": "each",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        }
+       ]
+      }
+     ],
+     "1": [
+      {
+       "type": "area",
+       "name": "Wall",
+       "label": "Wall",
+       "value": 13.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "own_value": 4.0,
+       "group_id": "g-w",
+       "group_count": 2,
+       "rev_id": "r-m",
+       "rev_page": 1,
+       "associated_items": [
+        {
+         "name": "Studs",
+         "qty": 0.75,
+         "qty_mode": "per_unit",
+         "unit": "EA",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        },
+        {
+         "name": "Nails",
+         "qty": 2,
+         "qty_mode": "total",
+         "unit": "box",
+         "unit_cost": 1.0,
+         "cost_type": "material"
+        }
+       ]
+      }
+     ],
+     "2": [
+      {
+       "type": "area",
+       "name": "Wall",
+       "label": "Wall",
+       "value": 9.0,
+       "points": [
+        [
+         1.0,
+         1.0
+        ],
+        [
+         9.0,
+         1.0
+        ],
+        [
+         9.0,
+         9.0
+        ]
+       ],
+       "visible": true,
+       "floor_level": "1st",
+       "category": "Framing",
+       "unit_cost": 1.0,
+       "group_id": "g-w",
+       "group_child": true
+      }
+     ]
+    },
+    "order": "column"
+   },
+   "truth": {
+    "name": "materials, a long list and a shared item (column)",
+    "items": [
+     {
+      "page": 0,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 1,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 2,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 3,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 4,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 5,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 0,
+      "i": 6,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 1,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": false,
+      "waiting": "",
+      "waitingLong": ""
+     },
+     {
+      "page": 2,
+      "i": 0,
+      "takeoff": true,
+      "counts": true,
+      "run": true,
+      "waiting": "",
+      "waitingLong": ""
+     }
+    ],
+    "counted": [
+     [
+      0,
+      0,
+      300.0,
+      "sq ft"
+     ],
+     [
+      0,
+      1,
+      120.0,
+      "sq ft"
+     ],
+     [
+      0,
+      2,
+      90.0,
+      "sq ft"
+     ],
+     [
+      0,
+      3,
+      250.0,
+      "sq ft"
+     ],
+     [
+      0,
+      4,
+      60.0,
+      "sq ft"
+     ],
+     [
+      0,
+      5,
+      40.0,
+      "sq ft"
+     ],
+     [
+      0,
+      6,
+      200.0,
+      "sq ft"
+     ],
+     [
+      1,
+      0,
+      9.0,
+      "sq ft"
+     ]
+    ],
+    "sums": {
+     "sq ft": 1069.0
+    },
+    "pages": [
+     {
+      "working": "",
+      "newest": "r-m",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        0
+       ],
+       [
+        "r-m",
+        "ASI 5",
+        0
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [
+       [
+        [
+         0,
+         [
+          0,
+          0,
+          0
+         ],
+         0
+        ],
+        "r-m"
+       ]
+      ],
+      "originDate": "",
+      "byVersion": {
+       "": 7
+      },
+      "label": "M1"
+     },
+     {
+      "working": "",
+      "newest": "r-m",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        1
+       ],
+       [
+        "r-m",
+        "ASI 5",
+        1
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [
+       [
+        [
+         0,
+         [
+          0,
+          0,
+          0
+         ],
+         0
+        ],
+        "r-m"
+       ]
+      ],
+      "originDate": "",
+      "byVersion": {
+       "r-m": 1
+      },
+      "label": "M2"
+     },
+     {
+      "working": "",
+      "newest": "",
+      "versions": [
+       [
+        "",
+        "ORIGINAL",
+        2
+       ]
+      ],
+      "own": [
+       -1,
+       [
+        0,
+        0,
+        0
+       ],
+       -1
+      ],
+      "ranked": [],
+      "originDate": "",
+      "byVersion": {},
+      "label": "M3"
+     }
+    ],
+    "tiles": {
+     "0": {
+      "kind": "warn",
+      "text": "\u26a0 ASI 5",
+      "short": "\u26a0ASI 5",
+      "added": false,
+      "shows": [
+       "r-m",
+       0
+      ],
+      "tip": "REVISED \u2014 the list shows ASI 5 \u00b7 10/05/2026, the newest of the 2 drawings of this sheet.\nCounting: its own drawing (the original set) \u2014 7 items.\n\u26a0 What counts is not the drawing shown. Nothing in your totals has changed. To count the drawing shown instead, open the sheet and press Count this version on the version bar \u2014 you are shown the change before it is made."
+     },
+     "1": {
+      "kind": "warn",
+      "text": "\u26a0 ASI 5",
+      "short": "\u26a0ASI 5",
+      "added": false,
+      "shows": [
+       "r-m",
+       1
+      ],
+      "tip": "REVISED \u2014 the list shows ASI 5 \u00b7 10/05/2026, the newest of the 2 drawings of this sheet.\nCounting: its own drawing (the original set) \u2014 nothing is taken off it.\nNot counted: 1 item on ASI 5 \u00b7 10/05/2026.\n\u26a0 What counts is not the drawing shown. Nothing in your totals has changed. To count the drawing shown instead, open the sheet and press Count this version on the version bar \u2014 you are shown the change before it is made."
+     }
+    },
+    "names": {
+     "r-m": {
+      "name": "ASI 5",
+      "hidden": "ASI 5",
+      "number": 1,
+      "title": "ASI 5 \u00b7 10/05/2026",
+      "version": "ASI 5"
+     },
+     "r-not-here": {
+      "name": "removed revision",
+      "hidden": "removed revision",
+      "number": 0,
+      "title": "removed revision",
+      "version": "removed revision"
+     }
+    },
+    "effect": [
+     [
+      0,
+      "",
+      ""
+     ],
+     [
+      0,
+      "r-m",
+      "300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) will leave"
+     ],
+     [
+      1,
+      "",
+      ""
+     ],
+     [
+      1,
+      "r-m",
+      "Wall 9 \u2192 13 sq ft (Studs 6.8 \u2192 9.8 EA)"
+     ],
+     [
+      2,
+      "",
+      ""
+     ]
+    ],
+    "dropEffect": [
+     [
+      "r-m",
+      ""
+     ]
+    ],
+    "book": [
+     {
+      "page": 0,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 0,
+      "rev": "r-m",
+      "revPage": 0,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 1,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 1,
+      "rev": "r-m",
+      "revPage": 1,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     },
+     {
+      "page": 2,
+      "rev": "",
+      "revPage": null,
+      "booked": false,
+      "book": null,
+      "bookedOver": {},
+      "said": []
+     }
+    ],
+    "keyOrder": [
+     "0",
+     "1",
+     "2"
+    ],
+    "ask": [
+     [
+      0,
+      "",
+      []
+     ],
+     [
+      0,
+      "r-m",
+      [
+       "M1 will count from ASI 5 instead of its own drawing.\n\nIn your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) will leave.\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way.\n\nThere is no takeoff on that drawing yet, so this sheet will contribute nothing until you take it off."
+      ]
+     ],
+     [
+      1,
+      "",
+      []
+     ],
+     [
+      1,
+      "r-m",
+      [
+       "M2 will count from ASI 5 instead of its own drawing.\n\nIn your totals: Wall 9 \u2192 13 sq ft (Studs 6.8 \u2192 9.8 EA).\n\nNothing is deleted: the takeoff on every other version stays where it is, and is listed on the report as not counted. You can change this back the same way."
+      ]
+     ],
+     [
+      2,
+      "",
+      []
+     ]
+    ],
+    "after": [],
+    "setSaid": [
+     [
+      0,
+      "",
+      false,
+      []
+     ],
+     [
+      0,
+      "r-m",
+      true,
+      [
+       "M1 now counts from ASI 5 instead of its own drawing \u2014 in your totals: 300 sq ft of Slab (with 1 each of Dumpster 20yd and 330 LF of Rebar #4), 120 sq ft of Footing, 90 sq ft of Stem Wall, 250 sq ft of Garage Slab and 3 more (300 sq ft, with 4 materials: 60 LF and 22 CY and 1 each) leave."
+      ]
+     ],
+     [
+      1,
+      "",
+      false,
+      []
+     ],
+     [
+      1,
+      "r-m",
+      true,
+      [
+       "M2 now counts from ASI 5 instead of its own drawing \u2014 in your totals: Wall 9 \u2192 13 sq ft (Studs 6.8 \u2192 9.8 EA)."
+      ]
+     ],
+     [
+      2,
+      "",
+      false,
+      []
+     ]
+    ],
+    "lone": [
+     [
+      1,
+      "r-m",
+      1,
+      0
+     ]
+    ],
+    "leftOut": "Not in your totals: Wall 4 sq ft on 1 sheet (M2) stays out of your totals \u2014 taken off on a drawing that sheet does not count from. The \u26a0 tiles in the Pages list mark it.",
+    "watch": [
+     [
+      0,
+      []
+     ],
+     [
+      2,
+      []
+     ]
+    ],
+    "latest": {
+     "date": {
+      "rows": [
+       {
+        "sheet": "M1",
+        "source": "ASI 5",
+        "date": "10/05/2026",
+        "from": [
+         "rev",
+         0,
+         0
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          0
+         ],
+         "1": [
+          "rev",
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "M2",
+        "source": "ASI 5",
+        "date": "10/05/2026",
+        "from": [
+         "rev",
+         0,
+         1
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          1
+         ],
+         "1": [
+          "rev",
+          0,
+          1
+         ]
+        }
+       },
+       {
+        "sheet": "M3",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         2
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          2
+         ]
+        }
+       }
+      ],
+      "notes": {
+       "sheets": 3,
+       "from_revisions": 2,
+       "unmatched": 0,
+       "duplicates": [],
+       "undated": 0
+      }
+     },
+     "column": {
+      "rows": [
+       {
+        "sheet": "M1",
+        "source": "ASI 5",
+        "date": "10/05/2026",
+        "from": [
+         "rev",
+         0,
+         0
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          0
+         ],
+         "1": [
+          "rev",
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "sheet": "M2",
+        "source": "ASI 5",
+        "date": "10/05/2026",
+        "from": [
+         "rev",
+         0,
+         1
+        ],
+        "versions": 2,
+        "kind": "main",
+        "usedCol": 1,
+        "cols": {
+         "0": [
+          "main",
+          1
+         ],
+         "1": [
+          "rev",
+          0,
+          1
+         ]
+        }
+       },
+       {
+        "sheet": "M3",
+        "source": "ORIGINAL",
+        "date": "",
+        "from": [
+         "main",
+         2
+        ],
+        "versions": 1,
+        "kind": "main",
+        "usedCol": 0,
+        "cols": {
+         "0": [
+          "main",
+          2
          ]
         }
        }

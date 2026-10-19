@@ -800,6 +800,11 @@ export class Project extends EventTarget {
 
   _restoreKeepingBook(step, direction) {
     const kept = this._bookNow();
+    // The job as it stood BEFORE this step: what the step's sentence is
+    // measured from. Read after the restore, the totals were already the
+    // picture's, and Ctrl+Z of a Yes named only what came back.
+    const prior = { metadata: this.metadata, measurements: this.measurements,
+      pageCount: this.pageCount };
     this.restore(step.state);
     if (kept.book && Object.keys(kept.book).length) this.metadata.sheet_version = kept.book;
     else delete this.metadata.sheet_version;
@@ -831,7 +836,8 @@ export class Project extends EventTarget {
     else delete book[String(page)];
     if (Object.keys(book).length) this.metadata.sheet_version = book;
     else delete this.metadata.sheet_version;
-    this.emit('booking', { page, direction, kind: tag.kind || 'first', to, bookBefore: before });
+    this.emit('booking', { page, direction, kind: tag.kind || 'first', to, bookBefore: before,
+      prior });
   }
 
   /**

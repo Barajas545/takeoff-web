@@ -75,7 +75,7 @@ WIN_METHODS = [
     "_page_of_image", "_takeoff_fingerprint", "_count_question_facts",
     "_tag_asked_booking", "_lone_uncounted_sheets", "_left_out_sentence",
     "_lone_words", "_amount_words", "_totals_gain_text",
-    "_watch_counted_takeoff",
+    "_watch_counted_takeoff", "_retract_stale_watch",
 ]
 # The stand-in window's DATA and the side effects that move no number.
 WIN_STUBS = {
@@ -84,7 +84,9 @@ WIN_STUBS = {
     "_announce_price", "_update_window_title", "_refresh_version_bar",
     "_queue_thumb_refresh", "_rebase_counted_seen",
     # what the questions remember for the session, and the watch's state
-    "_count_asked", "_counted_seen",
+    "_count_asked", "_counted_seen", "_watch_said",
+    # the deferred price sentences (the watch takes back one made untrue)
+    "_price_queue",
 }
 
 # GLPageWidget: the item's drawing, and the multi-shape arithmetic.
@@ -419,6 +421,8 @@ class Win(NS["WinBase"]):
         self.gl_widget = Canvas(self, meas)
         self._count_asked = set()
         self._counted_seen = None
+        self._watch_said = None
+        self._price_queue = []
         self.settings = {"latest_set_order": scn.get("order") or "date"}
         self.status_label = Recorder()
         self.items_panel = _Panel()
@@ -426,7 +430,9 @@ class Win(NS["WinBase"]):
         self.announced = []
 
     def _announce_price(self, text):
-        self.announced.append(str(text))
+        # Kept as given: the desktop may hand a callable that WORDS the
+        # sentence when it is said -- after the operation is over (_said).
+        self.announced.append(text)
 
     def _update_window_title(self):
         pass
@@ -458,6 +464,17 @@ def _items(win):
 
 def _qty(q):
     return [round(float(q[0]), 6), q[1]]
+
+
+def _said(lst):
+    """The sentences as the desktop puts them on the line: a deferred one is
+    worded now (_flush_price), after the operation that queued it."""
+    out = []
+    for t in lst:
+        t = t() if callable(t) else t
+        if t:
+            out.append(str(t))
+    return out
 
 
 def truth(scn):
@@ -571,13 +588,17 @@ def truth(scn):
                 m["rev_id"] = rid
                 m["rev_page"] = rp
             ok = w2._book_first_takeoff(p, m)
+            if empty:
+                # ...and filed, as _add_measurement files it after asking:
+                # the sentence is worded on the job the filing left.
+                w2.gl_widget._measurements.setdefault(p, []).append(m)
             book.append({
                 "page": p, "rev": rid, "revPage": rp, "booked": bool(ok),
                 "book": w2.metadata.get("sheet_version"),
                 "bookedOver": {str(r.get("id")): r.get("booked_over")
                                for r in w2._revisions
                                if r.get("booked_over")},
-                "said": w2.announced[n_said:],
+                "said": _said(w2.announced[n_said:]),
             })
     out["book"] = book
     # The order the desktop walks the measurement store in -- the file's own.
@@ -612,7 +633,8 @@ def truth(scn):
         _QMessageBox.asked[:] = []
         _QMessageBox.answer = _QMessageBox.No
         w2._ask_count_after_takeoff(m2, ("k",))
-        after.append([pg, i, [x[1] for x in _QMessageBox.asked], w2.announced])
+        after.append([pg, i, [x[1] for x in _QMessageBox.asked],
+                      _said(w2.announced)])
     out["after"] = after
     # ...and what a Yes to the plain question says (set_working_version).
     said = []
@@ -644,7 +666,7 @@ def truth(scn):
                                          if not any(m is h for h in here)]
         w2.announced[:] = []
         w2._watch_counted_takeoff()
-        watch.append([p, w2.announced])
+        watch.append([p, _said(w2.announced)])
     out["watch"] = watch
 
     # ── the Current Set, with promoted sheets ranked as what they are ──
@@ -925,6 +947,41 @@ def scenarios():
             "2": [_area("Own P3", 40),
                   _area("Parked P3", 50, rev_id="r-park", rev_page=1),
                   _area("Live P3", 60, rev_id="r-live", rev_page=0)],
+        },
+    })
+
+    # 10. The words for what moves (FIX6 step 2): an item's associated
+    #     materials named with it, the rest of a long list summed by unit,
+    #     and a multi-sheet item's first shape named by ITS amount on its
+    #     own drawing (4 sq ft) -- never by the item's whole total (13).
+    def _mat(name, qty, mode, unit):
+        return {"name": name, "qty": qty, "qty_mode": mode, "unit": unit,
+                "unit_cost": 1.0, "cost_type": "material"}
+    S.append({
+        "name": "materials, a long list and a shared item", "pageCount": 3,
+        "metadata": {
+            "page_labels": ["M1", "M2", "M3"],
+            "revisions": [_rev("r-m", "10/05/2026", "ASI 5", 2,
+                               match={"0": 0, "1": 1})],
+        },
+        "measurements": {
+            "0": [_area("Slab", 300, associated_items=[
+                      _mat("Dumpster 20yd", 1, "total", "each"),
+                      _mat("Rebar #4", 1.1, "per_unit", "LF")]),
+                  _area("Footing", 120), _area("Stem Wall", 90),
+                  _area("Garage Slab", 250), _area("Porch", 60),
+                  _area("Walk", 40, associated_items=[
+                      _mat("Gravel", 0.05, "per_unit", "CY")]),
+                  _area("Driveway", 200, associated_items=[
+                      _mat("Base", 0.1, "per_unit", "CY"),
+                      _mat("Forms", 60, "total", "LF"),
+                      _mat("Pump", 1, "total", "each")])],
+            "1": [_area("Wall", 13, own_value=4.0, group_id="g-w",
+                        group_count=2, rev_id="r-m", rev_page=1,
+                        associated_items=[
+                            _mat("Studs", 0.75, "per_unit", "EA"),
+                            _mat("Nails", 2, "total", "box")])],
+            "2": [_area("Wall", 9, group_id="g-w", group_child=True)],
         },
     })
 

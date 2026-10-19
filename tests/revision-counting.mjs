@@ -279,9 +279,19 @@ function checkScenario(input, truth, label, { words = true } = {}) {
           bo[String(r.id)] = r.booked_over;
         }
       }
+      // The sentence is worded on the job AFTER the takeoff is filed, as the
+      // desktop words it (its _add_measurement files it, then the price
+      // sentence is said): the booking applied, the probe on its sheet.
+      let said = [];
+      if (ch && ch.says) {
+        const filed = new CountingModel({ metadata: md,
+          measurements: { ...model.meas, [p]: [...model.items(p), m] },
+          pageCount: n, order: model.order, sizeOf: model.sizeOf, revSizeOf: model.revSizeOf });
+        said = [filed.firstTakeoffSaid(p, rid, ch.before)];
+      }
       book.push({ page: p, rev: rid, revPage: rp, booked: !!ch,
         book: md.sheet_version === undefined ? null : md.sheet_version,
-        bookedOver: bo, said: ch && ch.said ? [ch.said] : [] });
+        bookedOver: bo, said });
     }
   }
   eq(`${label} · what the first takeoff on each drawing books`, book, truth.book);

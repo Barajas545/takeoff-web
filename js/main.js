@@ -852,12 +852,16 @@ let priceQueue = [];
 // replaces it rather than growing a paragraph of every move this minute.
 let priceShown = '';
 function sayPrice(text) {
+  // `text` may be a function that WORDS the sentence when it is said: what
+  // an operation ended up doing is known only once it is over.
   if (!text) return;
   if (!priceQueue.includes(text)) priceQueue.push(text);
   if (priceQueue.length > 1) return;
   setTimeout(() => {
-    const said = priceQueue.join(' ');
+    const said = priceQueue.map(t => (typeof t === 'function' ? t() : t))
+      .filter(Boolean).join(' ');
     priceQueue = [];
+    if (!said) return;
     const now = $('statusText').textContent || '';
     const lead = now && !now.includes(said) && now !== priceShown
       && now !== (HINTS[controller.mode] || 'Ready')
@@ -896,7 +900,11 @@ const countAsked = new Set();
  * sheet and drawing — with the before and the after.
  */
 async function onTakeoffFiled({ page, item, booking, level }) {
-  if (booking && booking.said) sayPrice(booking.said);
+  // Worded when said, on the job as the filing left it (desktop
+  // _book_first_takeoff): what came into the totals, by quantity.
+  if (booking && booking.says) {
+    sayPrice(() => countingModel().firstTakeoffSaid(page, booking.rid, booking.before));
+  }
   syncVersionUi();
   if (!item || !isTakeoffItem(item) || !(page >= 0)) return;
   const model = countingModel();
@@ -978,9 +986,14 @@ function afterBookChange() {
 }
 
 /** An undo or redo moved a booking (Project._restoreKeepingBook). */
-function sayBookingUndo({ page, direction, kind, to, bookBefore }) {
+function sayBookingUndo({ page, direction, kind, to, bookBefore, prior: was }) {
   const model = countingModel();
-  const prior = model.variant({ sheetVersion: bookBefore });
+  // From the job as it stood BEFORE the step (its takeoff included): read
+  // after the restore, Ctrl+Z of a Yes named only what came back.
+  const prior = was
+    ? new CountingModel({ metadata: was.metadata, measurements: was.measurements,
+      pageCount: was.pageCount, order: latestOrder(), sizeOf: pageSizeOf, revSizeOf })
+    : model.variant({ sheetVersion: bookBefore });
   const moved = takeoffMoveWords(prior.countedQuantities(), model.countedQuantities());
   const sheet = model.pageLabel(page);
   setStatus(direction === 'undo' ? 'Undone.' : 'Redone.');
@@ -990,9 +1003,11 @@ function sayBookingUndo({ page, direction, kind, to, bookBefore }) {
       + `${moved ? `in your totals: ${moved}` : 'your totals did not change'}.`);
   } else if (direction === 'undo') {
     sayPrice(`${sheet} has no takeoff on any drawing again, so it is back to counting from `
-      + `${model.versionName(model.workingVersionOf(page))}, as before — the next takeoff on it decides.`);
+      + `${model.versionName(model.workingVersionOf(page))}, as before — the next takeoff on it decides`
+      + `${moved ? `; in your totals: ${moved}` : ''}.`);
   } else {
-    sayPrice(`${sheet} counts from ${model.versionName(to)} again — the drawing that takeoff is on.`);
+    sayPrice(`${sheet} counts from ${model.versionName(to)} again — the drawing that takeoff is on`
+      + `${moved ? `; in your totals: ${moved}` : ''}.`);
   }
   primeWatch();
 }

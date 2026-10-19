@@ -662,8 +662,12 @@ export function buildReportHtml(project, pageLabel, key, filters, options) {
 export function versionsLine(model, pageLabel, listsRow = () => true) {
   const book = model.countedBook(listsRow);
   const wait = model.waitingBook(listsRow);
-  if (!book.length && !wait.length) return '';
-  const bits = book.filter(([, rid]) => rid)
+  // EVERY sheet counted from a revision, not only those holding takeoff on
+  // another drawing too: since 3.05 the first takeoff books the drawing it
+  // is traced on, and those sheets were missing from the line.
+  const from = model.countedFrom(listsRow);
+  if (!book.length && !wait.length && !from.length) return '';
+  const bits = from
     .map(([pg, rid]) => `${pageLabel(pg)} · ${model.revisionLabel(rid) || 'a revision'}`);
   let nLeft = 0;
   for (const [, , left] of book) for (const v of left.values()) nLeft += v.length;

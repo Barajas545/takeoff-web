@@ -177,9 +177,14 @@ try {
   c.setVersionView(String(r2.id), r2.match[String(page)]);
   c._commit({ type: 'area', name: 'Wall A5', label: 'Wall A5', value: 12.25,
     points: [[10, 10], [185, 10], [185, 185], [10, 185]], visible: true, ppf: 50 }, 'Area');
+  // Worded on the job as the filing left it, as the app says it.
+  const bk = filed.at(-1).booking;
+  const bkSaid = bk && bk.says ? new CountingModel({ metadata: project.metadata,
+    measurements: project.measurements, pageCount: project.pageCount })
+    .firstTakeoffSaid(page, bk.rid, bk.before) : '';
   ok('the first takeoff on A5.0 booked REV 2, and said so by quantity',
-    filed.at(-1).booking && /A5\.0 now counts from REV 2 — the drawing you are taking off; Wall A5 12\.2 sq ft comes into your totals/.test(filed.at(-1).booking.said),
-    JSON.stringify(filed.at(-1).booking));
+    /A5\.0 now counts from REV 2 — the drawing you are taking off; in your totals: 12\.2 sq ft of Wall A5 comes in\./.test(bkSaid),
+    bkSaid || JSON.stringify(bk));
 
   // A7.0: a sheet REV 2 ADDED. Its own drawing is its newest — takeable.
   page = idx('A7.0');

@@ -26,6 +26,7 @@
 import { Project } from '../js/core/project.js';
 import { ToolController } from '../js/tools/controller.js';
 import { newestVersionOf, sheetVersions, versionItems } from '../js/core/revisions.js';
+import { CountingModel, takeoffMoveWords } from '../js/core/counting.js';
 import * as Reports from '../js/ui/reports.js';
 
 const { collectRows, collectItems, buildReportHtml } = Reports;
@@ -249,9 +250,13 @@ function revJob() {
   const m = p.measurements[0][0];
   eq('stamped with the drawing it was traced on', [m.rev_id, m.rev_page], ['r2', 0]);
   eq('the first takeoff booked that drawing', p.metadata.sheet_version, { 0: 'r2' });
-  ok('and said so, naming the quantity',
-    events[0] && /S1 now counts from REV 1 — the drawing you are taking off; Slab 120 sq ft comes into your totals/.test(events[0].booking.said),
-    JSON.stringify(events[0] && events[0].booking));
+  // Worded on the job as the filing left it (what came in), as the app says it.
+  const b0 = events[0] && events[0].booking;
+  const said0 = b0 && b0.says ? new CountingModel({ metadata: p.metadata,
+    measurements: p.measurements, pageCount: p.pageCount }).firstTakeoffSaid(0, b0.rid, b0.before) : '';
+  ok('and said so, naming the quantity that came in',
+    /S1 now counts from REV 1 — the drawing you are taking off; in your totals: 120 sq ft of Slab comes in\./.test(said0),
+    said0);
   eq('ONE undo step for both', p._undo.length, 1);
   const said = [];
   p.addEventListener('booking', ev => said.push(ev.detail));
@@ -259,6 +264,17 @@ function revJob() {
   ok('Ctrl+Z takes back the item AND the booking',
     !(p.measurements[0] || []).length && !p.metadata.sheet_version);
   eq('and says the booking moved', said.map(s => [s.direction, s.kind, s.to]), [['undo', 'first', '']]);
+  // ...measured from the job BEFORE the step: read after the restore, the
+  // totals were already the picture's and the 120 sq ft that left went unnamed.
+  {
+    const pr = said[0] && said[0].prior;
+    const before = pr ? new CountingModel({ metadata: pr.metadata, measurements: pr.measurements,
+      pageCount: pr.pageCount }).countedQuantities() : new Map();
+    const now = new CountingModel({ metadata: p.metadata, measurements: p.measurements,
+      pageCount: p.pageCount }).countedQuantities();
+    eq('the undo is said from the job before it: what left is named',
+      takeoffMoveWords(before, now), '120 sq ft of Slab leaves');
+  }
   p.redo();
   ok('Ctrl+Y puts back both', p.measurements[0].length === 1
     && JSON.stringify(p.metadata.sheet_version) === JSON.stringify({ 0: 'r2' }));

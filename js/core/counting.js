@@ -178,22 +178,46 @@ function itemName(m) {
 }
 
 /**
+ * [qty, unit] of ONE SHAPE of takeoff — what is traced on the drawing it
+ * sits on (desktop takeoff_shape_qty). A multi-sheet item keeps the whole
+ * item's total on its first shape; a sentence about one drawing that read
+ * it named the runs on every other sheet as if they were there.
+ */
+export function takeoffShapeQty(m) {
+  if (m && truthy(m.group_id) && !truthy(m.group_child)) {
+    const own = ('own_value' in m) ? orZero(m.own_value) : orZero(m.value);
+    return takeoffQty({ ...m, value: own });
+  }
+  return takeoffQty(m);
+}
+
+/** " and 3 more (18.1 sq ft)" — the rest of a list, counted AND summed. */
+function moreWords(n, qtys, extra = '') {
+  const bits = [takeoffSumText(qtys), extra].filter(Boolean);
+  return ` and ${n} more${bits.length ? ` (${bits.join(', ')})` : ''}`;
+}
+
+/**
  * The takeoff in `items` by name and QUANTITY — "Deck 500 sq ft, Walls
- * 250 LF and 2 more" — because a sentence about money that says "1 item"
- * says nothing. '' when there is no takeoff in it.
+ * 250 LF and 2 more (18.1 sq ft)" — because a sentence about money that
+ * says "1 item" says nothing. Every shape by what is traced on its own
+ * drawing, the first shape of a multi-sheet item included. '' when there is
+ * no takeoff in it.
  */
 export function takeoffQuantityWords(items, limit = 4) {
   const rows = [];
+  const qtys = [];
   for (const m of items || []) {
     if (!isTakeoffType(m)) continue;
-    const [q, u] = takeoffQty(m);
+    const [q, u] = takeoffShapeQty(m);
     const nm = itemName(m);
     if (m.group_child) rows.push(`${takeoffQtyText(q, u)} of ${nm}`);
     else rows.push(`${nm} ${takeoffQtyText(q, u)}`);
+    qtys.push([q, u]);
   }
   if (!rows.length) return '';
   let out = rows.slice(0, limit).join(', ');
-  if (rows.length > limit) out += ` and ${rows.length - limit} more`;
+  if (rows.length > limit) out += moreWords(rows.length - limit, qtys.slice(limit));
   return out;
 }
 
@@ -241,10 +265,27 @@ export function takeoffIdentity(m) {
  *    Wall M 13 → 4 sq ft"
  */
 export function takeoffMoveWords(before, after, future = false, limit = 4) {
-  const rows = (ks, src) => ks.map(k => `${takeoffQtyText(...src.get(k)[1])} of ${itemName(src.get(k)[0])}`);
-  const cut = xs => {
-    let out = xs.slice(0, limit).join(', ');
-    if (xs.length > limit) out += ` and ${xs.length - limit} more`;
+  const row = (k, src) => {
+    const [m, [q, u]] = src.get(k);
+    return `${takeoffQtyText(q, u)} of ${itemName(m)}`
+      + materialsWords(takeoffMaterials(m, matParent(m, q)));
+  };
+  const cut = (ks, src) => {
+    let out = ks.slice(0, limit).map(k => row(k, src)).join(', ');
+    if (ks.length > limit) {
+      const rest = ks.slice(limit);
+      const mats = [];
+      for (const k of rest) {
+        const [m, [q]] = src.get(k);
+        mats.push(...takeoffMaterials(m, matParent(m, q)));
+      }
+      let extra = '';
+      if (mats.length) {
+        const ms = takeoffSumText(mats.map(([, q, u]) => [q, u]));
+        extra = `with ${mats.length} material${mats.length === 1 ? '' : 's'}${ms ? `: ${ms}` : ''}`;
+      }
+      out += moreWords(rest.length, rest.map(k => src.get(k)[1]), extra);
+    }
     return out;
   };
   const same = (a, b) => a[0] === b[0] && a[1] === b[1];
@@ -276,19 +317,113 @@ export function takeoffMoveWords(before, after, future = false, limit = 4) {
   }
   const bits = [];
   if (gone.length) {
-    bits.push(`${cut(rows(gone, before))} ${gone.length === 1
+    bits.push(`${cut(gone, before)} ${gone.length === 1
       ? (future ? 'will leave' : 'leaves') : (future ? 'will leave' : 'leave')}`);
   }
   if (came.length) {
-    bits.push(`${cut(rows(came, after))} ${came.length === 1
+    bits.push(`${cut(came, after)} ${came.length === 1
       ? (future ? 'will come in' : 'comes in') : (future ? 'will come in' : 'come in')}`);
   }
   if (chg.length) {
-    bits.push(cut(chg.map(([[, [a, u]], [m1, [b, u2]]]) => (u === u2
+    const one = ([[m0, [a, u]], [m1, [b, u2]]]) => (u === u2
       ? `${itemName(m1)} ${takeoffQtyText(a)} → ${takeoffQtyText(b, u)}`
-      : `${itemName(m1)} ${takeoffQtyText(a, u)} → ${takeoffQtyText(b, u2)}`))));
+      : `${itemName(m1)} ${takeoffQtyText(a, u)} → ${takeoffQtyText(b, u2)}`)
+      + materialsChangeWords(m0, a, m1, b);
+    let out = chg.slice(0, limit).map(one).join(', ');
+    if (chg.length > limit) {
+      const rest = chg.slice(limit);
+      out += ` and ${rest.length} more (${netText(rest.map(p => [p[0][1], p[1][1]]))})`;
+    }
+    bits.push(out);
   }
   return bits.join('; ');
+}
+
+// ── an item's associated materials go wherever the item goes ────────────
+
+/** Python's _ai_total: a material's quantity for its item's quantity. */
+function aiTotal(ai, parentQty) {
+  const qty = ('qty' in ai) ? ai.qty : (('qty_per' in ai) ? ai.qty_per : 0.0);
+  const mode = ('qty_mode' in ai) ? ai.qty_mode : (('qty_per' in ai) ? 'per_unit' : 'total');
+  return mode === 'total' ? qty : qty * parentQty;
+}
+
+/** The quantity per-unit materials multiply (desktop _mat_parent). */
+function matParent(m, q) {
+  if (m && truthy(m.group_id) && !truthy(m.group_child)) return q;
+  return orZero((m || {}).value);
+}
+
+/** [[name, qty, unit]] of the materials riding item `m` (desktop takeoff_materials). */
+export function takeoffMaterials(m, parentQty) {
+  const out = [];
+  for (const ai of (m || {}).associated_items || []) {
+    if (!ai || typeof ai !== 'object' || Array.isArray(ai)) continue;
+    let t;
+    try {
+      t = aiTotal(ai, parentQty);
+    } catch {
+      continue;
+    }
+    const f = pyFloat(orZero(t));
+    if (!f.ok) continue;
+    out.push([String(ai.name || '').trim() || '(material)', f.n,
+      String((('unit' in ai) ? ai.unit : 'each') || '')]);
+  }
+  return out;
+}
+
+/** " (with 1 each of Dumpster 20yd and 27.5 LF of Rebar #4)". */
+function materialsWords(mats, limit = 2) {
+  if (!mats.length) return '';
+  const rows = mats.map(([n, q, u]) => `${takeoffQtyText(q, u)} of ${n}`);
+  let body;
+  if (rows.length > limit) {
+    const n = rows.length - limit;
+    const rest = takeoffSumText(mats.slice(limit).map(([, q, u]) => [q, u]));
+    body = `${rows.slice(0, limit).join(', ')} and ${n} more material${n === 1 ? '' : 's'}`
+      + `${rest ? `: ${rest}` : ''}`;
+  } else if (rows.length === 1) {
+    body = rows[0];
+  } else {
+    body = `${rows.slice(0, -1).join(', ')} and ${rows[rows.length - 1]}`;
+  }
+  return ` (with ${body})`;
+}
+
+/** "net -9 sq ft" for [[[a, u], [b, u2]]]; "no net change" when nothing does. */
+function netText(pairs) {
+  const net = new Map();
+  for (const [[a, u], [b, u2]] of pairs) {
+    net.set(u, (net.get(u) || 0) - pyFloat(orZero(a)).n);
+    net.set(u2, (net.get(u2) || 0) + pyFloat(orZero(b)).n);
+  }
+  const s = takeoffSumText([...net.entries()].map(([u, q]) => [pyRound(q, 6), u]));
+  return s ? `net ${s}` : 'no net change';
+}
+
+/** " (Rebar #4 14.3 → 4.4 LF)": the per-unit materials of a changed item. */
+function materialsChangeWords(m0, a, m1, b, limit = 2) {
+  const x0 = takeoffMaterials(m0, matParent(m0, a));
+  const x1 = takeoffMaterials(m1, matParent(m1, b));
+  const rows = [];
+  const pairs = [];
+  for (let i = 0; i < Math.min(x0.length, x1.length); i++) {
+    const [, q0, u0] = x0[i];
+    const [n1, q1, u1] = x1[i];
+    if (pyRound(q0, 6) === pyRound(q1, 6) && u0 === u1) continue;
+    rows.push(u0 === u1
+      ? `${n1} ${takeoffQtyText(q0)} → ${takeoffQtyText(q1, u1)}`
+      : `${n1} ${takeoffQtyText(q0, u0)} → ${takeoffQtyText(q1, u1)}`);
+    pairs.push([[q0, u0], [q1, u1]]);
+  }
+  if (!rows.length) return '';
+  let out = rows.slice(0, limit).join(', ');
+  if (rows.length > limit) {
+    const n = rows.length - limit;
+    out += ` and ${n} more material${n === 1 ? '' : 's'} (${netText(pairs.slice(limit))})`;
+  }
+  return ` (${out})`;
 }
 
 /** "3 items", "1 item and 2 shapes of items that span sheets", "nothing". */
@@ -731,17 +866,26 @@ export class CountingModel {
     if (String(book[String(page)] || '') === rid) return null;
     if (rid && !this.sheetVersions(page).some(v => v.revId === rid)) return null;
     const was = this.workingVersionOf(page);
+    // The totals before this takeoff, so its sentence can name what came in.
+    const before = this.countedQuantities();
     const ch = this.workingVersionChange(page, rid);
     if (!ch) return null;
     const after = this.variant({ sheetVersion: ch.book });
-    let said = '';
-    if (after.workingVersionOf(page) !== was) {
-      const w = takeoffQuantityWords([m]);
-      said = `${this.pageLabel(page)} now counts from ${this.versionName(rid)} — the drawing `
-        + `you are taking off${w ? `; ${w} comes into your totals` : ''}. Nothing was taken `
-        + 'off any of its other drawings, so no other total moved.';
-    }
-    return { ...ch, said };
+    const says = after.workingVersionOf(page) !== was;
+    return { ...ch, before, says };
+  }
+
+  /**
+   * The booking's sentence, worded on the job AFTER the takeoff was filed
+   * (desktop _book_first_takeoff's deferred words): what came into the
+   * totals, by quantity. Worded before, it named what the tool held, not
+   * what was filed.
+   */
+  firstTakeoffSaid(page, rid, before) {
+    const moved = takeoffMoveWords(before, this.countedQuantities());
+    return `${this.pageLabel(page)} now counts from ${this.versionName(rid)} — the drawing `
+      + `you are taking off${moved ? `; in your totals: ${moved}` : ''}. Nothing was taken `
+      + 'off any of its other drawings, so no other total moved.';
   }
 
   /**
@@ -850,7 +994,7 @@ export class CountingModel {
     for (const [p, r] of lone) {
       for (const m of this.items(p)) if (isTakeoffType(m) && itemRevId(m) === r) held.push(m);
     }
-    const sum = takeoffSumText(held.map(takeoffQty));
+    const sum = takeoffSumText(held.map(takeoffShapeQty));
     const what = takeoffQuantityWords(held) || amountWords(tItems, tRuns);
     return `${lead}: ${what}${sum && held.length > 1 ? ` (${sum} in all)` : ''} on ${n} sheet`
       + `${n === 1 ? '' : 's'} (${names}) stay${(tItems + tRuns) === 1 ? 's' : ''} out of your `
@@ -1068,6 +1212,28 @@ export class CountingModel {
         }
       }
       if (left.size) out.push([pg, countedRid, left]);
+    }
+    return out;
+  }
+
+  /**
+   * [[page, revId]] for every sheet whose takeoff in the totals was traced
+   * on a revision drawing (desktop ReportCenterDialog._counted_from) —
+   * wherever its other drawings stand, so a sheet the first takeoff booked
+   * is named too.
+   */
+  countedFrom(listsRow = () => true) {
+    const out = [];
+    const keys = this.pageKeys().filter(k => k >= 0).sort((a, b) => a - b);
+    for (const pg of keys) {
+      const rids = [];
+      for (const m of this.items(pg)) {
+        if (!m || ['textnote', 'page_ref', 'pitch', 'group', 'ref_distance'].includes(m.type)) continue;
+        if (!listsRow(m)) continue;
+        const rid = String(m.rev_id || '');
+        if (rid && !rids.includes(rid) && this.runCountsTowards(pg, m)) rids.push(rid);
+      }
+      for (const rid of rids) out.push([pg, rid]);
     }
     return out;
   }
