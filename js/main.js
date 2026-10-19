@@ -9,7 +9,12 @@ import { CalloutPreview } from './ui/callout-preview.js';
 import { resolveUiMode } from './ui/settings.js';
 import { RemoteFile } from './core/remote-file.js';
 import { PageStore } from './core/page-store.js';
-import { Project, KEEPS_OWN_SCALE } from './core/project.js';
+import {
+  Project, KEEPS_OWN_SCALE, takeoffFingerprint, resyncGroups,
+} from './core/project.js';
+import {
+  CountingModel, applyBooking, takeoffMoveWords, takeoffQuantityWords, isTakeoffItem,
+} from './core/counting.js';
 import { importPdf, canvasToPng } from './core/pdf-import.js';
 import {
   SCALE_PRESETS, EXTENDED_SCALES, computePixelsPerFoot, scaleLabelFor,
@@ -39,7 +44,7 @@ import { RevisionsPanel } from './ui/revisions-panel.js';
 import {
   visibleRevisions, sheetVersions, newestVersionOf, versionItems,
   revPageCount, revPageLabel, revisionLabel, workingVersionOf,
-  sizesMatch, sizeRefusal,
+  sizesMatch, sizeRefusal, itemRevId,
 } from './core/revisions.js';
 
 const $ = id => document.getElementById(id);
@@ -130,9 +135,12 @@ const thumbs = new Thumbnails({
   // Which sheet is off its newest drawing, and where in the run it sits.
   // Read from the app every time it paints rather than pushed in, so the red
   // frame and the drawing on screen cannot get out of step.
+  // What each tile says about its sheet's drawings (CountingModel.
+  // sheetTileStates), rebuilt by syncTiles() whenever it can change.
+  tileStates: () => tileStates,
   versionState: () => {
     const page = app.currentPage;
-    const vers = sheetVersions(page, allRevisions());
+    const vers = versionsOf(page);
     const cur = String(versionView.revId || '');
     return {
       page,
@@ -155,6 +163,9 @@ const versionBar = new VersionBar({
     viewingRevId: versionView.revId,
     workingRevId: workingVersion(app.currentPage),
     order: latestOrder(),
+    origins: sheetOrigin(),
+    // Count this version moves a total, so it is live only in Edit Mode.
+    canCount: app.editing,
   }),
   onPick: revId => showSheetVersion(app.currentPage, revId),
 });
@@ -168,6 +179,7 @@ const revisionsPanel = new RevisionsPanel({
     viewingRevId: versionView.revId,
     extraSheets: app.project.metadata.extra_sheets || [],
     order: latestOrder(),
+    origins: sheetOrigin(),
   }),
   host: {
     pageLabel: i => pageFinalLabel(i),
@@ -178,7 +190,8 @@ const revisionsPanel = new RevisionsPanel({
     showLoosePage: (rev, rp) => showLoosePage(rev, rp),
     setOrder: order => {
       app.settings.set('latest_set_order', order);
-      syncVersionUi();
+      // Which drawing is newest moves with the order, and the tiles say it.
+      syncVersionUi({ rebuild: true });
     },
   },
 });
@@ -195,9 +208,13 @@ let revCountsBySheet = new Map();
  */
 function syncVersionUi({ rebuild = false } = {}) {
   if (rebuild) {
-    revCountsBySheet = sheetsWithRevisions(app.pages.pageCount, allRevisions());
+    revCountsBySheet = sheetsWithRevisions(app.pages.pageCount, allRevisions(), sheetOrigin());
+    syncTiles({ paint: false });
     thumbs.syncLabels();
   }
+  // A callout pin or a note whose revision has left this sheet is shown —
+  // and can be clicked — on the sheet's own drawing (markVersion).
+  controller.markOf = markOf;
   // The tools must know which drawing is under them BEFORE anything is
   // painted or clicked: the hit test filters on it, and it is what stops a
   // drag from moving work onto a drawing it was never traced on.
@@ -232,7 +249,7 @@ function syncOldBadge() {
   const old = showingOldVersion();
   el.hidden = !old;
   if (!old) return;
-  const vers = sheetVersions(app.currentPage, allRevisions());
+  const vers = versionsOf(app.currentPage);
   const cur = String(versionView.revId || '');
   const which = Math.max(0, vers.findIndex(v => v.revId === cur)) + 1;
   const what = vers[which - 1];
@@ -290,7 +307,7 @@ function drawFrame() {
   // `scratch: true`, which is what makes them dash, and they come from a
   // store no save can reach.
   const real = (onRev || hasRevisions)
-    ? versionItems(onPage, versionView.revId, versionView.revPage)
+    ? versionItems(onPage, versionView.revId, versionView.revPage, markOf)
     : onPage;
   // Temporary dimensions go through the SAME version filter as real ones.
   // A dimension read off a revision belongs to that drawing; drawn after the
@@ -371,6 +388,8 @@ controller.addEventListener('selection-changed', ev => {
   itemsPanel.setSelection(ev.detail.ids);
 });
 controller.addEventListener('status', ev => setStatus(ev.detail.text));
+// Every finished item passes through controller._file, which says so here.
+controller.addEventListener('takeoff-filed', ev => { void onTakeoffFiled(ev.detail); });
 controller.addEventListener('mode-changed', ev => {
   for (const wrap of [$('toolButtons'), $('viewToolButtons'), $('markupButtons')]) {
     for (const b of wrap.children) {
@@ -384,7 +403,13 @@ controller.addEventListener('mode-changed', ev => {
 app.project.addEventListener('items-changed', () => {
   itemsPanel.refresh();
   requestDraw();
+  // What counts can change with any edit: the tiles' ⚠, and the sentence
+  // owed when a sheet comes to hold takeoff that does not count.
+  syncTiles();
+  watchCounted();
 });
+// An undo or redo moved a booking a takeoff had made: said, by quantity.
+app.project.addEventListener('booking', ev => sayBookingUndo(ev.detail));
 app.project.addEventListener('visibility-changed', () => requestDraw());
 app.project.addEventListener('annotations-changed', () => requestDraw());
 app.project.addEventListener('history-changed', ev => {
@@ -404,7 +429,12 @@ app.project.addEventListener('pages-changed', ev => {
   // inserted or deleted sheet moves them. Left behind, a dimension taken on
   // sheet 6 would be drawn over whatever sheet took that number.
   const { at, delta } = ev.detail || {};
-  if (Number.isFinite(at) && Number.isFinite(delta)) app.scratch.shiftPages(at, delta);
+  if (Number.isFinite(at) && Number.isFinite(delta)) {
+    app.scratch.shiftPages(at, delta);
+    // Both are keyed by page index: a sheet in or out re-keys every one.
+    countAsked.clear();
+    primeWatch();
+  }
   // The MODEL shifts with the pages — notePagesInserted / notePageRemoved run
   // shiftRevisionIndices over every match map. The cached count-per-sheet does
   // not, and it is what the dots on the cards are drawn from: left stale, row
@@ -551,6 +581,8 @@ function setEditing(on, { announce = true } = {}) {
   // syncModeUi owns the items-panel refresh now — it is the one place that
   // moves controller.readOnly, and the rows are built from it.
   syncModeUi();
+  // Count this version is live only in Edit Mode: the bar re-reads the mode.
+  versionBar.refresh();
   requestDraw();
 }
 
@@ -751,6 +783,284 @@ function allRevisions() {
   return app.project.metadata.revisions || [];
 }
 
+/** metadata.sheet_origin: the revision page each ADDED sheet IS. */
+function sheetOrigin() {
+  return app.project.metadata.sheet_origin || null;
+}
+
+/** Every drawing of one sheet — never its own origin page as a "version". */
+function versionsOf(page) {
+  return sheetVersions(page, allRevisions(), sheetOrigin());
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   What counts
+
+   A sheet can carry takeoff on several of its drawings and exactly ONE of
+   them is in the totals (core/counting.js, the desktop's rule, held to it by
+   tests/revision-counting.mjs). Everything here SAYS what moved: a quantity
+   that reaches the estimate never changes without a sentence on screen that
+   names the quantity — and looking never moves one.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/** The sizes the "another sheet size" rule asks about, as far as known. */
+function pageSizeOf(page) {
+  if (page === app.currentPage && pageImage) return [pageImage.width, pageImage.height];
+  const src = (app.pages.sources || [])[page];
+  return src && src.width && src.height ? [src.width, src.height] : null;
+}
+
+function revSizeOf(rev, rp) {
+  if (versionView.revId && String(rev.id) === versionView.revId
+      && rp === versionView.revPage && versionView.size) {
+    return [versionView.size.width, versionView.size.height];
+  }
+  const s = app.pages.peekRevisionPageSize?.(rev._setIndex, rp);
+  return s ? [s.width, s.height] : null;
+}
+
+/** The counting rule, asked of the project as it stands now. */
+function countingModel() {
+  return new CountingModel({
+    metadata: app.project.metadata, measurements: app.project.measurements,
+    pageCount: app.pages.pageCount, order: latestOrder(),
+    sizeOf: pageSizeOf, revSizeOf,
+  });
+}
+
+/** [revId, revPage] of the drawing a pin or note is SHOWN on. */
+function markOf(m) {
+  return countingModel().markVersion(app.currentPage, m);
+}
+
+/** {page: tile state} — what each Pages tile says (sheetTileStates). */
+let tileStates = {};
+
+function syncTiles({ paint = true } = {}) {
+  tileStates = app.pages.pageCount ? countingModel().sheetTileStates() : {};
+  if (paint) thumbs.syncTiles();
+}
+
+/**
+ * A sentence about money. Said AFTER whatever else this operation says, on
+ * the end of the line rather than over it, and kept up long enough to read
+ * (the desktop's _announce_price): "Added item" written a moment later must
+ * not bury "250 sq ft of Wall leaves".
+ */
+let priceQueue = [];
+// The line as the last price sentence left it: a NEW operation's sentence
+// replaces it rather than growing a paragraph of every move this minute.
+let priceShown = '';
+function sayPrice(text) {
+  if (!text) return;
+  if (!priceQueue.includes(text)) priceQueue.push(text);
+  if (priceQueue.length > 1) return;
+  setTimeout(() => {
+    const said = priceQueue.join(' ');
+    priceQueue = [];
+    const now = $('statusText').textContent || '';
+    const lead = now && !now.includes(said) && now !== priceShown
+      && now !== (HINTS[controller.mode] || 'Ready')
+      ? `${now.replace(/\s+$/, '')} — ` : '';
+    priceShown = lead + said;
+    $('statusText').textContent = priceShown;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => {
+      $('statusText').textContent = HINTS[controller.mode] || 'Ready';
+    }, 20000);
+  }, 0);
+}
+
+// ── the watch: a sheet whose counted drawing holds nothing ──────────────
+let countedSeen = null;
+
+/** Start the watch over in silence: a job opened, a draft restored. */
+function primeWatch() {
+  countedSeen = app.pages.pageCount ? countingModel().countedState() : null;
+}
+
+function watchCounted() {
+  if (!app.pages.pageCount) return;
+  const model = countingModel();
+  const said = countedSeen ? model.watchSentence(countedSeen) : '';
+  countedSeen = model.countedState();
+  if (said) sayPrice(said);
+}
+
+/** Which sheet+drawing has been asked about this session (desktop: per job). */
+const countAsked = new Set();
+
+/**
+ * Takeoff was just filed (controller._file). Say what its booking did, and
+ * when it landed on a drawing its sheet does not count from, ask — once per
+ * sheet and drawing — with the before and the after.
+ */
+async function onTakeoffFiled({ page, item, booking, level }) {
+  if (booking && booking.said) sayPrice(booking.said);
+  syncVersionUi();
+  if (!item || !isTakeoffItem(item) || !(page >= 0)) return;
+  const model = countingModel();
+  if (model.itemCountsTowards(page, item)) return;
+  const key = `${page}\u0000${itemRevId(item)}\u0000${item.rev_page ?? ''}`;
+  if (countAsked.has(key)) return;
+  countAsked.add(key);
+  // After the tool has finished with the click: a modal in the middle of a
+  // pointer handler is a modal in the middle of a half-made item.
+  await new Promise(r => setTimeout(r, 0));
+  await askCountAfterTakeoff(page, item, level, key);
+}
+
+/** Is `item` still filed on `page`? (by identity: the row is a snapshot) */
+function stillOn(page, item) {
+  return (app.project.measurements[page] || []).includes(item);
+}
+
+async function askCountAfterTakeoff(page, item, level, key) {
+  let model = countingModel();
+  if (!stillOn(page, item) || model.itemCountsTowards(page, item)) {
+    countAsked.delete(key);           // taken back, or counted since
+    return;
+  }
+  const rid = itemRevId(item);
+  const lead = model.afterTakeoffLead(page, item);
+  const q = model.countQuestion(page, rid, lead);
+  if (!q) return;
+  if (q.refused) {
+    setStatus(q.refused);
+    sayPrice(model.declinedSentence(page, item));
+    return;
+  }
+  const sheet = model.pageLabel(page);
+  const fpBefore = takeoffFingerprint((app.project.measurements[page] || []).filter(x => x !== item));
+  const ok = await D.confirmDialog('Which drawing does this sheet count from?', q.body,
+    { okLabel: `Count ${model.versionName(rid)}` });
+  // Asked again AFTER the answer: the dialog is a pause in which the job
+  // can move. Acted on only while every fact he was shown is still true.
+  model = countingModel();
+  if (!stillOn(page, item)) {
+    setStatus(`${sheet} was not changed: that takeoff is no longer on it.`);
+    return;
+  }
+  if (!ok) {
+    if (model.workingVersionOf(page) !== rid) sayPrice(model.declinedSentence(page, item));
+    return;
+  }
+  const q2 = model.countQuestion(page, rid, lead);
+  if (!q2 || q2.body !== q.body) {
+    setStatus(`${sheet} was not changed: what is taken off it changed while the question was `
+      + 'open. Count this version again to see the numbers as they are now.');
+    return;
+  }
+  const before = model.countedQuantities();
+  const ch = model.workingVersionChange(page, rid);
+  if (!ch) return;
+  applyBooking(app.project.metadata, ch);
+  resyncGroups(app.project);
+  app.project.markDirty();
+  // His Yes exists because of that takeoff, so it rides the takeoff's undo
+  // level: Ctrl+Z of the takeoff takes the Yes back too. A level the history
+  // has moved past is not tagged — the Yes is then his own.
+  app.project.tagBooking(level, { kind: 'asked', page, was: ch.was, now: rid,
+    fpBefore, fpAfter: takeoffFingerprint(app.project.measurements[page] || []) });
+  const after = countingModel();
+  sayPrice(after.bookedSentence(page, rid, ch.was, before, after.countedQuantities()));
+  afterBookChange();
+}
+
+/** Everything that shows which drawing counts, after the book moved. */
+function afterBookChange() {
+  primeWatch();
+  syncTiles();
+  itemsPanel.refresh();
+  syncVersionUi();
+  requestDraw();
+  syncTitle();
+}
+
+/** An undo or redo moved a booking (Project._restoreKeepingBook). */
+function sayBookingUndo({ page, direction, kind, to, bookBefore }) {
+  const model = countingModel();
+  const prior = model.variant({ sheetVersion: bookBefore });
+  const moved = takeoffMoveWords(prior.countedQuantities(), model.countedQuantities());
+  const sheet = model.pageLabel(page);
+  setStatus(direction === 'undo' ? 'Undone.' : 'Redone.');
+  if (kind === 'asked') {
+    sayPrice(`${sheet} counts from ${model.versionName(to)} again, `
+      + `${direction === 'undo' ? 'as it did before your Yes' : 'as you said Yes to'} — `
+      + `${moved ? `in your totals: ${moved}` : 'your totals did not change'}.`);
+  } else if (direction === 'undo') {
+    sayPrice(`${sheet} has no takeoff on any drawing again, so it is back to counting from `
+      + `${model.versionName(model.workingVersionOf(page))}, as before — the next takeoff on it decides.`);
+  } else {
+    sayPrice(`${sheet} counts from ${model.versionName(to)} again — the drawing that takeoff is on.`);
+  }
+  primeWatch();
+}
+
+/**
+ * Count this version: the ONE control that moves a total without anything
+ * being drawn. Shows the before and the after, changes nothing until he says
+ * yes, and is NOT in the undo history — an undo of an older edit must never
+ * take back a choice he made since (Project._restoreKeepingBook).
+ */
+async function countThisVersion() {
+  if (!app.pages.pageCount) return;
+  if (!app.editing) {
+    setStatus('View Only — press Edit Mode to change which drawing a sheet counts from.');
+    return;
+  }
+  const page = app.currentPage;
+  const rid = String(versionView.revId || '');
+  let model = countingModel();
+  const sheet = model.pageLabel(page);
+  if (model.workingVersionOf(page) === rid) {
+    setStatus(`${sheet} already counts from ${model.versionName(rid)}.`);
+    return;
+  }
+  const q = model.countQuestion(page, rid);
+  if (!q || q.refused) {
+    if (q) await D.alertDialog('That drawing cannot be taken off', q.refused);
+    return;
+  }
+  const ok = await D.confirmDialog('Which drawing does this sheet count from?', q.body,
+    { okLabel: 'Count this version' });
+  if (!ok) return;
+  if (app.currentPage !== page || String(versionView.revId || '') !== rid) {
+    setStatus(`${sheet} was not changed: another drawing came up while the question was open.`);
+    return;
+  }
+  model = countingModel();
+  const q2 = model.countQuestion(page, rid);
+  if (!q2 || q2.body !== q.body) {
+    setStatus(`${sheet} was not changed: what is taken off it changed while the question was `
+      + 'open. Count this version again to see the numbers as they are now.');
+    return;
+  }
+  const before = model.countedQuantities();
+  const ch = model.workingVersionChange(page, rid);
+  if (!ch) return;
+  applyBooking(app.project.metadata, ch);
+  // The one place a total moves without a takeoff: multi-sheet items re-add
+  // the runs that count now (desktop set_working_version -> resync).
+  resyncGroups(app.project);
+  app.project.markDirty();
+  const after = countingModel();
+  sayPrice(after.bookedSentence(page, rid, ch.was, before, after.countedQuantities()));
+  afterBookChange();
+}
+
+/**
+ * Opening a job: takeoff that is not in the totals because its sheet counts
+ * another drawing is SAID, by quantity and sheet (the desktop says the same
+ * line on every opening after a No). Nothing is changed — a job opens worth
+ * exactly what it was worth.
+ */
+function sayLeftOutAtOpen() {
+  const model = countingModel();
+  const lone = model.loneUncountedSheets();
+  if (lone.length) sayPrice(model.leftOutSentence(lone, 'Not in your totals'));
+}
+
 /** Whether a version of the sheet, rather than the sheet itself, is on screen. */
 function browsingOtherVersion() {
   return !!versionView.revId;
@@ -782,7 +1092,7 @@ function latestOrder() {
  * you did on purpose, not something you forgot to turn on.
  */
 function newestOf(page) {
-  return newestVersionOf(page, allRevisions(), latestOrder());
+  return newestVersionOf(page, allRevisions(), latestOrder(), sheetOrigin());
 }
 
 /** Is the drawing on screen something other than the newest of its sheet? */
@@ -851,7 +1161,7 @@ async function showSheetVersion(page, revId, { announce = true, flip = true } = 
     return true;
   }
 
-  const hit = sheetVersions(page, revs).find(v => v.revId === want);
+  const hit = sheetVersions(page, revs, sheetOrigin()).find(v => v.revId === want);
   if (!hit) {
     setStatus('That revision no longer has a page for this sheet.');
     return false;
@@ -925,7 +1235,7 @@ function stepSheet(delta) {
 
 /** The previous or next version of the sheet in view. */
 function stepSheetVersion(delta) {
-  const vers = sheetVersions(app.currentPage, allRevisions());
+  const vers = versionsOf(app.currentPage);
   if (vers.length < 2) { setStatus('This sheet has only one version'); return; }
   const i = Math.max(0, vers.findIndex(v => v.revId === versionView.revId));
   const j = Math.max(0, Math.min(vers.length - 1, i + delta));
@@ -948,7 +1258,7 @@ function stepSheetVersion(delta) {
  */
 async function slideSheetVersion(index, step) {
   if (!(index >= 0 && index < app.pages.pageCount)) return;
-  const vers = sheetVersions(index, allRevisions());
+  const vers = versionsOf(index);
   if (vers.length < 2) {
     setStatus(`${pageFinalLabel(index)} has only one drawing — nothing to slide to`);
     return;
@@ -1202,7 +1512,7 @@ async function startOverlay() {
   if (!revId) {
     const newest = newestOf(page);
     const v = newest
-      && sheetVersions(page, allRevisions()).find(x => x.revId === newest);
+      && versionsOf(page).find(x => x.revId === newest);
     if (!v) {
       setStatus('This sheet has only one drawing — there is nothing to compare it with.');
       return;
@@ -2106,7 +2416,10 @@ async function loadProjectFile(file, handle = null, { library = null } = {}) {
     buildScaleSelect();
     // Rebuilt before the thumbnails, so the cards carry their revision dots
     // on the first paint rather than after a second pass.
-    revCountsBySheet = sheetsWithRevisions(opened.pageCount, allRevisions());
+    revCountsBySheet = sheetsWithRevisions(opened.pageCount, allRevisions(), sheetOrigin());
+    // Another job's answers are not this one's.
+    countAsked.clear();
+    syncTiles({ paint: false });
     clearOverlay({ draw: false });
     // Another project's dimensions are not this one's, and they are keyed by
     // page index — left behind they would draw over whatever sheet took that
@@ -2134,6 +2447,8 @@ async function loadProjectFile(file, handle = null, { library = null } = {}) {
       `Opened ${file.name} — ${opened.pageCount} sheet${opened.pageCount === 1 ? '' : 's'}, ${mb} MB` +
       (opened.revisions.length ? `, ${opened.revisions.length} revision set(s)` : '')
     );
+    primeWatch();
+    sayLeftOutAtOpen();
     return true;
   } catch (err) {
     await D.alertDialog('Could not open', `${file.name}\n\n${err.message}`);
@@ -2344,9 +2659,16 @@ async function offerDraftRestore(file) {
     annotations: draft.payload.annotations,
     measurements: draft.payload.measurements,
     pageCount: app.pages.pageCount,
+    // The draft's metadata carries no page counts for the revision sets
+    // (a save strips them). Without these every revision read as one with
+    // no pages: off the version bar, out of the matrix, a save refused as
+    // "unreadable" — and, since 3.05, counted from nowhere.
+    revisionCounts: (app.pages.revisionSlices || []).map(s => s.length),
   });
   app.project.markDirty();
   itemsPanel.refresh();
+  syncVersionUi({ rebuild: true });
+  primeWatch();
   thumbs.refresh(app.currentPage);
   requestDraw();
   setStatus('Unsaved work restored. Save it into the file to keep it.');
@@ -2999,6 +3321,7 @@ async function runAction(act) {
     case 'version-newest':
       await showSheetVersion(app.currentPage, newestOf(app.currentPage));
       break;
+    case 'count-version': await countThisVersion(); break;
     case 'compare-overlay':
       if (overlayActive()) clearOverlay(); else await startOverlay();
       break;
@@ -3168,16 +3491,31 @@ async function deleteCurrentPage() {
     return;
   }
   const n = (app.project.measurements[app.currentPage] || []).length;
+  // By QUANTITY: "It carries 3 takeoff items" says nothing about money.
+  const onIt = (app.project.measurements[app.currentPage] || []).filter(isTakeoffItem);
+  const words = takeoffQuantityWords(onIt, 6);
+  const asked = app.currentPage;
+  const askedSheet = pageFinalLabel(asked);
   const ok = await D.confirmDialog(
     'Delete sheet',
-    `Delete ${pageFinalLabel(app.currentPage)}?` +
-    (n ? `\n\nIt carries ${n} takeoff item${n === 1 ? '' : 's'}, which go with it.` : ''),
+    `Delete ${askedSheet}?` +
+    (words ? `\n\nIts takeoff goes with it: ${words}.`
+      : (n ? `\n\nIt carries ${n} mark${n === 1 ? '' : 's'}, which go with it.` : '')),
     { okLabel: 'Delete sheet', danger: true }
   );
   if (!ok) return;
+  // The sheet he was asked about, not whatever is on screen now.
+  if (app.currentPage !== asked || pageFinalLabel(asked) !== askedSheet) {
+    setStatus(`${askedSheet} was not deleted: the sheet on screen changed while the question was open.`);
+    return;
+  }
   const idx = app.currentPage;
+  const before = countingModel().countedQuantities();
   app.pages.removePage(idx);
   app.project.notePageRemoved(idx);
+  const moved = takeoffMoveWords(before, countingModel().countedQuantities());
+  setStatus(`Deleted ${askedSheet}.`);
+  if (moved) sayPrice(`In your totals: ${moved}.`);
   calloutPreview.clearCache();        // its crops are keyed by page index
   thumbs.refresh(Math.min(idx, app.pages.pageCount - 1));
   pageImage = null;
@@ -4145,4 +4483,6 @@ window.TakeoffApp = {
   startOverlay, clearOverlay, diffCurrentVersion, composeDiff,
   allRevisions, browsingOtherVersion, syncVersionUi,
   revisionCounts: () => revCountsBySheet,
+  // What counts — the same entry points the version bar and the canvas use.
+  countThisVersion, countingModel, newestOf, tileStates: () => tileStates,
 };

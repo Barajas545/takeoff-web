@@ -8,7 +8,7 @@
 
 export class Thumbnails {
   constructor({ listEl, panelEl, project, pages, onPick, revisionCounts,
-                onSlideVersion, versionState }) {
+                onSlideVersion, versionState, tileStates }) {
     this.listEl = listEl;
     this.panelEl = panelEl;
     this.project = project;
@@ -25,6 +25,13 @@ export class Thumbnails {
     // which is the point: most projects have one drawing set and must look
     // exactly as they did.
     this.revisionCounts = revisionCounts || (() => new Map());
+    // () => {page: {kind, text, short, tip}} — what each tile says about the
+    // sheet's drawings, worded by the desktop's own rule
+    // (CountingModel.sheetTileStates): REV n when a revision superseded the
+    // sheet, ADDED when a revision brought it, ⚠ when the takeoff counts from
+    // a drawing other than the one the list shows. A page left out is an
+    // original never revised, and its card looks exactly as it always did.
+    this.tileStates = tileStates || (() => ({}));
     this.current = 0;
     this._rows = [];
 
@@ -72,6 +79,9 @@ export class Thumbnails {
     const no = document.createElement('span');
     no.className = 'thumb-no';
     cap.appendChild(no);
+    const vs = document.createElement('span');
+    vs.className = 'thumb-vs';
+    cap.appendChild(vs);
     const ver = document.createElement('span');
     ver.className = 'thumb-ver';
     cap.appendChild(ver);
@@ -128,7 +138,28 @@ export class Thumbnails {
         + 'slide the card sideways to walk through them'
       : '';
     el.classList.toggle('hasrev', n > 0);
+    this._tileState(el, i);
     this._versionMark(el, i);
+  }
+
+  /**
+   * The chip: where the drawing the list stands for came from. In WORDS on a
+   * chip of its own and in colour on the card's right edge — never in colour
+   * alone — with the whole story in the tooltip.
+   */
+  _tileState(el, i) {
+    const st = (this.tileStates() || {})[i] || null;
+    const chip = el.querySelector('.thumb-vs');
+    for (const k of ['rev', 'added', 'warn']) el.classList.toggle(`vs-${k}`, !!st && st.kind === k);
+    if (!chip) return;
+    chip.textContent = st ? st.text : '';
+    chip.title = st ? st.tip : '';
+    el.dataset.vs = st ? st.kind : '';
+  }
+
+  /** Repaint every chip without rebuilding a row. */
+  syncTiles() {
+    for (const r of this._rows) this._tileState(r, Number(r.dataset.index));
   }
 
   /**

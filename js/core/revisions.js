@@ -44,6 +44,195 @@ export function revPageCount(rev) {
 }
 
 /**
+ * The revisions the DESKTOP has: every record whose pages the file carries.
+ *
+ * The desktop keeps a revision only when its images came with it
+ * (`_on_cache_loaded`: `if _r["images"]`). A record with no pages is not a
+ * revision there at all — so a sheet booked to one counts from its own
+ * drawing, a name is numbered without it, and an item stamped with it is "a
+ * revision since removed". This app keeps such a record so a save can write
+ * it back, which makes it the one list that must never be counted, numbered
+ * or ranked against. Everything that decides a total or a name asks this.
+ */
+export function liveRevisions(revs) {
+  return (revs || []).filter(r => revPageCount(r) > 0);
+}
+
+// ── one name per revision ────────────────────────────────────────────────
+
+/** The longest description that is a revision's NAME (REV_NAME_MAX). */
+export const REV_NAME_MAX = 12;
+
+const REV_NUMBER_NAME_RE = /^(?:REV(?:ISION)?|R)\.?\s*#?\s*(\d+)$/i;
+
+/** Python's `" ".join(str(s).split())`. */
+function squash(s) {
+  return String(s == null ? '' : s).split(/\s+/).filter(Boolean).join(' ');
+}
+
+/** Python's str.casefold, for the ASCII and Latin text a description holds. */
+function casefold(s) {
+  return String(s).toLowerCase().replace(/ß/g, 'ss');
+}
+
+/**
+ * THE name of a revision, on every screen and in every sentence (desktop
+ * `revision_short_name`).
+ *
+ * Its own description when that is a name: at most REV_NAME_MAX letters,
+ * carried by no other revision in `revisions`, and not a revision number
+ * other than its own ("Revision 10" typed on the first one). Otherwise
+ * "REV n" — `number` is its place in the order the revisions were added,
+ * from 1, hidden and archived ones included, so hiding one renames none.
+ * One revision, one name: "REV 1" on a tile and "ASI 1" in the question about
+ * it was two names for one drawing.
+ */
+export function revisionShortName(rev, number, revisions = []) {
+  let d = squash((rev || {}).description);
+  if (d && [...d].length <= REV_NAME_MAX) {
+    const mm = REV_NUMBER_NAME_RE.exec(d);
+    if (mm && parseInt(mm[1], 10) !== Math.trunc(Number(number))) {
+      d = '';
+    } else if ((revisions || []).some(r => r !== rev
+        && casefold(squash(r.description)) === casefold(d))) {
+      d = '';
+    }
+    if (d) return d;
+  }
+  return `REV ${Math.trunc(Number(number))}`;
+}
+
+/**
+ * A revision's number on screen: its place among the revisions the desktop
+ * has (liveRevisions), from 1, hidden and archived ones included. 0 for a
+ * sheet's own drawing or an id no revision answers to.
+ */
+export function revisionNumber(revId, revs) {
+  const rid = String(revId || '');
+  if (!rid) return 0;
+  const live = liveRevisions(revs);
+  for (let k = 0; k < live.length; k++) {
+    if (String(live[k].id) === rid) return k + 1;
+  }
+  return 0;
+}
+
+/**
+ * The one name of a revision by id (desktop `rev_name`): '' for the sheet's
+ * own drawing, "removed revision" for an id the project no longer has, and
+ * " (hidden)" after a hidden or archived one when asked.
+ */
+export function revNameOf(revId, revs, hiddenNote = false) {
+  const rid = String(revId || '');
+  if (!rid) return '';
+  const live = liveRevisions(revs);
+  const k = live.findIndex(r => String(r.id) === rid);
+  if (k < 0) return 'removed revision';
+  const rev = live[k];
+  let nm = revisionShortName(rev, k + 1, live);
+  if (hiddenNote && !(rev.visible !== false && !rev.archived)) nm += ' (hidden)';
+  return nm;
+}
+
+/** {rev_id: name} for every revision (desktop `revision_names`). */
+export function revisionNamesOf(revs) {
+  const out = {};
+  for (const r of liveRevisions(revs)) out[String(r.id)] = revNameOf(r.id, revs);
+  return out;
+}
+
+// ── which revision page a sheet was cut from ─────────────────────────────
+//
+// metadata.sheet_origin = { mainPage(str): [rev_id, rev_page, date?] }
+//
+// A sheet a revision ADDED is that revision's page, promoted into the set.
+// [2], the revision's date, is stamped when the sheet is made (3.05) and is
+// absent on files from 2.97–3.04 — read it as optional everywhere.
+
+/** Python's int() of a JSON value: {ok, n}. */
+export function pyInt(v) {
+  if (typeof v === 'boolean') return { ok: true, n: v ? 1 : 0 };
+  if (typeof v === 'number') {
+    return Number.isFinite(v) ? { ok: true, n: Math.trunc(v) } : { ok: false, n: 0 };
+  }
+  if (typeof v === 'string' && /^\s*[+-]?\d+\s*$/.test(v)) {
+    return { ok: true, n: parseInt(v, 10) };
+  }
+  return { ok: false, n: 0 };
+}
+
+/** Python's str() of a JSON scalar: None, True and False by their names. */
+export function pyStr(v) {
+  if (v === null || v === undefined) return 'None';
+  if (v === true) return 'True';
+  if (v === false) return 'False';
+  return String(v);
+}
+
+/** The raw sheet_origin entry for one main page, or undefined. */
+export function originOf(page, origins) {
+  const o = (origins || {})[String(page)];
+  return (o === undefined || o === null) ? undefined : o;
+}
+
+/** [rev_id, rev_page] of a sheet's origin, or null when it is unreadable. */
+export function originPair(page, origins) {
+  const o = originOf(page, origins);
+  if (!o || !Array.isArray(o) || o.length < 2) return null;
+  const rp = pyInt(o[1]);
+  if (!rp.ok) return null;
+  return [pyStr(o[0]), rp.n];
+}
+
+/**
+ * The date of the revision a promoted sheet came from (desktop
+ * `_origin_date`): the live revision's, so re-dating it re-ranks the sheet;
+ * once it is gone, the date stamped on the sheet when it was made.
+ */
+export function originDateOf(page, origins, revs) {
+  const o = originOf(page, origins);
+  if (!o || !Array.isArray(o) || !o.length) return '';
+  const rid = pyStr(o[0]);
+  for (const r of liveRevisions(revs)) {
+    if (String(r.id) === rid) return r.date || '';
+  }
+  return o.length > 2 ? String(o[2] || '') : '';
+}
+
+/**
+ * {page: [rev_id, rev_page, date]} for every promoted sheet (desktop
+ * `_origin_map`), dated from the FULL revision list so hiding or archiving
+ * the revision changes nothing. A value that is not a 2- or 3-array, or
+ * whose [1] is not an integer, is skipped, never thrown on.
+ */
+export function originMapOf(origins, revs) {
+  const out = {};
+  const byId = new Map(liveRevisions(revs).map(r => [String(r.id), r]));
+  for (const [k, v] of Object.entries(origins || {})) {
+    if (!Array.isArray(v) || v.length < 2) continue;
+    const rp = pyInt(v[1]);
+    if (!rp.ok) continue;
+    const rid = pyStr(v[0]);
+    const d = byId.has(rid) ? (byId.get(rid).date || '')
+      : (v.length > 2 ? String(v[2] || '') : '');
+    out[String(k)] = [rid, rp.n, d];
+  }
+  return out;
+}
+
+/** Set of "rev_id\u0000rev_page" that ARE project sheets. */
+export function originPairsOf(origins) {
+  const out = new Set();
+  for (const v of Object.values(origins || {})) {
+    if (!Array.isArray(v) || v.length < 2) continue;
+    const rp = pyInt(v[1]);
+    if (!rp.ok) continue;
+    out.add(`${pyStr(v[0])}\u0000${rp.n}`);
+  }
+  return out;
+}
+
+/**
  * The revision sets the matrix shows and the Current Set chooses from.
  *
  * Hiding or archiving a revision is a way of LOOKING — it takes a column out
@@ -135,8 +324,17 @@ export function compareRank(a, b) {
   return 0;
 }
 
-/** The name a revision goes by in the matrix and the Current Set. */
-export function revName(rev, col) {
+/**
+ * The name a revision goes by where only the visible columns are at hand
+ * (desktop `_rev_name`): the job's own name for it (`names`, {rev_id: name},
+ * from revisionNamesOf) when the caller has it — every caller in the app does
+ * — else its description or its column.
+ */
+export function revName(rev, col, names = null) {
+  if (names) {
+    const nm = names[String((rev || {}).id)];
+    if (nm) return nm;
+  }
   return ((rev && rev.description) || '').trim() || `Revision ${col + 1}`;
 }
 
@@ -191,18 +389,27 @@ export function autoMatchPages(mainLabels, revLabels) {
  * The original is revId '' and rev null. Order matches the revision matrix,
  * which is list order and NOT date order — the matrix is an arrangement, the
  * ranking is a judgement, and they are allowed to disagree.
+ *
+ * `origins` is metadata.sheet_origin. The page a sheet was CUT FROM is the
+ * sheet's own drawing, not another version of it: without the skip a sheet a
+ * revision added reads as having "1 newer version" of itself, and the Newest
+ * view puts a byte-identical copy of it up as a revision (desktop
+ * `sheet_versions`). Each version is labelled with the revision's ONE name.
  */
-export function sheetVersions(page, revs) {
+export function sheetVersions(page, revs, origins = null) {
   const out = [{
     revId: '', label: 'ORIGINAL', date: '', description: '',
     rev: null, revPage: page, col: 0,
   }];
+  const org = originOf(page, origins);
   visibleRevisions(revs).forEach((rev, c) => {
     const rp = (rev.match || {})[String(page)];
     if (rp === undefined || rp === null || !(rp >= 0 && rp < revPageCount(rev))) return;
+    if (org && Array.isArray(org) && org.length >= 2
+        && String(rev.id) === pyStr(org[0]) && rp === org[1]) return;
     out.push({
       revId: String(rev.id),
-      label: (rev.description || '').trim() || (rev.date || 'Revision'),
+      label: revNameOf(rev.id, revs),
       date: rev.date || '',
       description: rev.description || '',
       rev, revPage: rp, col: c + 1,
@@ -212,22 +419,55 @@ export function sheetVersions(page, revs) {
 }
 
 /**
+ * {own, ranked} for one sheet (desktop `_sheet_ranks`): the rank of the
+ * sheet's OWN drawing, and [rank, revId] for every other drawing of it.
+ *
+ * A sheet promoted out of a revision IS that revision's drawing, so its own
+ * drawing ranks as that revision — by the live revision's date when it is
+ * still in the job, by the date stamped on the sheet once it is deleted, by
+ * its column under column order. Every unknown falls back to ORIGINAL_RANK,
+ * which is what shipped: nothing here can pin a sheet to its own drawing.
+ */
+export function sheetRanks(page, revs, order = 'date', origins = null) {
+  const vis = visibleRevisions(revs);
+  const opair = originPair(page, origins);
+  const ranked = [];
+  vis.forEach((rev, c) => {
+    const rp = (rev.match || {})[String(page)];
+    if (rp === undefined || rp === null || !(rp >= 0 && rp < revPageCount(rev))) return;
+    if (opair && String(rev.id) === opair[0] && rp === opair[1]) return;
+    ranked.push([revisionRank(rev, c, order), String(rev.id)]);
+  });
+  let own = ORIGINAL_RANK;
+  if (opair) {
+    const ocol = vis.findIndex(r => String(r.id) === opair[0]);
+    if (order === 'column') {
+      if (ocol >= 0) own = revisionRank(vis[ocol], ocol, order);
+    } else {
+      const od = parseRevisionDate(originDateOf(page, origins, revs));
+      if (od) own = [1, od, ocol >= 0 ? ocol : -1];
+    }
+  }
+  return { own, ranked };
+}
+
+/**
  * The rev_id of the newest version of a sheet, by the SAME rule the Current
  * Set uses. Two answers to "which drawing is current" is a wrong sheet in a
  * bid, so there is only one rule and this is it.
  *
- * '' means the sheet's own drawing.
+ * '' means the sheet's own drawing. A sheet a revision ADDED ranks as the
+ * revision it came from (sheetRanks), so an OLDER revision's page of the
+ * same number paired to it can no longer call itself the newest drawing —
+ * which is what made the web lock the added sheet's own drawing read-only.
  */
-export function newestVersionOf(page, revs, order = 'date') {
-  const vis = visibleRevisions(revs);
+export function newestVersionOf(page, revs, order = 'date', origins = null) {
+  if (sheetVersions(page, revs, origins).length <= 1) return '';
+  const { own, ranked } = sheetRanks(page, revs, order, origins);
   let best = '';
-  let bestRank = ORIGINAL_RANK;
-  for (let c = 0; c < vis.length; c++) {
-    const rev = vis[c];
-    const rp = (rev.match || {})[String(page)];
-    if (rp === undefined || rp === null || !(rp >= 0 && rp < revPageCount(rev))) continue;
-    const rank = revisionRank(rev, c, order);
-    if (compareRank(rank, bestRank) > 0) { best = String(rev.id); bestRank = rank; }
+  let bestRank = own;
+  for (const [rank, vid] of ranked) {
+    if (compareRank(rank, bestRank) > 0) { best = vid; bestRank = rank; }
   }
   return best;
 }
@@ -249,7 +489,10 @@ export function newestVersionOf(page, revs, order = 'date') {
 export function workingVersionOf(page, revs, sheetVersionMap) {
   const rid = String((sheetVersionMap || {})[String(page)] || '');
   if (!rid) return '';
-  for (const rev of revs || []) {
+  // Against the revisions the DESKTOP has: a record whose pages the file
+  // does not carry is not a revision there, and a sheet booked to one
+  // counts from its own drawing.
+  for (const rev of liveRevisions(revs)) {
     if (String(rev.id) === rid
         && (rev.match || {})[String(page)] !== undefined
         && (rev.match || {})[String(page)] !== null) return rid;
@@ -264,12 +507,13 @@ export function workingVersionOf(page, revs, sheetVersionMap) {
  * sheet, so this is asked fresh rather than remembered.
  */
 export function revPageOf(page, revId, revs) {
+  // desktop `rev_page_of`: the pairing as it is written, no bounds test --
+  // a counting question must be asked of exactly what the desktop reads.
   const rid = String(revId || '');
-  if (!rid) return null;
-  for (const rev of revs || []) {
+  for (const rev of liveRevisions(revs)) {
     if (String(rev.id) !== rid) continue;
     const rp = (rev.match || {})[String(page)];
-    return (rp !== undefined && rp !== null && rp >= 0 && rp < revPageCount(rev)) ? rp : null;
+    return (rp === undefined || rp === null) ? null : rp;
   }
   return null;
 }
@@ -284,10 +528,10 @@ export function revPageOf(page, revId, revs) {
 export function itemOnDrawing(page, revId, item, revs) {
   const rp = item && item.rev_page;
   if (rp === undefined || rp === null) return true;
+  const n = pyInt(rp);
+  if (!n.ok) return true;
   const now = revPageOf(page, revId, revs);
-  const n = Number(rp);
-  if (!Number.isFinite(n)) return true;
-  return now === n;
+  return now !== null && Number(now) === n.n;
 }
 
 /** The rev_id an item was traced on. '' is the sheet's own drawing. */
@@ -313,20 +557,31 @@ export function itemRevId(item) {
  *
  * `viewingRevPage` is null when the sheet's own drawing is up.
  */
-export function onThisVersion(item, viewingRevId, viewingRevPage) {
-  if (itemRevId(item) !== String(viewingRevId || '')) return false;
-  const rp = item && item.rev_page;
+export function onThisVersion(item, viewingRevId, viewingRevPage, markOf = null) {
+  // A callout pin or a text note is asked of the drawing it is SHOWN on
+  // (markOf -> CountingModel.markVersion): its stamp while the sheet still
+  // has that drawing, the sheet's own drawing once it does not -- a pin on a
+  // hidden or deleted revision must not become a pin nobody can reach.
+  let rid = itemRevId(item);
+  let rp = item && item.rev_page;
+  if (rid && markOf && KEPT_MARK_TYPES.has(item && item.type)) {
+    [rid, rp] = markOf(item);
+  }
+  if (rid !== String(viewingRevId || '')) return false;
   if (rp === undefined || rp === null || viewingRevPage === null
       || viewingRevPage === undefined) return true;
-  const a = Number(rp), b = Number(viewingRevPage);
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return true;
-  return a === b;
+  const a = pyInt(rp), b = pyInt(viewingRevPage);
+  if (!a.ok || !b.ok) return true;
+  return a.n === b.n;
 }
 
 /** The items on a page that belong to the drawing on screen. */
-export function versionItems(items, viewingRevId, viewingRevPage) {
-  return (items || []).filter(m => onThisVersion(m, viewingRevId, viewingRevPage));
+export function versionItems(items, viewingRevId, viewingRevPage, markOf = null) {
+  return (items || []).filter(m => onThisVersion(m, viewingRevId, viewingRevPage, markOf));
 }
+
+/** The marks he puts on a drawing to READ it by (desktop KEPT_MARK_TYPES). */
+export const KEPT_MARK_TYPES = new Set(['page_ref', 'textnote']);
 
 /**
  * Whether takeoff may be traced on the drawing on screen.
@@ -356,10 +611,14 @@ export function sizeRefusal(sheetSize, revSize) {
     + 'so anything traced here would come out at the wrong length.';
 }
 
-/** {revId: how many items} on one sheet. A group's child is not an item. */
+/**
+ * {revId: how many items} on one sheet. A group's child is not an item, and
+ * a note, a callout, a ruler or a reference line is not takeoff.
+ */
 export function itemsByVersion(items) {
   const out = {};
   for (const m of items || []) {
+    if (!isTakeoffType(m)) continue;
     if (m.group_child) continue;
     const rid = itemRevId(m);
     out[rid] = (out[rid] || 0) + 1;
@@ -375,17 +634,29 @@ export function itemsByVersion(items) {
  * which is worth saying out loud rather than showing as a blank.
  */
 export function revisionLabel(revId, revs) {
-  const rid = String(revId || '');
-  if (!rid) return '';
-  for (const rev of revs || []) {
-    if (String(rev.id) !== rid) continue;
-    const d = (rev.description || '').trim();
-    const dt = (rev.date || '').trim();
-    let nm = d || dt || 'Revision';
-    if (!(rev.visible !== false && !rev.archived)) nm += ' (hidden)';
-    return nm;
-  }
-  return 'removed revision';
+  // The revision's ONE name (desktop `revision_label` -> `rev_name`), with
+  // "(hidden)" after a hidden or archived one.
+  return revNameOf(revId, revs, true);
+}
+
+// ── what is takeoff ──────────────────────────────────────────────────────
+
+/** Types drawn on a sheet that are in no total (desktop NON_TAKEOFF_TYPES). */
+export const NON_TAKEOFF = new Set(['textnote', 'page_ref', 'pitch', 'group', 'ref_distance']);
+
+/** The Measure ruler: a reading, not takeoff (desktop READING_TYPES). */
+export const READING_TYPES = new Set(['distance']);
+
+/**
+ * Can this item carry a quantity into the bid? (desktop `is_takeoff_item`)
+ *
+ * The one answer to the one question. A run of a multi-sheet item IS takeoff
+ * here; whether a reader counts runs or whole items is that reader's own
+ * question.
+ */
+export function isTakeoffType(m) {
+  return !!m && typeof m === 'object' && !Array.isArray(m)
+    && !NON_TAKEOFF.has(m.type || '') && !READING_TYPES.has(m.type || '');
 }
 
 // ── the row plan: original sheets, inserted rows, orphans ────────────────
@@ -400,10 +671,13 @@ export function revisionLabel(revId, revs) {
  * `bound` is the set of slot ids some visible revision actually fills. A slot
  * nothing fills is not shown — it would be a row of empty cells.
  */
-export function rowPlan(mainLabels, extraSheets, revs) {
-  const bound = new Set();
-  for (const r of revs || []) {
-    for (const k of Object.keys(r.extra || {})) bound.add(k);
+export function rowPlan(mainLabels, extraSheets, revs, boundIds = null) {
+  let bound = boundIds;
+  if (!bound) {
+    bound = new Set();
+    for (const r of revs || []) {
+      for (const k of Object.keys(r.extra || {})) bound.add(k);
+    }
   }
   const byAfter = new Map();
   for (const s of extraSheets || []) {
@@ -440,9 +714,31 @@ export function rowPlan(mainLabels, extraSheets, revs) {
 export function resolveLatestSheets(mainLabels, extraSheets, revs, opts = {}) {
   const order = opts.order || 'date';
   const includeNew = opts.includeNew !== false;
+  const names = opts.names || null;
+  // Revisions he has unticked are SKIPPED as candidates, never removed from
+  // the list: under column order the column index IS the rank.
+  const skip = new Set((opts.excludeIds || []).map(String));
+  // Which drawing each sheet WAS CUT FROM: {page: [rev_id, rev_page, date]}
+  // (originMapOf -- dated from the full revision list). A sheet promoted out
+  // of a revision IS that drawing: the pair is not a version of it, its own
+  // drawing ranks as that revision, and the page is not loose.
+  const orgMap = {};
+  for (const [k, v] of Object.entries(opts.origins || {})) {
+    if (!Array.isArray(v) || v.length < 2) continue;
+    const rp = pyInt(v[1]);
+    if (!rp.ok) continue;
+    orgMap[String(k)] = [pyStr(v[0]), rp.n, v.length > 2 ? v[2] : ''];
+  }
+  const orgPairs = new Set(Object.values(orgMap).map(o => `${o[0]}\u0000${o[1]}`));
   const rows = [];
 
-  for (const step of rowPlan(mainLabels, extraSheets, revs)) {
+  const bound = new Set();
+  for (const r of revs || []) {
+    if (skip.has(String(r.id))) continue;
+    for (const k of Object.keys(r.extra || {})) bound.add(k);
+  }
+
+  for (const step of rowPlan(mainLabels, extraSheets, revs, bound)) {
     // Column 0 is the ORIGINAL set; revision c sits in column c + 1, the same
     // way the matrix on screen reads.
     const cands = [];
@@ -450,12 +746,25 @@ export function resolveLatestSheets(mainLabels, extraSheets, revs, opts = {}) {
     if (step.kind === 'main') {
       const i = step.index;
       sheet = (mainLabels[i] || '').trim() || `Page ${i + 1}`;
-      cands.push({ rank: ORIGINAL_RANK, src: 'ORIGINAL', date: '', where: ['main', i], col: 0 });
+      const oe = orgMap[String(i)];
+      let own = ORIGINAL_RANK;
+      if (oe) {
+        const oc = (revs || []).findIndex(r => String(r.id) === oe[0]);
+        if (order === 'column') {
+          if (oc >= 0) own = revisionRank(revs[oc], oc, order);
+        } else {
+          const od = parseRevisionDate(oe[2]);
+          if (od) own = [1, od, oc >= 0 ? oc : -1];
+        }
+      }
+      cands.push({ rank: own, src: 'ORIGINAL', date: '', where: ['main', i], col: 0 });
       (revs || []).forEach((rev, c) => {
+        if (skip.has(String(rev.id))) return;
         const rp = (rev.match || {})[String(i)];
         if (rp === undefined || rp === null || !(rp >= 0 && rp < revPageCount(rev))) return;
+        if (oe && String(rev.id) === oe[0] && rp === oe[1]) return;  // THIS sheet IS that drawing
         cands.push({
-          rank: revisionRank(rev, c, order), src: revName(rev, c),
+          rank: revisionRank(rev, c, order), src: revName(rev, c, names),
           date: rev.date || '', where: ['rev', c, rp], col: c + 1,
         });
       });
@@ -463,10 +772,11 @@ export function resolveLatestSheets(mainLabels, extraSheets, revs, opts = {}) {
       const slot = step.slot;
       sheet = (slot.label || '').trim() || 'NEW SHEET';
       (revs || []).forEach((rev, c) => {
+        if (skip.has(String(rev.id))) return;
         const rp = (rev.extra || {})[slot.id];
         if (rp === undefined || rp === null || !(rp >= 0 && rp < revPageCount(rev))) return;
         cands.push({
-          rank: revisionRank(rev, c, order), src: revName(rev, c),
+          rank: revisionRank(rev, c, order), src: revName(rev, c, names),
           date: rev.date || '', where: ['rev', c, rp], col: c + 1,
         });
       });
@@ -494,15 +804,19 @@ export function resolveLatestSheets(mainLabels, extraSheets, revs, opts = {}) {
     const byLabel = new Map();
     const loose = [];
     (revs || []).forEach((rev, c) => {
+      if (skip.has(String(rev.id))) return;
+      // A page a project SHEET was cut from is not loose: the sheet is that
+      // drawing, and it is already in the set above as a main row.
       const used = new Set([
         ...Object.values(rev.match || {}),
         ...Object.values(rev.extra || {}),
       ]);
       for (let rp = 0; rp < revPageCount(rev); rp++) {
         if (used.has(rp)) continue;
+        if (orgPairs.has(`${String(rev.id)}\u0000${rp}`)) continue;
         const lbl = revPageLabel(rev, rp).trim();
         const ent = {
-          rank: revisionRank(rev, c, order), src: revName(rev, c),
+          rank: revisionRank(rev, c, order), src: revName(rev, c, names),
           date: rev.date || '', where: ['rev', c, rp], lbl,
         };
         if (lbl) {
@@ -542,12 +856,170 @@ export function resolveLatestSheets(mainLabels, extraSheets, revs, opts = {}) {
     from_revisions: rows.filter(r => r.from[0] === 'rev').length,
     unmatched: orphans,
     duplicates: [...dupes].sort(),
-    undated: (revs || []).filter(r => !parseRevisionDate(r.date)).length,
+    undated: (revs || []).filter(r => !skip.has(String(r.id))
+      && !parseRevisionDate(r.date)).length,
   };
   return { rows, notes };
 }
 
 // ── keeping the model straight when the page list changes ────────────────
+
+/** A mapper for `count` sheets inserted at `at`: k -> k + count from `at` on. */
+export function insertMapper(at, count) {
+  return k => (k >= at ? k + count : k);
+}
+
+/** A mapper for the sheet at `index` removed: it is gone, later ones move up. */
+export function deleteMapper(index) {
+  return k => (k === index ? null : (k > index ? k - 1 : k));
+}
+
+function remapKeyed(dict, mapper) {
+  const out = {};
+  for (const [k, v] of Object.entries(dict || {})) {
+    const i = pyInt(k);
+    if (!i.ok) continue;
+    const nk = mapper(i.n);
+    if (nk !== null && nk !== undefined) out[String(nk)] = v;
+  }
+  return out;
+}
+
+/** desktop `_remap_anchor`: the sheet a record follows, or the nearest above. */
+function remapAnchor(after, mapper) {
+  const a0 = pyInt(after);
+  if (!a0.ok) return -1;
+  for (let a = a0.n; a >= 0; a -= 1) {
+    const na = mapper(a);
+    if (na !== null && na !== undefined) return na;
+  }
+  return -1;
+}
+
+/** A callout pin's target, moved with its sheet: -1 when the sheet is gone. */
+function remapRefPage(m, mapper) {
+  if (!m || typeof m !== 'object' || m.type !== 'page_ref') return;
+  if (!Object.prototype.hasOwnProperty.call(m, 'ref_page')) return;
+  const rp = pyInt(m.ref_page === undefined || m.ref_page === null ? -1 : m.ref_page);
+  if (!rp.ok || rp.n < 0) return;
+  const nrp = mapper(rp.n);
+  m.ref_page = (nrp === null || nrp === undefined) ? -1 : nrp;
+}
+
+/**
+ * Move every page index the job keeps — the KEYS of every record filed by
+ * sheet, and the indices stored INSIDE records — after the main page list
+ * changed. `mapper(oldIndex)` is the new index, or null when that sheet is
+ * gone. The port of the desktop's `_remap_revision_matches` (the one funnel
+ * every insert, reorder, copy and delete there goes through), key for key,
+ * plus the per-sheet dicts the desktop moves beside it.
+ *
+ * Left behind, any one of these hands one sheet's record to whichever sheet
+ * landed on its number. For `sheet_origin` that was not cosmetic: a delete
+ * here left the ADDED sheet's origin on the original sheet that slid into its
+ * row, and the desktop's Delete Revision then deleted that ORIGINAL sheet as
+ * "the sheet it added". Its value — [rev_id, rev_page, date] — holds no main
+ * index and travels whole, the date included.
+ *
+ * `measurements` is walked for callout pins: a pin names its target sheet by
+ * index INSIDE the item, which no re-keying of the buckets reaches. A pin
+ * whose target is deleted is kept and pointed nowhere (-1), as the desktop
+ * does: it is a mark he made on a sheet he kept.
+ */
+export function remapPageIndices(md, measurements, mapper, { reordered = false } = {}) {
+  if (!md) return;
+  for (const rev of md.revisions || []) {
+    rev.match = remapKeyed(rev.match, mapper);
+  }
+  if (md.sheet_version && Object.keys(md.sheet_version).length) {
+    md.sheet_version = remapKeyed(md.sheet_version, mapper);
+    // Absent means "the sheet's own drawing", so an emptied book is the same
+    // statement as no book — and leaving no key keeps a file that never had
+    // one exactly as it was.
+    if (!Object.keys(md.sheet_version).length) delete md.sheet_version;
+  }
+  // page_groups: the desktop's shape is a LIST of {id, name, pages: [...]},
+  // each holding page indices INSIDE it. An older build of this app wrote an
+  // empty {} here, which the desktop reads as no groups; that shape is left
+  // as it is.
+  if (Array.isArray(md.page_groups) && md.page_groups.length) {
+    const out = [];
+    for (const g of md.page_groups) {
+      if (!g || typeof g !== 'object') continue;
+      const pages = [];
+      for (const i of g.pages || []) {
+        const n = pyInt(i);
+        if (!n.ok) continue;
+        const ni = mapper(n.n);
+        if (ni !== null && ni !== undefined) pages.push(ni);
+      }
+      if (pages.length) {
+        out.push({ ...g, pages: [...new Set(pages)].sort((a, b) => a - b) });
+      }
+    }
+    md.page_groups = out;
+  }
+  // Inserted rows hang off a sheet: the anchor moves with it, and a deleted
+  // anchor falls back to the sheet above.
+  for (const s of md.extra_sheets || []) {
+    const a = pyInt(s.after === undefined ? -1 : s.after);
+    const av = a.ok ? a.n : -1;
+    if (av < 0) { s.after = -1; continue; }
+    const na = mapper(av);
+    s.after = (na === null || na === undefined) ? av - 1 : na;
+  }
+  for (const key of ['page_titles', 'sheet_origin']) {
+    if (md[key] && Object.keys(md[key]).length) md[key] = remapKeyed(md[key], mapper);
+  }
+  if (md.page_overlays && Object.keys(md.page_overlays).length) {
+    const out = {};
+    for (const [k, st0] of Object.entries(md.page_overlays)) {
+      const i = pyInt(k);
+      if (!i.ok) continue;
+      const nk = mapper(i.n);
+      if (nk === null || nk === undefined) continue;
+      let st = st0;
+      if (st && typeof st === 'object'
+          && (st.rev_id === undefined || st.rev_id === null)
+          && Object.prototype.hasOwnProperty.call(st, 'overlay_page')) {
+        const op0 = pyInt(st.overlay_page);
+        const op = op0.ok ? mapper(op0.n) : null;
+        if (op === null || op === undefined) continue;   // compared sheet gone
+        st = { ...st, overlay_page: op };
+      }
+      out[String(nk)] = st;
+    }
+    md.page_overlays = out;
+  }
+  const kept = [];
+  for (const p of md.revisions_pending_images || []) {
+    if (!p || typeof p !== 'object') continue;
+    if (p.match && Object.keys(p.match).length) p.match = remapKeyed(p.match, mapper);
+    for (const r of p.kept_sheets || []) if (r && typeof r === 'object') kept.push(r);
+  }
+  for (const r of md.sheets_kept_aside || []) if (r && typeof r === 'object') kept.push(r);
+  for (const rec of kept) {
+    if ('after' in rec) rec.after = remapAnchor(rec.after, mapper);
+    for (const m of rec.measurements || []) remapRefPage(m, mapper);
+  }
+  for (const lst of Object.values(measurements || {})) {
+    if (!Array.isArray(lst)) continue;
+    for (const m of lst) remapRefPage(m, mapper);
+  }
+  // The per-sheet dicts the desktop moves beside the funnel: the reader's
+  // doubt about a sheet number, the detail map read off a sheet, and what a
+  // look at a sheet saw -- each read as evidence about THAT sheet.
+  for (const key of ['page_label_conf', 'detail_maps', 'vision_callouts']) {
+    if (md[key] && typeof md[key] === 'object' && !Array.isArray(md[key])
+        && Object.keys(md[key]).length) {
+      md[key] = remapKeyed(md[key], mapper);
+      if (key === 'detail_maps' && !Object.keys(md[key]).length) delete md[key];
+    }
+  }
+  // After a page move the source PDF no longer stands for this project's
+  // page numbers (desktop `_reindex_detail_maps`).
+  if (reordered) md.pages_rearranged = true;
+}
 
 /**
  * Shift every page-index reference in the revision model after an insert or

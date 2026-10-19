@@ -39,6 +39,29 @@ That script lifts `resolve_latest_sheets`, `revision_rank` and
 runs them, so the expected values are the desktop program's own, not a
 transcription of them.
 
+## counting-truth.json
+
+The desktop app's own answers to **what counts** — which piece of takeoff is
+in the totals, how much it adds, which drawing each sheet counts from and is
+shown at, what every tile and question and sentence says, what the first
+takeoff on each drawing books — over synthetic jobs built the way the
+estimator builds one. **No real project is in it**: every scenario is written
+out in `tests/counting-python-truth.py`, so there is nothing to scrub.
+
+Regenerate it when the desktop's counting rule or its wording changes:
+
+```
+PTT_DESKTOP_SRC=<path to pdf_fast_viewer.py> \
+    python tests/counting-python-truth.py --scenarios > tests/data/counting-truth.json
+```
+
+That script lifts PDFCacheViewer's and GLPageWidget's counting METHODS (and
+every module-level name they reach) out of `pdf_fast_viewer.py` through `ast`,
+and **refuses to run unless the lifted set is a closure**: a name reached and
+not lifted, or a `self.<attribute>` that is neither lifted nor a declared
+stand-in, is named before anything executes. `tests/revision-counting.mjs`
+also runs it live, over these scenarios and over the whole library.
+
 ## Why a snapshot AND a live differential
 
 `tests/revisions-logic.mjs` runs both. The snapshot is the regression check —

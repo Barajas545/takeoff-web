@@ -35,6 +35,8 @@ const PORTABLE = [
   'catalog-search',     // the matcher (differential part needs its truth file)
   'revisions-logic',    // edge cases + the committed snapshot; live diff opt-in
   'ref-distance',       // it is drawn, distinctly, and keeps its own scale
+  'revision-counting',  // what counts == the desktop's own methods (closure-checked)
+  'revision-web-flow',  // origins follow their sheets; stamp, book, undo; reports
 ];
 
 // NEEDS THE LIBRARY: these read the estimator's real projects, which is the
@@ -47,6 +49,8 @@ const LOCAL = [
   'round-trip',
   'revisions-pixels',
   'remote-round-trip',
+  // needs the desktop app itself, run offscreen: desktop -> web -> desktop
+  'desktop-round-trip',
 ];
 
 const only = process.argv.includes('--portable');

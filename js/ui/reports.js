@@ -15,6 +15,7 @@ import {
 } from '../core/measure.js';
 import { comparePageKeys, STANDALONE_PAGE } from '../core/takeoff-file.js';
 import { writeWorkbook, cell } from '../core/xlsx.js';
+import { CountingModel, valueLine } from '../core/counting.js';
 import * as H from './report-html.js';
 
 export const REPORTS = [
@@ -50,6 +51,61 @@ const TYPE_LABEL = {
 
 /** Types that produce no export row of their own. Their materials still do. */
 const NO_ROW_TYPES = new Set(['textnote', 'page_ref', 'pitch', 'ref_distance']);
+
+/**
+ * Types that are not yielded at all — not even their materials. A Group
+ * holds items and is not one to buy; a reference distance is a reading.
+ * (desktop TakeoffReportDialog._iter_measurements)
+ */
+const NEVER_YIELDED = new Set(['group', 'ref_distance']);
+
+/**
+ * The Measure ruler: a READING, not takeoff (desktop READING_TYPES). The
+ * desktop's Report Center lists rulers only with "Include dimensions"
+ * ticked — off by default — and so does this one, or the same job prices
+ * differently on two screens. `filters.includeDims` false leaves them out;
+ * absent keeps the plain File ▸ Export behaviour, which lists them (the
+ * desktop's Takeoff Report does the same).
+ */
+const DIMENSION_TYPE = 'distance';
+const listsDims = filters => filters.includeDims !== false;
+
+// ── what counts ───────────────────────────────────────────────────────────
+//
+// A sheet can carry takeoff on several of its drawings and exactly ONE of
+// them is in the totals. Every row below goes through the same filter the
+// desktop's reports do (counted_filter), so a job prices the same in both
+// programs: what is left out is listed at the end of the report, by sheet,
+// drawing and quantity, and never silently dropped.
+
+/** The counting rule, asked of this project as it stands. */
+export function countingOf(project) {
+  return new CountingModel({ metadata: project.metadata,
+    measurements: project.measurements, pageCount: project.pageCount });
+}
+
+/**
+ * The item as the totals see it: a multi-sheet item's total is re-added
+ * from the runs that COUNT (desktop _counted_qty) — what the desktop's synced
+ * master value holds — never a total that still carries a run the book left
+ * out.
+ */
+function asCounted(model, pageIdx, m) {
+  if (!(m.group_id && !m.group_child)) return m;
+  const [q] = model.countedQty(pageIdx, m);
+  return q === m.value ? m : { ...m, value: q };
+}
+
+/**
+ * The Sheet cell: the sheet number, and the version of it the quantity was
+ * traced on when that is not the sheet's own drawing (desktop _sheet_disp).
+ */
+function sheetDisp(model, pageLabel, pageIdx, m) {
+  if (pageIdx < 0) return '—';
+  const lbl = pageLabel(pageIdx);
+  const rid = String(m.rev_id || '');
+  return rid ? `${lbl} · ${model.revisionLabel(rid) || 'revision'}` : lbl;
+}
 
 // ── the flat row model ────────────────────────────────────────────────────
 
@@ -97,13 +153,21 @@ function typePrefix(m) {
 export function collectRows(project, pageLabel, filters = {}) {
   const rows = [];
   const keys = Object.keys(project.measurements).sort(comparePageKeys);
+  const model = countingOf(project);
+  const keep = model.countedFilter();
 
   for (const key of keys) {
     const pageIdx = Number(key);
-    const sheet = pageIdx < 0 ? '—' : pageLabel(pageIdx);
-    for (const m of project.measurements[key]) {
-      if (m.group_child) continue;
-      if (!passes(m, filters)) continue;
+    for (const m0 of project.measurements[key]) {
+      // A version this sheet is not counted from: listed as not counted,
+      // never in a total.
+      if (!keep(pageIdx, m0)) continue;
+      if (m0.group_child) continue;
+      if (NEVER_YIELDED.has(m0.type)) continue;
+      if (m0.type === DIMENSION_TYPE && !listsDims(filters)) continue;
+      if (!passes(m0, filters)) continue;
+      const m = asCounted(model, pageIdx, m0);
+      const sheet = sheetDisp(model, pageLabel, pageIdx, m);
 
       const floor = m.floor_level || '';
       const cat = m.category || '';
@@ -206,14 +270,19 @@ function passes(m, { floor, category, costType } = {}) {
 export function collectItems(project, pageLabel, filters = {}) {
   const out = [];
   const keys = Object.keys(project.measurements).sort(comparePageKeys);
+  const model = countingOf(project);
+  const keep = model.countedFilter();
 
   for (const key of keys) {
     const pageIdx = Number(key);
-    const sheet = pageIdx < 0 ? '—' : pageLabel(pageIdx);
-    for (const m of project.measurements[key]) {
-      if (m.group_child) continue;
-      if (NO_ROW_TYPES.has(m.type)) continue;
-      if (!passes(m, filters)) continue;
+    for (const m0 of project.measurements[key]) {
+      if (!keep(pageIdx, m0)) continue;
+      if (m0.group_child) continue;
+      if (NO_ROW_TYPES.has(m0.type) || NEVER_YIELDED.has(m0.type)) continue;
+      if (m0.type === DIMENSION_TYPE && !listsDims(filters)) continue;
+      if (!passes(m0, filters)) continue;
+      const m = asCounted(model, pageIdx, m0);
+      const sheet = sheetDisp(model, pageLabel, pageIdx, m);
       const q = reportQty(m);
       if (!q) continue;
 
@@ -248,7 +317,7 @@ export function collectItems(project, pageLabel, filters = {}) {
         // A crossed outline is flagged in the report rather than silently
         // totalled — the shoelace formula reads a bow-tie as near zero.
         selfIntersects: !!m.self_intersects,
-        src: m,
+        src: m0,
         materials: [],
       };
       if (m.type === 'standalone') entry.cost = q.qty * entry.rate;
@@ -470,6 +539,15 @@ export async function openReportCenter(project, pageLabel) {
     addCheck('subs', 'Subtotals', true);
     addCheck('costs', 'Costs ($)', true);
     addCheck('totalsOnly', 'Totals only', false);
+    // Off, as on the desktop: a Measure reading is a ruler, not takeoff.
+    // The count is on the label — the one place that says how much is left
+    // out.
+    let nDims = 0;
+    for (const [, m] of project.allItems()) if (m.type === DIMENSION_TYPE) nDims += 1;
+    addCheck('dims', `Include dimensions${nDims ? ` (${nDims})` : ''}`, false);
+    checks.dims.parentElement.title = 'Readings from the Measure tool. They are rulers, not '
+      + 'takeoff items: no name, no trade, no price. Reports and exports leave them out; '
+      + 'tick this to list them anyway.';
     for (const s of [floorSel, tradeSel, groupSel]) s.addEventListener('change', preview);
     right.appendChild(opts);
 
@@ -483,6 +561,7 @@ export async function openReportCenter(project, pageLabel) {
       const filters = {
         floor: floorSel.value === ' ALL' ? null : floorSel.value,
         category: tradeSel.value === ' ALL' ? null : tradeSel.value,
+        includeDims: checks.dims.checked,
       };
       const options = {
         groupBy: groupSel.value,
@@ -508,8 +587,10 @@ export async function openReportCenter(project, pageLabel) {
       body,
       buttons: [
         D.button('Print / PDF', '', () => printHtml(lastHtml)),
-        D.button('Export CSV', '', () => exportCsv(project, pageLabel)),
-        D.button('Export Excel', '', () => exportWorkbook(project, pageLabel)),
+        D.button('Export CSV', '', () => exportCsv(project, pageLabel,
+          { includeDims: checks.dims.checked })),
+        D.button('Export Excel', '', () => exportWorkbook(project, pageLabel,
+          { includeDims: checks.dims.checked })),
         D.button('Close', 'primary', () => close(true)),
       ],
     });
@@ -560,6 +641,91 @@ function flattenFor(items, wantType) {
 }
 
 export function buildReportHtml(project, pageLabel, key, filters, options) {
+  const html = buildReportBody(project, pageLabel, key, filters, options);
+  const model = countingOf(project);
+  const listsRow = m => m.type !== DIMENSION_TYPE || listsDims(filters || {});
+  const band = versionsLine(model, pageLabel, listsRow);
+  const tail = notCountedHtml(model, pageLabel, listsRow);
+  let out = html;
+  // Function replacers: a sheet number holding '$&' must not be read as a
+  // replacement pattern.
+  if (band) out = out.replace(/(<p class="meta">[\s\S]*?<\/p>)/, hit => hit + band);
+  if (tail) out = out.replace(/<\/div>\s*$/, () => `${tail}</div>`);
+  return out;
+}
+
+/**
+ * One sentence naming every sheet priced from a revision, and how much is
+ * left out (desktop ReportCenterDialog._versions_line). A total nobody can
+ * trace is a total nobody can defend.
+ */
+export function versionsLine(model, pageLabel, listsRow = () => true) {
+  const book = model.countedBook(listsRow);
+  const wait = model.waitingBook(listsRow);
+  if (!book.length && !wait.length) return '';
+  const bits = book.filter(([, rid]) => rid)
+    .map(([pg, rid]) => `${pageLabel(pg)} · ${model.revisionLabel(rid) || 'a revision'}`);
+  let nLeft = 0;
+  for (const [, , left] of book) for (const v of left.values()) nLeft += v.length;
+  let txt = '';
+  if (bits.length) txt += `Counted from: ${bits.join(',  ')}. `;
+  if (nLeft) {
+    txt += `${nLeft} item${nLeft === 1 ? '' : 's'} on other versions of ${book.length} sheet`
+      + `${book.length === 1 ? '' : 's'} ${nLeft === 1 ? 'is' : 'are'} not in these totals — `
+      + 'listed at the end. ';
+  }
+  if (wait.length) {
+    txt += `${wait.length} item${wait.length === 1 ? '' : 's'} `
+      + `${wait.length === 1 ? 'waits' : 'wait'} on revision pages that are no drawing of any `
+      + 'sheet now, counted nowhere — listed at the end.';
+  }
+  txt = txt.trim();
+  return `<p style="font-size:11px;color:#8a5a12;background:#fdf3e0;padding:4px 6px;margin-top:2px">${H.esc(txt)}</p>`;
+}
+
+/**
+ * The closing tables: every quantity that left the bid, and why — the work
+ * on the other versions of a sheet, and the work waiting on pages that are
+ * no drawing of any sheet now (desktop _not_counted_html).
+ */
+export function notCountedHtml(model, pageLabel, listsRow = () => true) {
+  const rows = [];
+  for (const [pg, , left] of model.countedBook(listsRow)) {
+    for (const [rid, items] of left) {
+      const nm = rid ? (model.revisionLabel(rid) || 'a revision') : "the sheet's own drawing";
+      for (const m of items) {
+        let what = m.name || m.label || '(unnamed)';
+        if (m.group_child) what += ` (run ${m.shape_no ?? '?'} of ${m.group_count ?? '?'})`;
+        rows.push([pageLabel(pg), nm, what, valueLine(m)]);
+      }
+    }
+  }
+  const tableHead = cols => '<table style="margin-top:4px"><thead><tr>'
+    + cols.map((c, i) => `<th${i === cols.length - 1 ? ' class="n"' : ''}>${H.esc(c)}</th>`).join('')
+    + '</tr></thead><tbody>';
+  const body = r => `<tr>${r.map((c, i) => `<td${i === r.length - 1 ? ' class="n"' : ''}>${H.esc(c)}</td>`).join('')}</tr>`;
+  let out = '';
+  if (rows.length) {
+    out += '<h3 style="color:#8a6d2a;margin-top:16px">Not counted — takeoff on other versions of these sheets</h3>'
+      + '<p class="note">Every sheet is priced from one of its drawings. This is the work on the others: '
+      + 'kept, not deleted, and not in the totals above. Count this version, on the version bar, is '
+      + 'where that changes.</p>'
+      + tableHead(['Sheet', 'Version', 'Item', 'Quantity']) + rows.map(body).join('') + '</tbody></table>';
+  }
+  const wait = model.waitingBook(listsRow);
+  if (wait.length) {
+    out += '<h3 style="color:#8a6d2a;margin-top:16px">Not counted — waiting: takeoff on pages that are no drawing of any sheet now</h3>'
+      + '<p class="note">Traced on revision pages that were un-paired from the sheet they were filed '
+      + 'under, or whose revision was removed. Kept, not deleted, and counted nowhere: pair each page '
+      + 'again in the desktop app — its takeoff goes with it.</p>'
+      + tableHead(['Filed under', 'Where its page is', 'Item', 'Quantity'])
+      + wait.map(([pg, m, why]) => body([pageLabel(pg), why, m.name || m.label || '(unnamed)', valueLine(m)])).join('')
+      + '</tbody></table>';
+  }
+  return out;
+}
+
+function buildReportBody(project, pageLabel, key, filters, options) {
   const md = project.metadata;
   const title = (REPORTS.find(r => r[0] === key) || [])[1] || 'Report';
 

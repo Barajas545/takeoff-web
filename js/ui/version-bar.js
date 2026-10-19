@@ -64,10 +64,13 @@ export class VersionBar {
     }
     this.root.hidden = false;
 
-    const vers = sheetVersions(s.page, revs);
+    // With the sheet's ORIGIN: a sheet a revision added is that revision's
+    // page, so the page is not "a newer version" of it and its own drawing
+    // ranks as the revision it came from.
+    const vers = sheetVersions(s.page, revs, s.origins);
     const viewing = String(s.viewingRevId || '');
     const cur = vers.find(v => v.revId === viewing) || vers[0];
-    const newest = newestVersionOf(s.page, revs, s.order || 'date');
+    const newest = newestVersionOf(s.page, revs, s.order || 'date', s.origins);
 
     this.root.querySelector('#vbSheet').textContent =
       `Sheet ${s.sheetLabel || s.page + 1}`;
@@ -100,6 +103,25 @@ export class VersionBar {
     // Nothing to go back to until you have gone somewhere.
     const back = this.root.querySelector('#vbNewestBtn');
     if (back) back.disabled = onNewest || n <= 1;
+
+    // The ONE control that moves a total: count this sheet from the drawing
+    // on screen. Live only when the drawing on screen is not the one counted
+    // and the project can be edited; the click shows the before and the
+    // after, and changes nothing until he says yes.
+    const count = this.root.querySelector('#vbCountBtn');
+    if (count) {
+      const working = String(s.workingRevId || '');
+      const already = viewing === working;
+      count.hidden = n <= 1 && already;
+      count.disabled = already || !s.canCount;
+      count.classList.toggle('on', !already);
+      count.title = already
+        ? `This sheet counts from ${viewing ? cur.label : 'its own drawing'} — the drawing on screen`
+        : (s.canCount
+          ? `This sheet counts from ${working ? (vers.find(v => v.revId === working) || {}).label || 'another drawing' : 'its own drawing'}. `
+            + 'Count the drawing on screen instead — you are shown the change before it is made'
+          : 'Press Edit Mode to change which drawing this sheet counts from');
+    }
 
     this._drawPips(vers, viewing, s.workingRevId || '', newest);
   }
@@ -189,7 +211,7 @@ export class VersionBar {
  * rather than one `newestVersionOf` call per sheet: on the largest real job
  * that is 11 map lookups instead of 173 × 11.
  */
-export function sheetsWithRevisions(pageCount, revs) {
+export function sheetsWithRevisions(pageCount, revs, origins = null) {
   const out = new Map();          // page -> how many versions beyond its own
   for (const rev of visibleRevisions(revs)) {
     const n = revPageCount(rev);
@@ -197,6 +219,10 @@ export function sheetsWithRevisions(pageCount, revs) {
       const i = parseInt(k, 10);
       if (!Number.isFinite(i) || i < 0 || i >= pageCount) continue;
       if (!(rp >= 0 && rp < n)) continue;
+      // The page a sheet was CUT FROM is that sheet, not a version of it.
+      const o = (origins || {})[String(i)];
+      if (Array.isArray(o) && o.length >= 2 && String(o[0]) === String(rev.id)
+          && Number(o[1]) === rp) continue;
       out.set(i, (out.get(i) || 0) + 1);
     }
   }

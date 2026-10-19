@@ -437,6 +437,17 @@ export class PageStore {
   // single-slot queue, never a scroll-driven fill — on a project opened from
   // the portal every one of those bytes is an HTTP range request.
 
+  /**
+   * A revision sheet's size when it is already known — on screen, or read
+   * before — and null otherwise. Synchronous: the counting rule asks it in
+   * the middle of a sentence and must never start a fetch to answer.
+   */
+  peekRevisionPageSize(set, page) {
+    const live = this.peekRevisionPage(set, page);
+    if (live) return { width: live.width, height: live.height };
+    return this._revSizes.get(`${set}:${page}`) || null;
+  }
+
   /** A revision sheet's true size, from the PNG's IHDR. No decode. */
   async revisionPageSize(set, page) {
     const live = this.peekRevisionPage(set, page);

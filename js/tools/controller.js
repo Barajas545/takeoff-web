@@ -27,6 +27,7 @@ import {
 import { nextPaletteColor, peekPaletteColor } from '../render/theme.js';
 import { STANDALONE_PAGE } from '../core/takeoff-file.js';
 import { onThisVersion } from '../core/revisions.js';
+import { CountingModel, applyBooking } from '../core/counting.js';
 import {
   MARKUP_TOOLS, MARKUP_HINTS, MarkupState, beginStroke, extendStroke,
   rectFrom, rectIsWorthKeeping, annotationsUnderEraser, makeTextNote,
@@ -214,6 +215,10 @@ export class ToolController extends EventTarget {
      * because looking is never refused.
      */
     this.viewingVersion = { revId: '', revPage: null };
+    // (item) -> [revId, revPage] of the drawing a callout pin or a text note
+    // is SHOWN on (CountingModel.markVersion), set by the app. Without it a
+    // pin is asked of its stamp alone, as it always was.
+    this.markOf = null;
 
     /* ── read-only: looking is free, editing is not ────────────────────
      *
@@ -1266,13 +1271,12 @@ export class ToolController extends EventTarget {
       fontSize: this.markupStyle.noteFontSize,
     });
     if (!spec || !String(spec.text || '').trim()) { this.emit('changed'); return; }
-    this.project.addItem(this.getCurrentPage(), makeTextNote({
+    const made = this._file(this.getCurrentPage(), makeTextNote({
       tip, notePos: at, text: spec.text, color: spec.color,
       fontSize: spec.fontSize, category: spec.category,
     }), { label: 'Note' });
     // A note carries no quantity and no scale, so the stamps every takeoff
     // item gets would be meaningless on it.
-    const made = this.project.itemsOn(this.getCurrentPage()).at(-1);
     if (made) {
       delete made.sort_order;
       delete made.scale;
@@ -1284,10 +1288,9 @@ export class ToolController extends EventTarget {
   async _placeCallout(at) {
     const spec = await this.host.askCallout?.({});
     if (!spec) { this.emit('changed'); return; }
-    this.project.addItem(this.getCurrentPage(), makeCallout({
+    const made = this._file(this.getCurrentPage(), makeCallout({
       at, detail: spec.detail, sheet: spec.sheet, refPage: spec.refPage,
     }), { label: 'Callout' });
-    const made = this.project.itemsOn(this.getCurrentPage()).at(-1);
     if (made) { delete made.scale; delete made.scale_label; }
     this.emit('changed');
   }
@@ -1336,8 +1339,7 @@ export class ToolController extends EventTarget {
     // it was never taken from. It deliberately matches what the renderer
     // paints, so nothing invisible is ever reachable.
     const items = (this.project.measurements[page] || [])
-      .filter(m => this.project.isVisible(m)
-        && onThisVersion(m, this.viewingVersion.revId, this.viewingVersion.revPage));
+      .filter(m => this.project.isVisible(m) && this._onScreen(m));
 
     let best = null;
     let bestDist = Infinity;
@@ -1671,19 +1673,24 @@ export class ToolController extends EventTarget {
     const page = this.getCurrentPage();
     const list = this.project.itemsOn(page);
 
-    // 1. an armed target on this page just gains a point.
-    if (this.countTarget && list.includes(this.countTarget)) {
+    // 1. an armed target on this page just gains a point — when it is on
+    //    the drawing on screen. A count traced on another drawing of this
+    //    sheet is not under the pencil: a dot added to it would be drawn
+    //    nowhere and counted from lines it was not placed on.
+    if (this.countTarget && list.includes(this.countTarget)
+        && this._onScreen(this.countTarget)) {
       this.project.transact('Count', () => {
         this.countTarget.points.push(pt.slice());
         this.countTarget.value = this.countTarget.points.length;
       });
+      this._countGrew(page, this.countTarget);
       this.emit('changed');
       return;
     }
 
     // 2. an armed spec materialises on the first click only.
     if (this.countSpec) {
-      const made = this.project.addItem(page, this._base('count', {
+      const made = this._file(page, this._base('count', {
         points: [pt.slice()],
         value: 1,
         count_number: this.countSpec.count_number ?? nextCountNumber(this.project),
@@ -1699,18 +1706,20 @@ export class ToolController extends EventTarget {
     // 3. an existing count on this page with the same name.
     const cat = (this.options.pendingName || this.options.countCategory || '').trim();
     if (cat) {
-      const existing = list.find(m => m.type === 'count' && m.name === cat);
+      const existing = list.find(m => m.type === 'count' && m.name === cat
+        && this._onScreen(m));
       if (existing) {
         this.project.transact('Count', () => {
           existing.points.push(pt.slice());
           existing.value = existing.points.length;
         });
         this.countTarget = existing;
+        this._countGrew(page, existing);
         this.emit('changed');
         return;
       }
       // 4. a name was typed but nothing matches: create it silently.
-      const made = this.project.addItem(page, this._base('count', {
+      const made = this._file(page, this._base('count', {
         points: [pt.slice()],
         name: cat, label: cat,
         color: nextPaletteColor(),
@@ -1723,7 +1732,9 @@ export class ToolController extends EventTarget {
     }
 
     // 5. nothing to go on — ask.
-    this.host.askCountItem?.({ existing: list.filter(m => m.type === 'count') })
+    this.host.askCountItem?.({
+      existing: list.filter(m => m.type === 'count' && this._onScreen(m)),
+    })
       .then(choice => {
         if (!choice) return;
         if (choice.continueItem) this.countTarget = choice.continueItem;
@@ -1746,7 +1757,7 @@ export class ToolController extends EventTarget {
       ? [0.20, 0.55, 1.00, 1.0]
       : [0.95, 0.45, 0.15, 1.0];
 
-    this.project.addItem(this.getCurrentPage(), this._base(kind, {
+    this._file(this.getCurrentPage(), this._base(kind, {
       points: [pt.slice()],
       [pre + 'seq']: seq,
       [pre + 'number']: '',
@@ -1810,13 +1821,66 @@ export class ToolController extends EventTarget {
     // finished — filed under a drawing the estimator was not looking at. This
     // is the one place every finished item passes through, and it is the same
     // stamp, off the same state, that a temporary dimension already gets.
-    const v = this.viewingVersion || {};
-    const stamped = v.revId
-      ? { ...item, rev_id: v.revId, rev_page: v.revPage }
-      : item;
-    const created = this.project.addItem(this.getCurrentPage(), stamped, { label });
+    const created = this._file(this.getCurrentPage(), item, { label });
     this.emit('changed');
     return created;
+  }
+
+  /** Is this item on the drawing on screen? The renderer's own test. */
+  _onScreen(m) {
+    return onThisVersion(m, this.viewingVersion.revId, this.viewingVersion.revPage,
+      this.markOf);
+  }
+
+  /**
+   * THE one place a finished item goes into the project — takeoff, a count,
+   * a window or door, a note, a callout pin. Two things happen here and
+   * nowhere else, so no tool can skip them:
+   *
+   * 1. It is STAMPED with the drawing it was traced on. An item drawn on a
+   *    revision and left unstamped vanished the instant it was finished —
+   *    filed under the sheet's own drawing, which was not on screen — and
+   *    counted from a drawing nobody traced it on. The count, the opening
+   *    pins, notes and callouts each called addItem directly and were never
+   *    stamped; now nothing can be.
+   *
+   * 2. The FIRST takeoff on a sheet with none on any of its drawings books
+   *    the drawing it was traced on as the one the sheet counts from
+   *    (CountingModel.firstTakeoffBooking — the desktop's rule). Written in
+   *    the SAME transaction as the item, so one Ctrl+Z takes back both, and
+   *    the booking rides that undo level for Ctrl+Y.
+   *
+   * Then 'takeoff-filed' tells the app, which says the booking and asks —
+   * once — when takeoff landed on a drawing that does not count.
+   */
+  _file(page, item, { label = 'Add item' } = {}) {
+    const v = this.viewingVersion || {};
+    const onSheet = page !== STANDALONE_PAGE && page >= 0;
+    const stamped = (onSheet && v.revId)
+      ? { ...item, rev_id: v.revId, rev_page: v.revPage }
+      : item;
+    let created = null;
+    let booking = null;
+    this.project.transact(label, () => {
+      if (onSheet) {
+        const model = new CountingModel({ metadata: this.project.metadata,
+          measurements: this.project.measurements, pageCount: this.project.pageCount });
+        booking = model.firstTakeoffBooking(page, stamped);
+        if (booking) applyBooking(this.project.metadata, booking);
+      }
+      created = this.project.addItem(page, stamped, { label });
+    });
+    const level = this.project.undoTop;
+    if (booking) {
+      this.project.tagBooking(level, { kind: 'first', page, was: booking.was, now: booking.rid });
+    }
+    this.emit('takeoff-filed', { page, item: created, booking, level });
+    return created;
+  }
+
+  /** A point added to a count already on the sheet: said like a new item. */
+  _countGrew(page, item) {
+    this.emit('takeoff-filed', { page, item, booking: null, level: this.project.undoTop });
   }
 
   _remember(spec) {

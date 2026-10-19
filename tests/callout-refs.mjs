@@ -62,8 +62,11 @@ console.log('\n-- removing a sheet --');
 {
   const p = build(5, [[0, 1], [0, 3], [0, 4]]);
   p.notePageRemoved(3);
-  ok(JSON.stringify(refs(p)) === JSON.stringify([1, 'gone', 3]),
-     `the pin AT the removed sheet loses its target rather than sliding onto `
+  // -1 is the file's own "no sheet" sentinel, and what the desktop writes
+  // (_remap_revision_matches): the pin is a mark he made on a sheet he KEPT,
+  // so it stays, pointing nowhere, rather than losing the key.
+  ok(JSON.stringify(refs(p)) === JSON.stringify([1, -1, 3]),
+     `the pin AT the removed sheet loses its target (-1) rather than sliding onto `
      + `whatever took its place; later ones shift down — got ${JSON.stringify(refs(p))}`);
 }
 

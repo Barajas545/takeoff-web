@@ -20,8 +20,20 @@
 import {
   visibleRevisions, sheetVersions, newestVersionOf, resolveLatestSheets,
   revPageCount, revPageLabel, revName, rowPlan, parseRevisionDate,
-  revisionRank, compareRank, ORIGINAL_RANK,
+  revisionRank, compareRank, ORIGINAL_RANK, revisionNamesOf, revisionNumber,
+  originMapOf, originPair,
 } from '../core/revisions.js';
+
+/**
+ * A revision's column head: its one name when that is short ("ASI 2"), else
+ * R and its number — the same short form the Pages tiles use, so a sheet
+ * marked R2 there is found under R2 here.
+ */
+function colHead(rev, all, names) {
+  const nm = names[String(rev.id)] || '';
+  const no = revisionNumber(rev.id, all);
+  return (nm && [...nm].length <= 5 && !nm.startsWith('REV ')) ? nm : (no ? `R${no}` : 'R?');
+}
 
 /**
  * The rev_id of the newest version filling an inserted "new sheet" row.
@@ -93,6 +105,10 @@ export class RevisionsPanel {
       body.appendChild(this._empty());
       return;
     }
+    // One name per revision, numbered among ALL of them (hidden included),
+    // and the sheets a revision ADDED (sheet_origin): read once per paint.
+    s.names = revisionNamesOf(s.revs || []);
+    s.originMap = originMapOf(s.origins || {}, s.revs || []);
     if (this.tab === 'sets') body.appendChild(this._sets(s, revs));
     else if (this.tab === 'current') body.appendChild(this._current(s, revs));
     else body.appendChild(this._matrix(s, revs));
@@ -143,8 +159,8 @@ export class RevisionsPanel {
     revs.forEach((rev, c) => {
       const card = el('div', 'rp-set');
       const h = el('div', 'rp-set-head');
-      h.appendChild(el('span', 'rp-col', `R${c + 1}`));
-      h.appendChild(el('span', 'rp-set-name', revName(rev, c)));
+      h.appendChild(el('span', 'rp-col', colHead(rev, s.revs, s.names)));
+      h.appendChild(el('span', 'rp-set-name', revName(rev, c, s.names)));
       const date = (rev.date || '').trim();
       const d = el('span', 'rp-set-date', date || 'no date');
       if (!parseRevisionDate(date)) {
@@ -159,11 +175,27 @@ export class RevisionsPanel {
       const n = revPageCount(rev);
       const matched = Object.keys(rev.match || {}).length;
       const slots = Object.keys(rev.extra || {}).length;
-      const loose = Math.max(0, n - matched - slots);
+      // The pages this revision ADDED to the set are project sheets now: not
+      // loose, and not to be "paired in the desktop app".
+      const addedHere = new Map();       // revPage -> the sheet it became
+      for (const [k, o] of Object.entries(s.originMap || {})) {
+        if (o[0] === String(rev.id) && o[1] >= 0 && o[1] < n
+            && !Object.values(rev.match || {}).includes(o[1])
+            && !Object.values(rev.extra || {}).includes(o[1])) {
+          addedHere.set(o[1], parseInt(k, 10));
+        }
+      }
+      const loose = Math.max(0, n - matched - slots - addedHere.size);
       const line = el('div', 'rp-set-stats');
       line.appendChild(el('span', null, `${n} sheet${n === 1 ? '' : 's'}`));
       line.appendChild(el('span', null, `${matched} matched`));
       if (slots) line.appendChild(el('span', null, `${slots} new`));
+      if (addedHere.size) {
+        const a = el('span', 'added', `◆ ${addedHere.size} added`);
+        a.title = 'Sheets this revision added to the project — they are in the '
+          + 'Pages list now, marked ADDED.';
+        line.appendChild(a);
+      }
       if (loose) {
         const w = el('span', 'warn', `${loose} unmatched`);
         w.title = 'These pages are not paired with any sheet in the project. '
@@ -199,7 +231,14 @@ export class RevisionsPanel {
         const lbl = revPageLabel(rev, rp) || `p.${rp + 1}`;
         const b = el('button', 'rp-chip', lbl);
         const main = backToMain.get(rp);
-        if (main !== undefined) {
+        if (addedHere.has(rp)) {
+          const at = addedHere.get(rp);
+          b.classList.add('added');
+          b.textContent = `◆ ${lbl}`;
+          b.title = `Added to the project as sheet ${this.host.pageLabel(at)} — `
+            + 'not part of the original plans. Opens that sheet.';
+          b.addEventListener('click', () => this.host.showOwn(at));
+        } else if (main !== undefined) {
           b.title = `Sheet ${this.host.pageLabel(main)}, as reissued by this revision`;
           b.addEventListener('click', () => this.host.showVersion(main, String(rev.id)));
         } else if (backToSlot.has(rp)) {
@@ -236,8 +275,8 @@ export class RevisionsPanel {
     orig.title = 'The drawing set this project was made from';
     head.appendChild(orig);
     revs.forEach((rev, c) => {
-      const h = el('div', 'rp-cell rp-h', `R${c + 1}`);
-      h.title = `${revName(rev, c)}${rev.date ? ` — ${rev.date}` : ''}`
+      const h = el('div', 'rp-cell rp-h', colHead(rev, s.revs, s.names));
+      h.title = `${revName(rev, c, s.names)}${rev.date ? ` — ${rev.date}` : ''}`
         + `\n${revPageCount(rev)} sheets`;
       head.appendChild(h);
     });
@@ -254,9 +293,15 @@ export class RevisionsPanel {
       const i = step.index;
 
       const name = el('div', 'rp-cell rp-sheet');
+      const org = isMain ? (s.originMap || {})[String(i)] : null;
       if (isMain) {
-        name.appendChild(el('span', 'rp-no', mainLabels[i] || `${i + 1}`));
+        name.appendChild(el('span', 'rp-no', `${org ? '◆ ' : ''}${mainLabels[i] || `${i + 1}`}`));
         name.appendChild(el('span', 'rp-seq', `${i + 1}`));
+        if (org) {
+          name.classList.add('added');
+          name.title = 'ADDED — not part of the original plans. It came with '
+            + `${(s.names || {})[org[0]] || 'a revision since deleted'}, as page ${org[1] + 1} of that set.`;
+        }
         if (i === s.page) row.classList.add('here');
       } else {
         name.classList.add('slot');
@@ -271,8 +316,9 @@ export class RevisionsPanel {
       // revisions that fill it — by the same rank, or the matrix and the
       // Current Set would disagree about the same row.
       const newest = isMain
-        ? newestVersionOf(i, revs, order)
+        ? newestVersionOf(i, s.revs, order, s.origins)
         : newestForSlot(step.slot, revs, order);
+      const opair = isMain ? originPair(i, s.origins) : null;
 
       // column 0 — the original
       const c0 = el('div', 'rp-cell rp-v');
@@ -295,13 +341,25 @@ export class RevisionsPanel {
           ? (rev.match || {})[String(i)]
           : (rev.extra || {})[step.slot.id];
         const ok = rp !== undefined && rp !== null && rp >= 0 && rp < revPageCount(rev);
-        if (!ok) {
+        const isOrigin = !!opair && String(rev.id) === opair[0];
+        if (isOrigin && (!ok || rp === opair[1])
+            && opair[1] >= 0 && opair[1] < revPageCount(rev)) {
+          // The revision this sheet CAME WITH: its page is the sheet's own
+          // drawing, not another version of it — shown as where the sheet
+          // came from, and a click opens the sheet itself.
+          cell.classList.add('has', 'added');
+          cell.textContent = '◆ added here';
+          cell.title = `This sheet came with this revision (its page ${opair[1] + 1}). `
+            + 'It is the project\'s own drawing of the sheet, not another version of it '
+            + '— click to open it.';
+          cell.addEventListener('click', () => this.host.showOwn(i));
+        } else if (!ok) {
           cell.classList.add('none');
-          cell.title = `${revName(rev, c)} did not reissue this sheet`;
+          cell.title = `${revName(rev, c, s.names)} did not reissue this sheet`;
         } else {
           cell.classList.add('has');
           cell.textContent = revPageLabel(rev, rp) || '●';
-          cell.title = `${revName(rev, c)}${rev.date ? ` — ${rev.date}` : ''}`
+          cell.title = `${revName(rev, c, s.names)}${rev.date ? ` — ${rev.date}` : ''}`
             + `\npage ${rp + 1} of that set`;
           if (String(rev.id) === (newest || '')) cell.classList.add('newest');
           if (isMain && i === s.page && viewing === String(rev.id)) cell.classList.add('on');
@@ -332,6 +390,7 @@ export class RevisionsPanel {
     l.appendChild(item('newest', 'newest version'));
     l.appendChild(item('on', 'on screen now'));
     l.appendChild(item('slot', 'new sheet'));
+    l.appendChild(item('added', '◆ added by a revision'));
     return l;
   }
 
@@ -342,8 +401,11 @@ export class RevisionsPanel {
     const mainLabels = Array.from({ length: s.pageCount },
       (_, i) => this.host.pageLabel(i));
     const order = s.order || 'date';
+    // With the sheets a revision ADDED ranked as what they are, their pages
+    // not loose, and every revision under its one name.
     const { rows, notes } = resolveLatestSheets(
-      mainLabels, s.extraSheets || [], revs, { order, includeNew: true });
+      mainLabels, s.extraSheets || [], revs,
+      { order, includeNew: true, origins: s.originMap, names: s.names });
 
     const bar = el('div', 'rp-cur-head');
     bar.appendChild(el('span', null,

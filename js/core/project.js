@@ -24,7 +24,10 @@ import {
 import { DEFAULT_DPI, DEFAULT_PPF, scaleLabelFor } from './units.js';
 import { polygonArea, pathLength } from './geom.js';
 import { shapeOwn } from './measure.js';
-import { shiftRevisionIndices } from './revisions.js';
+import {
+  remapPageIndices, insertMapper, deleteMapper, isTakeoffType, itemRevId,
+} from './revisions.js';
+import { CountingModel } from './counting.js';
 
 export { STANDALONE_PAGE };
 
@@ -44,7 +47,10 @@ export const KEEPS_OWN_SCALE = new Set(['ref_distance']);
 // measurement at a scale of its own, taken to read a detail without
 // recalibrating the sheet. It is never a quantity, and this build
 // opens the same files, so it must never be one here either.
-export const NON_TAKEOFF_TYPES = new Set(['distance', 'textnote', 'page_ref', 'pitch', 'ref_distance']);
+// 'group' is the desktop's Group container: it holds items and is never
+// bought. The same set as revisions.js isTakeoffType asks (NON_TAKEOFF plus
+// the Measure ruler), so the panel, the reports and the totals agree.
+export const NON_TAKEOFF_TYPES = new Set(['distance', 'textnote', 'page_ref', 'pitch', 'ref_distance', 'group']);
 
 /** Every item type the canvas can hold. */
 export const ITEM_TYPES = [
@@ -589,34 +595,14 @@ export class Project extends EventTarget {
   /**
    * Record that pages were inserted at `at`. Everything filed under a later
    * page number moves along with it; the standalone bucket does not move.
-   */
-  /**
-   * Move every callout's target with the sheets.
    *
-   * A page_ref item stores `ref_page`, the index of the sheet it points at.
-   * That is a reference INTO the set, not a property of the page it sits on,
-   * so the per-page bucket shuffling above does not touch it. Insert one
-   * sheet in the middle and every callout after it points one drawing too
-   * high; the preview then shows the wrong detail with total confidence.
-   *
-   * `removedIndex`, when given, is a sheet that no longer exists: a callout
-   * that pointed AT it loses its target rather than silently sliding onto
-   * whatever took its place.
+   * A callout pin stores `ref_page`, the index of the sheet it points at —
+   * a reference INTO the set, which the bucket shuffling does not touch.
+   * remapPageIndices moves it with its sheet, and a pin whose target is
+   * deleted keeps its place and points nowhere (-1), as on the desktop.
    */
-  _shiftCalloutTargets(at, delta, removedIndex = null) {
-    for (const list of Object.values(this.measurements)) {
-      for (const m of list) {
-        if (m.type !== 'page_ref' || !Number.isInteger(m.ref_page)) continue;
-        if (removedIndex != null && m.ref_page === removedIndex) {
-          delete m.ref_page;                 // the sheet it named is gone
-          continue;
-        }
-        if (m.ref_page >= at) m.ref_page += delta;
-      }
-    }
-  }
-
   notePagesInserted(at, count) {
+    const atEnd = at >= this.pageCount;
     this._shiftStores(at - 1, count);
     spliceArray(this.metadata.page_labels, at, count, '');
     // Every index-keyed dict has to move with the pages, or a sheet inserted
@@ -624,8 +610,11 @@ export class Project extends EventTarget {
     for (const key of INDEX_DICT_KEYS) {
       this.metadata[key] = shiftIndexDict(this.metadata[key], at - 1, count);
     }
-    this._shiftCalloutTargets(at, count);
-    this._shiftRevisions(at, count);
+    // ...and every record the revision model files by sheet, and every index
+    // stored INSIDE a record: a callout's target, an overlay's compared
+    // sheet, a group's pages, the sheet a revision ADDED (sheet_origin).
+    remapPageIndices(this.metadata, this.measurements, insertMapper(at, count),
+      { reordered: !atEnd });
     this.pageCount += count;
     this.clearHistory('a sheet was added');
     this.markDirty();
@@ -636,47 +625,31 @@ export class Project extends EventTarget {
 
   /** Record that one page was removed. Its items go with it. */
   notePageRemoved(index) {
+    const last = index >= this.pageCount - 1;
+    // A multi-shape item whose MASTER is on this sheet lives on through its
+    // runs on other sheets: one of them takes the item over first, exactly
+    // as the desktop does (_promote_masters_leaving). Without it the runs
+    // were left with no master, every reader skips a run, and the rest of
+    // the item silently left the bid -- here and in the desktop on reopen.
+    promoteMastersLeaving(this.measurements, index);
     delete this.measurements[index];
     delete this.annotations[index];
     this._shiftStores(index, -1);
-    this._shiftCalloutTargets(index, -1, index);
     (this.metadata.page_labels || []).splice(index, 1);
     for (const key of INDEX_DICT_KEYS) {
       const d = { ...(this.metadata[key] || {}) };
       delete d[String(index)];
       this.metadata[key] = shiftIndexDict(d, index, -1);
     }
-    this._shiftRevisions(index, -1);
+    remapPageIndices(this.metadata, this.measurements, deleteMapper(index),
+      { reordered: !last });
     this.pageCount = Math.max(0, this.pageCount - 1);
+    // What is left of each multi-shape item is added up again: a run that
+    // went with the sheet is no longer in its item's total (_resync_groups).
+    resyncGroups(this, { layout: true });
     this.clearHistory('a sheet was deleted');
     this.markDirty();
     this.emit('pages-changed', { at: index, delta: -1 });
-  }
-
-  /**
-   * Move every page-index reference in the revision model with the pages.
-   *
-   * A revision's `match` is keyed by main page index, `extra_sheets[].after`
-   * names the sheet a new-sheet row follows, and `sheet_version` says which
-   * version of each sheet its totals come from — all three are page indices.
-   *
-   * Left behind, an insert hands one sheet's revisions to whichever sheet
-   * landed on its number, and with them the version its takeoff is counted
-   * from. Nothing errors; the wrong drawing is simply current.
-   */
-  _shiftRevisions(at, delta) {
-    const revs = this.metadata.revisions;
-    const extra = this.metadata.extra_sheets;
-    if (!(revs || []).length && !(extra || []).length
-        && !Object.keys(this.metadata.sheet_version || {}).length) return;
-    if (!this.metadata.sheet_version) this.metadata.sheet_version = {};
-    shiftRevisionIndices(revs, extra, this.metadata.sheet_version, at, delta);
-    if (!Object.keys(this.metadata.sheet_version).length) {
-      // Absent means "the original", so an empty dict is the same statement
-      // as no dict — and not writing one keeps a file that never had the key
-      // exactly as it was.
-      delete this.metadata.sheet_version;
-    }
   }
 
   /**
@@ -777,8 +750,8 @@ export class Project extends EventTarget {
   undo() {
     const step = this._undo.pop();
     if (!step) return false;
-    this._redo.push({ label: step.label, state: this.snapshot() });
-    this.restore(step.state);
+    this._redo.push({ label: step.label, state: this.snapshot(), booking: step.booking });
+    this._restoreKeepingBook(step, 'undo');
     this.markDirty();
     this.emit('history-changed', {});
     this.emit('items-changed', {});
@@ -789,14 +762,91 @@ export class Project extends EventTarget {
   redo() {
     const step = this._redo.pop();
     if (!step) return false;
-    this._undo.push({ label: step.label, state: this.snapshot() });
-    this.restore(step.state);
+    this._undo.push({ label: step.label, state: this.snapshot(), booking: step.booking });
+    this._restoreKeepingBook(step, 'redo');
     this.markDirty();
     this.emit('history-changed', {});
     this.emit('items-changed', {});
     this.emit('pages-changed', {});
     return true;
   }
+
+  // ── which drawing counts, across an undo ────────────────────────────
+  //
+  // A snapshot here holds the whole metadata, and the book
+  // (metadata.sheet_version) is in it. Restored wholesale, an undo of ANY
+  // older edit would put back the book as it stood then — taking back a
+  // "Count this version" he clicked since, a number moving with nothing on
+  // screen asking for it. The desktop keeps the book out of the history for
+  // exactly that reason, and so does this: every undo and redo carries the
+  // book as it stands.
+  //
+  // The one exception is a booking a TAKEOFF caused — the first takeoff on
+  // an empty sheet, or his Yes to counting the drawing his takeoff just
+  // landed on. That exists because of the takeoff, so it rides the takeoff's
+  // undo level (`step.booking`): Ctrl+Z takes it back, Ctrl+Y makes it
+  // again — but only while it is still that booking, never one he changed
+  // since (desktop _undo_booking). Whatever moved is SAID: the 'booking'
+  // event carries what the totals were counted under before.
+
+  /** The book as it stands, and each revision's booked_over, to carry. */
+  _bookNow() {
+    return {
+      book: this.metadata.sheet_version ? structuredClone(this.metadata.sheet_version) : null,
+      over: new Map((this.metadata.revisions || [])
+        .map(r => [String(r.id), r.booked_over ? structuredClone(r.booked_over) : null])),
+    };
+  }
+
+  _restoreKeepingBook(step, direction) {
+    const kept = this._bookNow();
+    this.restore(step.state);
+    if (kept.book && Object.keys(kept.book).length) this.metadata.sheet_version = kept.book;
+    else delete this.metadata.sheet_version;
+    for (const r of this.metadata.revisions || []) {
+      const o = kept.over.get(String(r.id));
+      if (o) r.booked_over = o;
+      else if (kept.over.has(String(r.id))) delete r.booked_over;
+    }
+    const tag = step.booking;
+    if (!tag) return;
+    const page = tag.page;
+    const [frm, to] = direction === 'undo' ? [tag.now, tag.was] : [tag.was, tag.now];
+    const book = { ...(this.metadata.sheet_version || {}) };
+    if (String(book[String(page)] || '') !== frm) return;
+    // The takeoff on the sheet must be exactly what it was on that side of
+    // the takeoff: anything he did in between is his, and wins.
+    const fp = takeoffFingerprint(this.measurements[page] || []);
+    if (tag.kind === 'asked') {
+      const want = direction === 'undo' ? tag.fpBefore : tag.fpAfter;
+      if (JSON.stringify(sortedObj(fp)) !== JSON.stringify(sortedObj(want || {}))) return;
+    } else {
+      const rids = Object.keys(fp);
+      const ok = direction === 'undo' ? rids.length === 0
+        : (rids.length === 1 && rids[0] === to);
+      if (!ok) return;
+    }
+    const before = this.metadata.sheet_version ? { ...this.metadata.sheet_version } : null;
+    if (to) book[String(page)] = to;
+    else delete book[String(page)];
+    if (Object.keys(book).length) this.metadata.sheet_version = book;
+    else delete this.metadata.sheet_version;
+    this.emit('booking', { page, direction, kind: tag.kind || 'first', to, bookBefore: before });
+  }
+
+  /**
+   * Hang a booking on the newest undo level — the takeoff that caused it —
+   * when that level is still `level`. False when the history has moved past
+   * it: the booking is then his own, like a click on Count this version.
+   */
+  tagBooking(level, tag) {
+    if (!level || this._undo[this._undo.length - 1] !== level) return false;
+    level.booking = tag;
+    return true;
+  }
+
+  /** The newest undo level, to hand back to tagBooking. */
+  get undoTop() { return this._undo[this._undo.length - 1] || null; }
 
   // ── dirty state ─────────────────────────────────────────────────────
 
@@ -952,8 +1002,127 @@ function revisionsForSave(revs) {
   });
 }
 
-/** The metadata dicts keyed by a stringified page index. */
-const INDEX_DICT_KEYS = ['page_labels_custom', 'page_names', 'page_scales', 'page_groups'];
+/**
+ * The metadata dicts keyed by a stringified page index.
+ *
+ * NOT page_groups: the desktop's page_groups is a LIST of {id, name,
+ * pages: [...]}, and shifting it as a dict turned that list into an object
+ * the desktop then iterates as strings. remapPageIndices moves it, the
+ * desktop's way.
+ */
+const INDEX_DICT_KEYS = ['page_labels_custom', 'page_names', 'page_scales'];
+
+/** {revId: pieces of takeoff} on one sheet — what an undo must find again. */
+export function takeoffFingerprint(items) {
+  const out = {};
+  for (const m of items || []) {
+    if (!isTakeoffType(m)) continue;
+    const r = itemRevId(m);
+    out[r] = (out[r] || 0) + 1;
+  }
+  return out;
+}
+
+function sortedObj(o) {
+  return Object.fromEntries(Object.entries(o || {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}
+
+// ── multi-shape items across a page delete (desktop GLPageWidget) ────────
+
+const PROMOTE_KEYS = ['name', 'label', 'notes', 'floor_level', 'category', 'layer',
+  'sub_category', 'cost_type', 'sort_order', 'associated_items', 'color', 'visible',
+  'pitch', 'purpose', 'catalog_code', 'catalog_unit', 'framing', 'framing_suppressed'];
+
+/** desktop _promote_child: a run takes over the item from its master. */
+function promoteChild(doomed, heir) {
+  for (const k of PROMOTE_KEYS) if (k in doomed) heir[k] = doomed[k];
+  delete heir.group_child;
+  heir.own_value = heir.value ?? 0;
+  if ('perimeter' in heir) heir.own_perimeter = heir.perimeter;
+  if ('flat_area' in heir) heir.own_flat = heir.flat_area;
+  if ('total_ft' in heir) heir.own_total_ft = heir.total_ft;
+}
+
+function pageKeysSorted(meas) {
+  return Object.keys(meas).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+}
+
+/** desktop _promote_masters_leaving: before `page` is dropped. */
+export function promoteMastersLeaving(meas, page) {
+  for (const m of [...(meas[page] || [])]) {
+    const gid = m.group_id;
+    if (!gid || m.group_child) continue;
+    const heirs = [];
+    for (const pg of pageKeysSorted(meas)) {
+      if (pg === page) continue;
+      for (const s of meas[pg] || []) {
+        if (s.group_id === gid && s.group_child) heirs.push(s);
+      }
+    }
+    if (heirs.length) promoteChild(m, heirs[0]);
+  }
+}
+
+/**
+ * Every multi-shape master re-adds its shapes — only the runs on drawings
+ * their sheets count from, as the desktop's _sync_group does.
+ *
+ * `layout: true` is the desktop's _resync_groups, after a page came or went:
+ * a group left with no master also promotes its first shape, and a lone
+ * master's own numbers become its numbers. `layout: false` is its
+ * _resync_group_totals, after the book moved: the masters' totals only.
+ */
+export function resyncGroups(project, { layout = false } = {}) {
+  const meas = project.measurements;
+  const seen = new Set();
+  const all = [];
+  for (const pg of pageKeysSorted(meas)) for (const m of meas[pg] || []) all.push([pg, m]);
+  if (layout) {
+    for (const [, m] of all) {
+      const gid = m.group_id;
+      if (gid && m.group_child && !seen.has(gid)) {
+        seen.add(gid);
+        if (!all.some(([, x]) => x.group_id === gid && !x.group_child)) promoteChild({}, m);
+      }
+    }
+  }
+  // Which runs are ADDED UP is the counting rule's (desktop _shape_counts ->
+  // run_counts_towards): a run on a drawing its sheet does not count from is
+  // drawn and numbered, and is in no total.
+  const model = new CountingModel({ metadata: project.metadata,
+    measurements: meas, pageCount: project.pageCount });
+  const counts = (p, x) => model.runCountsTowards(p, x);
+  const get = (o, k, dflt) => (k in o ? o[k] : dflt);
+  for (const [pg, m] of all) {
+    if (m.group_child) continue;
+    if (!m.group_id && !('own_value' in m)) continue;
+    if (!m.group_id) {
+      if (!layout) continue;
+      for (const [k, own] of [['value', 'own_value'], ['perimeter', 'own_perimeter'],
+        ['flat_area', 'own_flat'], ['total_ft', 'own_total_ft']]) {
+        if (own in m) m[k] = m[own];
+      }
+      m.group_count = 1;
+      continue;
+    }
+    const shapes = all.filter(([, x]) => x.group_id === m.group_id)
+      .sort((a, b) => (!!a[1].group_child - !!b[1].group_child) || (a[0] - b[0]));
+    const children = shapes.filter(([, x]) => x.group_child);
+    const adding = children.filter(([p, x]) => counts(p, x)).map(([, x]) => x);
+    const mine = counts(pg, m);
+    const sum = (key, ownKey) => {
+      const own = mine ? (Number(get(m, ownKey, get(m, key, 0)) || 0) || 0) : 0;
+      return own + adding.reduce((s, c) => s + (Number(get(c, key, 0) || 0) || 0), 0);
+    };
+    m.value = sum('value', 'own_value');
+    m.group_count = 1 + children.length;
+    m.shape_no = 1;
+    children.forEach(([, c], i) => { c.shape_no = i + 2; c.group_count = m.group_count; });
+    if (m.type === 'area' || m.type === 'slope_area') m.perimeter = sum('perimeter', 'own_perimeter');
+    if (m.type === 'slope_area') m.flat_area = sum('flat_area', 'own_flat');
+    if (m.type === 'linear_count') m.total_ft = sum('total_ft', 'own_total_ft');
+  }
+}
 
 /** Anything keyed by page index, normalised to a dict of string keys. */
 function indexDict(v) {
