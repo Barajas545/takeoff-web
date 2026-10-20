@@ -427,7 +427,16 @@ export function takeoffMoveWords(before, after, future = false, limit = 4) {
     const left = [];
     const paired = new Set();
     for (const k of gone) {
-      const hit = waiting.get(ident(before.get(k)[0]));
+      let hit = waiting.get(ident(before.get(k)[0]));
+      if (hit && hit.length && ident === takeoffLineage) {
+        // desktop: by lineage -- the geometry no longer matches -- a pair is
+        // ONE item only if it is priced alike. Two items of one name on one
+        // drawing priced apart, one leaving and the other arriving at the
+        // same quantity, are a swap that moves money; unpaired, each is said.
+        const pk = priceKey(before.get(k)[0], before.get(k)[1][1]);
+        const j = hit.findIndex(k2 => priceKey(after.get(k2)[0], after.get(k2)[1][1]) === pk);
+        hit = j >= 0 ? hit.splice(j, 1) : null;
+      }
       if (hit && hit.length) {
         const k2 = hit.shift();
         paired.add(k2);

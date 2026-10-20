@@ -139,6 +139,17 @@ console.log('-- one item, one line; never netted --');
   const s1 = { ...s0, associated_items: [{ name: 'Dumpster', qty: 1, qty_mode: 'total', unit: 'each' }] };
   eq('a material added is said', takeoffMoveWords(new Map([[1, [s0, [25, 'sq ft']]]]),
     new Map([[2, [s1, [25, 'sq ft']]]])), 'Slab 25 sq ft (1 each of Dumpster comes in)');
+  // two items of one name on one drawing, priced apart, one leaving and the
+  // other arriving at the same quantity: a swap that moves money, said --
+  // and priced alike, one item whose shape changed, which moves nothing
+  const w1 = { type: 'area', name: 'Wall', unit_cost: 2, points: [[0, 0]] };
+  const w2 = { type: 'area', name: 'Wall', unit_cost: 5, points: [[9, 9]] };
+  eq('a swap priced apart is said',
+    takeoffMoveWords(new Map([[1, [w1, [9, 'sq ft']]]]), new Map([[2, [w2, [9, 'sq ft']]]])),
+    '9 sq ft of Wall leaves; 9 sq ft of Wall comes in');
+  eq('priced alike it is one item, and nothing moved',
+    takeoffMoveWords(new Map([[1, [w1, [9, 'sq ft']]]]),
+      new Map([[2, [{ ...w2, unit_cost: 2 }, [9, 'sq ft']]]])), '');
   // two items of one name moving opposite ways are never one line
   const i0 = { type: 'area', name: 'Wall', points: [[0, 0]] };
   const i1 = { type: 'area', name: 'Wall', points: [[9, 9]] };
