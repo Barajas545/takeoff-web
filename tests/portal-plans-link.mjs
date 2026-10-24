@@ -8,7 +8,8 @@
 // with made-up values — and checks what they produce against this app's
 // reader:
 //
-//   · the switch is off by default, and on only for "folder";
+//   · the portal's default is this app's PLANS_SOURCE (the two switches are
+//     flipped the same day), and the switch is on only for "folder";
 //   · every link openPlans writes is one parsePlansLink reads back to the
 //     same project, and anything that is not a project number opens the
 //     whole archive rather than travelling in the address;
@@ -25,6 +26,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { PORTAL, skip } from './config.mjs';
 import { parsePlansLink } from '../js/core/plans-folder.js';
+import { PLANS_SOURCE } from '../js/site-config.js';
 
 const OPEN = PORTAL && path.join(PORTAL, 'takeoff-open.js');
 const LIB = PORTAL && path.join(PORTAL, 'plans-library.js');
@@ -74,11 +76,11 @@ function page(config) {
 }
 
 // ── the switch ───────────────────────────────────────────────────────────
-eq('off by default', page(null).w.DCRTakeoff.plansFromFolder(), false);
+eq(`the default matches this app's (${PLANS_SOURCE})`, page(null).w.DCRTakeoff.plansFromFolder(), PLANS_SOURCE === 'folder');
 eq('off for "sharepoint"', page({ PLANS_SOURCE: 'sharepoint' }).w.DCRTakeoff.plansFromFolder(), false);
 eq('off for anything else', page({ PLANS_SOURCE: 'Folder ' }).w.DCRTakeoff.plansFromFolder(), false);
 eq('on for "folder"', page({ PLANS_SOURCE: 'folder' }).w.DCRTakeoff.plansFromFolder(), true);
-eq('the library follows it', [page(null).w.DCRPlansLibrary.plansMoved(), page({ PLANS_SOURCE: 'folder' }).w.DCRPlansLibrary.plansMoved()], [false, true]);
+eq('the library follows it', [page({ PLANS_SOURCE: 'sharepoint' }).w.DCRPlansLibrary.plansMoved(), page({ PLANS_SOURCE: 'folder' }).w.DCRPlansLibrary.plansMoved(), page(null).w.DCRPlansLibrary.plansMoved()], [false, true, PLANS_SOURCE === 'folder']);
 
 // ── the link, written by the portal, read by this app ────────────────────
 for (const [given, code] of [
@@ -118,9 +120,10 @@ for (const [folder, code] of [['A249', 'A249'], ['A249 - old name', 'A249'], ['A
   eq('… and none of it touched storage or the network', touched, []);
 }
 {
-  // Off: the same call goes on to the library's usual checks — here the
+  // Off (the portal's config.js set back to "sharepoint", the rollback): the
+  // same call goes on to the library's usual checks — here the
   // sandbox has no device storage, so it stops at "unsupported", not "moved".
-  const { w } = page(null);
+  const { w } = page({ PLANS_SOURCE: 'sharepoint' });
   let code = '';
   try { await w.DCRPlansLibrary.save({ id: '01MADEUP' }); } catch (e) { code = e.code; }
   eq('with the switch off, save goes on as before', code, 'unsupported');
