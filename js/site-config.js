@@ -15,4 +15,4 @@
 // Changing this line is the whole switch for the app. Each person can still
 // choose for their own device in Settings, which is how the folder is tried
 // before the switch and how one device is kept on the old way after it.
-export const PLANS_SOURCE = 'sharepoint';
+export const PLANS_SOURCE = 'folder';
