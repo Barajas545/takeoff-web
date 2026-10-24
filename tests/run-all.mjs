@@ -37,6 +37,7 @@ const PORTABLE = [
   'ref-distance',       // it is drawn, distinctly, and keeps its own scale
   'revision-counting',  // what counts == the desktop's own methods (closure-checked)
   'revision-web-flow',  // origins follow their sheets; stamp, book, undo; reports
+  'plans-folder',       // the Plans Archive: projects, plan files, save guard, made-up folders
 ];
 
 // NEEDS THE LIBRARY: these read the estimator's real projects, which is the

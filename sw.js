@@ -12,14 +12,15 @@
  *
  * Project files are never put in this cache: they are the estimator's own
  * documents and run to gigabytes. Plans saved for offline use are kept by
- * the portal's Plans Library, in the origin-private file system, not here.
+ * the portal's Plans Library, in the origin-private file system, or read
+ * straight off the disk from the Plans Archive folder — never here.
  *
  * Bump CACHE whenever the app changes, or an installed copy will keep
  * serving the old one. A new module goes in PROGRAM: tests/sw-precache.mjs
  * fails when one main.js can reach is missing, and when an entry names a
  * file that does not exist — that would fail every install.
  */
-const CACHE = 'ptt-web-v11';
+const CACHE = 'ptt-web-v12';
 
 /**
  * The program, precached on install: the page, the stylesheet, and every
@@ -42,6 +43,7 @@ const PROGRAM = [
   'index.html',
   'css/app.css',
   'js/main.js',
+  'js/site-config.js',
   'js/core/canvas-limits.js',
   'js/core/counting.js',
   'js/core/drafts.js',
@@ -49,6 +51,7 @@ const PROGRAM = [
   'js/core/measure.js',
   'js/core/page-store.js',
   'js/core/pdf-import.js',
+  'js/core/plans-folder.js',
   'js/core/project.js',
   'js/core/remote-file.js',
   'js/core/revisions.js',
@@ -69,6 +72,7 @@ const PROGRAM = [
   'js/ui/catalog.js',
   'js/ui/dialogs.js',
   'js/ui/items-panel.js',
+  'js/ui/plans-archive.js',
   'js/ui/report-html.js',
   'js/ui/reports.js',
   'js/ui/revisions-panel.js',

@@ -55,6 +55,7 @@ try {
         <div class="menu-pop">
           <button data-act="new-project">New Project<kbd>Ctrl+N</kbd></button>
           <button data-act="open-project">Open Project…<kbd>Ctrl+O</kbd></button>
+          <button data-act="plans-archive">Plans Archive…</button>
           <button data-act="import-pdf">Import PDF…<kbd>Ctrl+I</kbd></button>
           <hr>
           <button data-act="save">Save<kbd>Ctrl+S</kbd></button>
@@ -336,6 +337,12 @@ try {
           <p class="es-hint">
             Drop a <code>.takeoff</code> or <code>.pdf</code> file anywhere on this window.
           </p>
+          <!-- The Plans Archive: plan files from a folder on this computer.
+               Filled by js/ui/plans-archive.js (renderStart): the "choose
+               your folder" step, "Reconnect" after a browser restart, then a
+               search box and the recently opened plans. Hidden until a
+               folder is chosen while plans still come from the portal. -->
+          <div class="es-lib es-arch" id="esArchive" hidden></div>
           <!-- Plans the portal's Plans Library saved to this device, so they
                open with no signal. Filled by renderLibraryList() in
                js/main.js from the portal's read-only index; hidden when there

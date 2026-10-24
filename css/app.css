@@ -822,6 +822,81 @@ button { font-family: inherit; }
   font-size: 10px; font-weight: 600; line-height: 15px; white-space: nowrap;
 }
 
+/* The Plans Archive on the start screen — the same frame as the saved-copies
+   list above, so the two read as one family. The search box and the button
+   share a row, wrapping on a phone. */
+.es-arch-note { margin: 0 0 10px; font-size: 11.5px; line-height: 1.45; color: var(--text-dim); }
+.es-arch-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.es-arch-find {
+  flex: 1 1 160px; min-width: 0; min-height: var(--ctl-h);
+  background: var(--field-bg); color: var(--text);
+  border: 1px solid #303030; border-radius: 6px;
+  padding: 7px 9px; font-size: 12.5px; font-family: inherit;
+}
+.es-arch-btn { display: block; width: 100%; margin: 0 0 8px; min-height: var(--ctl-h); }
+.es-arch-row .es-arch-btn { width: auto; flex: 0 0 auto; margin: 0; }
+.es-arch-sub {
+  margin: 8px 0 6px; font-size: 10px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--text-faint);
+}
+button.es-lib-manage { background: none; border: 0; cursor: pointer; font-family: inherit; }
+
+/* The Plans Archive browser (a wide dialog). */
+.pa { display: flex; flex-direction: column; gap: 10px; min-height: min(420px, 60vh); }
+.pa-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pa-search {
+  flex: 1 1 220px; min-width: 0; min-height: var(--ctl-h);
+  background: var(--field-bg); color: var(--text);
+  border: 1px solid #303030; border-radius: 6px;
+  padding: 7px 10px; font-size: 13px; font-family: inherit;
+}
+.pa-count { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
+.pa-list { display: flex; flex-direction: column; gap: 4px; }
+.pa-sect {
+  margin: 10px 0 2px; font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.pa-proj[hidden] { display: none; }
+.pa-proj { border: 1px solid var(--btn-press); border-radius: 6px; background: #222; }
+.pa-proj-head {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; width: 100%;
+  min-height: var(--ctl-h); padding: var(--ctl-pad);
+  background: none; border: 0; color: var(--text); text-align: left;
+  font-size: 12.5px; font-family: inherit; cursor: pointer; border-radius: 6px;
+}
+.pa-proj-head:hover { background: var(--btn-bg); }
+.pa-proj-head:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
+.pa-proj-head[aria-expanded="true"] { border-bottom: 1px solid #333; border-radius: 6px 6px 0 0; }
+.pa-code { font-variant-numeric: tabular-nums; }
+.pa-pname { color: var(--text-dim); overflow-wrap: anywhere; min-width: 0; }
+.pa-tag {
+  margin-left: auto; padding: 0 6px; border-radius: 8px;
+  border: 1px solid #3a3a3a; color: var(--text-faint); font-size: 10.5px; line-height: 16px;
+}
+.pa-proj-body[hidden] { display: none; }
+.pa-proj-body { padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 4px; }
+.pa-sub { margin: 6px 0 2px; font-size: 11px; font-weight: 600; color: var(--text-dim); overflow-wrap: anywhere; }
+.pa-file, .pa-folder {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 6px 8px; border-radius: 5px; background: var(--chip-bg);
+}
+.pa-ic { font-size: 16px; line-height: 1; }
+.pa-ftxt { flex: 1 1 240px; min-width: 0; }
+.pa-fname { font-size: 12.5px; overflow-wrap: anywhere; }
+.pa-fmeta { margin-top: 1px; font-size: 11px; color: var(--text-dim); overflow-wrap: anywhere; }
+.pa-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.pa-acts .btn { min-height: var(--ctl-h); }
+.pa-older { margin-top: 4px; }
+.pa-older > summary {
+  cursor: pointer; font-size: 11.5px; color: var(--text-dim); padding: 4px 2px;
+  min-height: var(--icon-h);
+}
+.pa-older[open] > summary { margin-bottom: 4px; }
+.pa-older > .pa-file + .pa-file, .pa-older > .pa-sub + .pa-file { margin-top: 4px; }
+.pa-note { margin: 4px 0; font-size: 11.5px; line-height: 1.45; color: var(--text-dim); }
+.pa-warn { color: var(--warn); }
+.pa-folders { display: flex; flex-direction: column; gap: 6px; }
+
 .drop-veil[hidden] { display: none; }
 .drop-veil {
   position: absolute; inset: 12px; z-index: 30;

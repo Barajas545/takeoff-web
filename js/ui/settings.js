@@ -12,6 +12,7 @@
 import * as D from './dialogs.js';
 import { DEFAULT_DPI } from '../core/units.js';
 import { PREVIEW_SIZES } from './callout-preview.js';
+import { PLANS_SOURCE } from '../site-config.js';
 
 const STORAGE_KEY = 'ptt.settings.v1';
 
@@ -37,6 +38,11 @@ export const DEFAULT_SETTINGS = {
   // be changed by accident. This is for the estimator who lives in Edit Mode
   // and would rather not press the button every time.
   open_in_edit_mode: false,
+  // Where plan files come from on this device: null follows the company's
+  // default (js/site-config.js), which is how the switch reaches everyone;
+  // 'sharepoint' or 'folder' is this person's own choice and wins. A NEW key,
+  // for the reason at the top of this file.
+  plans_source: null,
   page_nav_keys: 'pageupdown',
   thumb_width: 190,
   items_width: 300,
@@ -163,6 +169,20 @@ export class Settings {
       const precision = D.field(form, 'Measure precision',
         D.select(['Nearest Inch', 'Inches Only', '1/2', '1/8', '1/16'], v.distance_precision));
 
+      const SOURCE_WORDS = {
+        sharepoint: 'SharePoint, through the portal',
+        folder: 'The Plans Archive folder on this computer',
+      };
+      const plans = D.field(form, 'Plan files',
+        D.select([
+          ['', `Company default — ${SOURCE_WORDS[PLANS_SOURCE] || SOURCE_WORDS.sharepoint}`],
+          ['sharepoint', SOURCE_WORDS.sharepoint],
+          ['folder', SOURCE_WORDS.folder],
+        ], v.plans_source || ''),
+        'What the start screen offers plans from. The company changes the '
+        + 'default when the plans move; choose here only to try the other way '
+        + 'on this device. File › Plans Archive works either way.');
+
       const touch = D.input('', 'checkbox');
       touch.checked = !!v.ui_touch_mode;
       const touchWrap = D.el('div', 'radio-row');
@@ -201,6 +221,7 @@ export class Settings {
             page_nav_keys: nav.value,
             preview_popup_size: preview.value,
             distance_precision: precision.value,
+            plans_source: plans.value || null,
             ui_touch_mode: touch.checked,
             company_name: cName.value.trim(),
             company_address: cAddr.value.trim(),

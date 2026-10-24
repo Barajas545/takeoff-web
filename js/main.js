@@ -8,6 +8,12 @@ import { draftKey, putDraft, getDraft, dropDraft } from './core/drafts.js';
 import { CalloutPreview } from './ui/callout-preview.js';
 import { resolveUiMode } from './ui/settings.js';
 import { RemoteFile } from './core/remote-file.js';
+import {
+  PlansFolders, idbBackend, fileStamp, changedSince, permissionOf, askPermission,
+  resolvePlansSource, parsePlansLink,
+} from './core/plans-folder.js';
+import { PlansArchive } from './ui/plans-archive.js';
+import { PLANS_SOURCE } from './site-config.js';
 import { PageStore } from './core/page-store.js';
 import {
   Project, KEEPS_OWN_SCALE, takeoffFingerprint, resyncGroups,
@@ -62,6 +68,13 @@ const app = {
   // lock that keeps the portal from deleting it — null for any other file.
   // See openLibraryCopy().
   libraryCopy: null,
+  // The open project lives in a Plans Archive folder on this computer:
+  // { stamp, dir, folderName, path } — what the file was when it was opened,
+  // so Save can tell when another computer saved it since. Null otherwise.
+  // See openArchiveTakeoff() and checkArchiveWrite().
+  archive: null,
+  // Where Save As starts: the folder of the PDF this takeoff was started from.
+  saveStartIn: null,
   // False is View Only, which is what a project opens in. See setEditing().
   editing: false,
 };
@@ -2355,6 +2368,29 @@ const canUseFsApi = 'showOpenFilePicker' in window
   && !new URLSearchParams(location.search).has('nofsapi');
 
 /**
+ * Where plans come from on this device: 'folder' (the Plans Archive folder)
+ * or 'sharepoint' (handed over by the portal). Settings first, then the
+ * company's default in js/site-config.js — the line that is the switch.
+ */
+function plansSource() {
+  return resolvePlansSource(app.settings.get('plans_source'), PLANS_SOURCE);
+}
+
+// The Plans Archive: plan folders chosen on this device, remembered in
+// IndexedDB (a folder handle can be kept there and nowhere else).
+const plansStore = new PlansFolders({ backend: idbBackend() });
+const plansArchive = new PlansArchive({
+  store: plansStore,
+  host: {
+    mode: () => plansSource(),
+    status: text => setStatus(text),
+    refreshStart: () => renderArchiveSection(),
+    openTakeoff: entry => openArchiveTakeoff(entry),
+    startFromPdf: entry => startArchivePdf(entry),
+  },
+});
+
+/**
  * Open a project.
  *
  * The unsaved-changes prompt is checked SYNCHRONOUSLY first. Awaiting it
@@ -2393,8 +2429,13 @@ async function openProjectFile() {
  *
  * `library` is given only for a Plans Library copy (see openLibraryCopy): the
  * hold that keeps the portal from deleting that copy while it is open.
+ *
+ * `archive` is given for a file opened from the Plans Archive folder (see
+ * openArchiveTakeoff). A file opened any other way that turns out to sit
+ * inside one of this device's plan folders is treated the same, so Save
+ * guards it the same way whichever door it came in by.
  */
-async function loadProjectFile(file, handle = null, { library = null } = {}) {
+async function loadProjectFile(file, handle = null, { library = null, archive = null } = {}) {
   showProgress('Opening project…', 0, 1, file.name);
   try {
     // Only the header, the metadata and the page index are read here — about
@@ -2412,6 +2453,8 @@ async function loadProjectFile(file, handle = null, { library = null } = {}) {
     });
     app.pages.setFromProject(opened);
     app.fileHandle = handle;
+    app.archive = archive;
+    app.saveStartIn = archive ? archive.dir || null : null;
     // The project in hand is this one from here on. A library copy the last
     // one was read from is no longer open, so its lock goes now — not before,
     // because a failed open leaves the last project open and still reading
@@ -2455,6 +2498,7 @@ async function loadProjectFile(file, handle = null, { library = null } = {}) {
     // Not a library copy: Recent can only offer the OS file picker, and that
     // cannot see the browser's private storage the copy lives in.
     if (!library) noteRecent(file);
+    if (handle && !archive) await adoptIfInArchive(handle, file);
     syncTitle();
     await offerDraftRestore(file);
     const mb = (file.size / 1048576).toFixed(file.size > 1e9 ? 0 : 1);
@@ -2527,19 +2571,52 @@ async function saveProject({ saveAs = false } = {}) {
   }
 
   let handle = app.fileHandle;
+  const handleBefore = handle;
+
+  // A plan in the Plans Archive is shared: OneDrive keeps the folder the same
+  // on every computer, so the file may have been saved somewhere else since
+  // it was opened here. Writing over it then would lose that work in place,
+  // with nothing said. So look first, and ask.
+  if (handle && !saveAs && app.archive) {
+    const verdict = await checkArchiveWrite(handle);
+    if (verdict === 'cancel') return;
+    if (verdict === 'save-as') saveAs = true;
+  } else if (app.archive && !(await projectSourcesReadable())) {
+    // Save As cannot write a project whose sheets can no longer be read
+    // either: the file they came from was replaced. Keep the work instead.
+    let now = null;
+    try { now = handle ? await handle.getFile() : null; } catch { now = null; }
+    await keepChangesAsDraft(now);
+    return;
+  }
+
   if (saveAs || !handle) {
     if (canUseFsApi) {
+      // Save As starts in the folder the plan came from — the archive
+      // project's own folder, or the PDF's — so a new takeoff lands beside
+      // its drawings unless the estimator moves it.
+      const startIn = (app.archive && app.archive.dir) || app.saveStartIn || null;
+      const pick = withStart => window.showSaveFilePicker({
+        suggestedName: suggestedFileName(),
+        types: [{
+          description: 'Takeoff Project',
+          accept: { 'application/octet-stream': [FILE_EXTENSION] },
+        }],
+        ...(withStart ? { startIn } : {}),
+      });
       try {
-        handle = await window.showSaveFilePicker({
-          suggestedName: suggestedFileName(),
-          types: [{
-            description: 'Takeoff Project',
-            accept: { 'application/octet-stream': [FILE_EXTENSION] },
-          }],
-        });
+        handle = await pick(!!startIn);
       } catch (err) {
         if (err.name === 'AbortError') return;
-        throw err;
+        // A folder the browser will not start in any more (moved, renamed,
+        // gone) is no reason not to save: ask again without it.
+        if (!startIn) throw err;
+        try {
+          handle = await pick(false);
+        } catch (err2) {
+          if (err2.name === 'AbortError') return;
+          throw err2;
+        }
       }
     } else {
       handle = null;   // fall through to a download
@@ -2565,6 +2642,10 @@ async function saveProject({ saveAs = false } = {}) {
       // them, and a sheet would then fail to decode with the project still
       // open. Re-acquire the handle's File and re-point the page index at it.
       await reacquireAfterSave(handle);
+      // What the file is now, so the next Save can tell our own write from
+      // somebody else's; and a takeoff saved into the archive is one of its
+      // plans from here on.
+      await noteArchiveSave(handle, handle !== handleBefore);
     } else {
       const how = await downloadBlob(blob, suggestedFileName());
       if (how === 'cancelled') { setStatus('Save cancelled.'); return; }
@@ -2610,6 +2691,177 @@ async function reacquireAfterSave(handle) {
     }
   } catch (err) {
     console.warn('could not re-acquire the saved file; page slices kept', err);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   The Plans Archive
+
+   Plan files kept in a folder on this computer — a synced OneDrive folder
+   with one folder per project — instead of handed over by the portal. The
+   screens are js/ui/plans-archive.js; what is here is the part that touches
+   the open project: opening with the file's handle so Save writes back into
+   the folder, and checking before that write that nobody else has saved the
+   file since.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/** Open a .takeoff from the archive, with its handle. Resolves whether it opened. */
+async function openArchiveTakeoff(entry) {
+  if (app.project.dirty && !(await confirmDiscard())) return false;
+  let file;
+  try {
+    file = await entry.handle.getFile();
+  } catch {
+    await D.alertDialog('Not in the folder any more',
+      `${entry.name} is no longer where it was in ${entry.folderName || 'the Plans Archive'} — `
+      + 'it may have been moved, renamed or deleted, or OneDrive is still bringing '
+      + 'it down. Browse the Plans Archive to find it again.');
+    return false;
+  }
+  const ok = await loadProjectFile(file, entry.handle, {
+    archive: {
+      stamp: fileStamp(file), dir: entry.dir || null,
+      folderName: entry.folderName || '', path: entry.path || '',
+    },
+  });
+  if (ok) {
+    await plansStore.noteRecent({ ...entry, size: file.size, lastModified: file.lastModified });
+  }
+  return ok;
+}
+
+/** Start a new takeoff from a PDF in the archive; Save As then starts in its folder. */
+async function startArchivePdf(entry) {
+  let file;
+  try {
+    file = await entry.handle.getFile();
+  } catch {
+    await D.alertDialog('Not in the folder any more',
+      `${entry.name} is no longer where it was — it may have been moved, renamed or deleted.`);
+    return;
+  }
+  await importPdfFile(file, { saveStartIn: entry.dir || null });
+}
+
+/**
+ * Before Save writes over an archive file in place: 'write', 'save-as' or
+ * 'cancel'. Permission comes first, while the Save click still counts as one —
+ * the browser will not show its prompt otherwise.
+ */
+async function checkArchiveWrite(handle) {
+  let perm = await permissionOf(handle, 'readwrite');
+  if (perm !== 'granted') perm = await askPermission(handle, 'readwrite');
+  if (perm !== 'granted') {
+    const ok = await D.confirmDialog('Not allowed to save into the folder',
+      `This browser was not allowed to write to ${app.fileName}. Save it as a new `
+      + 'file instead?', { okLabel: 'Save As…' });
+    return ok ? 'save-as' : 'cancel';
+  }
+  let now = null;
+  try { now = await handle.getFile(); } catch { now = null; }
+  if (now && !changedSince(app.archive.stamp, now)) return 'write';
+  // Every untouched sheet is a slice of the file as it was opened, and the
+  // browser will not read a file that has been replaced since — so once it
+  // has changed, no project can be written from here at all, in place or as
+  // a new file. Keep the work instead, where reopening the plan finds it.
+  if (!(await projectSourcesReadable())) return keepChangesAsDraft(now);
+  return askChangedOnDisk(now);
+}
+
+/** Can the open project's sheets still be read from the file they came from? */
+async function projectSourcesReadable() {
+  const needsFile = app.pages.saveSources().some(s => s.kind === 'slice')
+    || app.pages.revisionSheetCount() > 0;
+  if (!needsFile || !app.pages.file) return true;
+  return libraryCopyReadable(app.pages.file);
+}
+
+/**
+ * The file was replaced (or went) after it was opened and its sheets can no
+ * longer be read: keep the work as a draft keyed to the file as it is NOW, so
+ * opening that file again offers it back (offerDraftRestore), and say so.
+ * Always resolves 'cancel' — nothing is written.
+ */
+async function keepChangesAsDraft(now) {
+  const work = app.project.buildSaveMetadata();
+  const info = { pageCount: app.pages.pageCount, name: app.fileName || '' };
+  await putDraft(currentDraftKey(), work, info);
+  if (now) await putDraft(draftKey(app.fileName, now.size), work, info);
+  await D.alertDialog('Changed since you opened it', now
+    ? `${app.fileName} was replaced in the folder after you opened it — saved on `
+      + 'another computer, or brought down by OneDrive. The drawings of the copy '
+      + 'you opened are no longer there to read, so your changes cannot be '
+      + 'written into a project file from here.\n\n'
+      + 'Your changes are kept on this device. Open the plan again from the Plans '
+      + 'Archive and choose “Restore it” when it offers your unsaved work. Your '
+      + 'version then replaces the one saved elsewhere, so look at that one first.'
+    : `${app.fileName} is no longer where it was opened from — moved, renamed or `
+      + 'deleted, or OneDrive is replacing it — so your changes cannot be written '
+      + 'into a project file from here.\n\n'
+      + 'Your changes are kept on this device. When the file is back, open it and '
+      + 'choose “Restore it” when it offers your unsaved work.');
+  setStatus('Not saved — your changes are kept on this device as unsaved work.');
+  return 'cancel';
+}
+
+/** The file changed (or went) after it was opened: say how, and let the estimator choose. */
+function askChangedOnDisk(now) {
+  const when = ms => new Date(ms).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+  const mb = n => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+  const was = app.archive.stamp;
+  const text = now
+    ? `${app.fileName} was changed after you opened it — saved from another `
+      + 'computer, or brought down by OneDrive.\n\n'
+      + `When you opened or last saved it: ${when(was.lastModified)}, ${mb(was.size)}\n`
+      + `In the folder now: ${when(now.lastModified)}, ${mb(now.size)}\n\n`
+      + 'Saving here would replace those changes with yours. Save yours as a new '
+      + 'file instead, and compare the two?'
+    : `${app.fileName} is no longer where it was opened from — moved, renamed or `
+      + 'deleted, or OneDrive is replacing it. Save yours as a new file instead?';
+  return D.showDialog(close => {
+    const body = D.el('div');
+    body.style.whiteSpace = 'pre-wrap';
+    body.textContent = text;
+    const buttons = [D.button('Cancel', '', () => close('cancel'))];
+    if (now) buttons.push(D.button('Replace it anyway', 'danger', () => close('write')));
+    buttons.push(D.button('Save as a new file…', 'primary', () => close('save-as')));
+    return D.dlg({ title: 'Changed since you opened it', body, buttons });
+  }).then(v => v || 'cancel');
+}
+
+/**
+ * After a write through a handle: the archive's record of the file follows
+ * it. A Save As to a new file is located again — into the archive, it is one
+ * of its plans from here on; elsewhere, the guard still knows its stamp.
+ */
+async function noteArchiveSave(handle, isNewFile) {
+  try {
+    const file = await handle.getFile();
+    if (isNewFile && await adoptIfInArchive(handle, file)) return;
+    if (app.archive) app.archive.stamp = fileStamp(file);
+  } catch { /* the next save asks again; nothing here may fail a save */ }
+}
+
+/**
+ * A file opened or saved through the ordinary pickers that sits inside one of
+ * this device's plan folders is an archive file all the same: Save guards it,
+ * and it goes on the start screen's recent list. Resolves whether it was one.
+ */
+async function adoptIfInArchive(handle, file) {
+  try {
+    const where = await plansArchive.locate(handle);
+    if (!where) return false;
+    app.archive = { stamp: fileStamp(file), dir: where.dir, folderName: where.folderName, path: where.path };
+    await plansStore.noteRecent({
+      handle, dir: where.dir, name: handle.name, path: where.path, code: where.code,
+      project: where.project, folderId: where.folderId, folderName: where.folderName,
+      size: file.size, lastModified: file.lastModified,
+    });
+    return true;
+  } catch {
+    return false;   // not knowing where it is changes nothing about opening it
   }
 }
 
@@ -2816,13 +3068,15 @@ async function confirmDiscard() {
 
 // ── PDF import ────────────────────────────────────────────────────────────
 
-async function importPdfFile(file, { intoOpen = false } = {}) {
+async function importPdfFile(file, { intoOpen = false, saveStartIn = null } = {}) {
   if (!intoOpen && app.project.dirty && !(await confirmDiscard())) return;
   const dpi = app.settings.get('import_dpi');
   showProgress('Reading PDF…', 0, 1, file.name);
   try {
     if (!intoOpen) {
       newProject();
+      // A PDF from the Plans Archive: Save As starts in its folder.
+      app.saveStartIn = saveStartIn || null;
       app.project.metadata.project_name = file.name.replace(/\.pdf$/i, '');
       app.project.metadata.source = file.name;
       app.project.metadata.dpi = dpi;
@@ -3138,6 +3392,8 @@ function newProject() {
   app.currentPage = 0;
   app.fileHandle = null;
   app.fileName = '';
+  app.archive = null;
+  app.saveStartIn = null;
   // The old project is gone, so a library copy it was read from is no
   // longer open and the portal may tidy it away.
   releaseLibraryCopy();
@@ -3200,6 +3456,9 @@ async function runAction(act) {
       reloadForUpdateIfIdle();
       break;
     case 'open-project': await openProjectFile(); break;
+    // Straight through: the folder picker or the browser's "allow" prompt
+    // may be the first thing it shows, and both need this click.
+    case 'plans-archive': await plansArchive.open(); break;
     case 'import-pdf': {
       // The picker is opened first, before anything that could await, so the
       // click's user activation is still live when it runs.
@@ -3434,6 +3693,8 @@ function onSettingsChanged() {
   // The nudge shortcut steps aside when the arrows are the page-turn keys.
   const nav = app.settings.get('page_nav_keys');
   controller.arrowsNavigatePages = nav === 'leftright' || nav === 'updown';
+  // Where plans come from may have changed: the start screen follows.
+  if (!$('emptyState').hidden) renderStartLists();
   requestDraw();
 }
 
@@ -3967,8 +4228,21 @@ function syncHistoryButtons() {
 
 function showEmptyState() {
   $('emptyState').hidden = false;
-  // Back at the start screen: list whatever the Plans Library holds now.
+  // Back at the start screen: list whatever the Plans Library holds now,
+  // and where the Plans Archive stands on this device.
+  renderStartLists();
+}
+
+/** Both start-screen lists: the portal's saved copies and the Plans Archive. */
+function renderStartLists() {
   renderLibraryList();
+  renderArchiveSection();
+}
+
+function renderArchiveSection() {
+  void plansArchive.renderStart($('esArchive')).catch(err => {
+    console.warn('plans archive section', err);
+  });
 }
 function hideEmptyState() { $('emptyState').hidden = true; }
 
@@ -4112,13 +4386,19 @@ async function openFromPortal(id) {
     return;
   }
 
-  await loadProjectFile(new RemoteFile({
+  const opened = await loadProjectFile(new RemoteFile({
     url: rec.url,
     name: rec.name,
     size: rec.size,
     lastModified: Number(rec.lastModified) || 0,
     renew: renewerFor(rec.renew),
   }));
+  // After the switch a portal link still works for as long as SharePoint
+  // answers it — but the plan it opens is the old copy, not the archive's.
+  if (opened && plansSource() === 'folder') {
+    setStatus('Opened from the old portal (SharePoint). Plans are kept in the '
+      + 'Plans Archive folder now — this copy may be older than the one there.');
+  }
 }
 
 /**
@@ -4337,6 +4617,14 @@ function renderLibraryList() {
   const box = $('esLibrary');
   const list = $('esLibraryList');
   if (!box || !list) return;
+  // Once plans come from the Plans Archive, these copies are mirrors of the
+  // old SharePoint files that nothing updates any more: listing them beside
+  // the archive would offer two versions of one plan with no way to tell.
+  if (plansSource() === 'folder') {
+    list.replaceChildren();
+    box.hidden = true;
+    return;
+  }
   const entries = libraryEntries();
   list.replaceChildren(...entries.map(libraryItem));
   box.hidden = !entries.length;
@@ -4405,6 +4693,13 @@ window.addEventListener('pageshow', ev => {
 /* Checked synchronously: an async check would let the idle status below land
    on top of "Opening project…". */
 const HANDOFF = /(?:^|[#&])open=([^&]+)/.exec(location.hash || '');
+// `#plans` / `#plans=A249`: the portal's search, or a bookmark, asking for the
+// Plans Archive or one job's plans in it. A project number is no credential,
+// so unlike a handoff it may travel in the address.
+const PLANS_LINK = HANDOFF ? null : parsePlansLink(location.hash || '');
+const IDLE_STATUS = canUseFsApi
+  ? 'Open a .takeoff project, or start from a PDF.'
+  : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.';
 if (HANDOFF) {
   setStatus('Opening the project from the portal…');
   openFromPortal(HANDOFF[1]).catch(async err => {
@@ -4413,14 +4708,27 @@ if (HANDOFF) {
   }).finally(() => {
     // Nothing opened — a used link, a saved copy no longer here — so this is
     // the start screen after all, and it lists what is saved like any launch.
-    if (!$('emptyState').hidden) renderLibraryList();
+    if (!$('emptyState').hidden) renderStartLists();
   });
+} else if (PLANS_LINK) {
+  // Consumed like a handoff: a reload must not open the browser again over
+  // a project the estimator has opened since.
+  try { history.replaceState(null, '', location.pathname + location.search); } catch { /* cosmetic */ }
+  setStatus(IDLE_STATUS);
+  renderStartLists();
+  plansArchive.openLink(PLANS_LINK).catch(err => console.warn('plans link', err));
 } else {
-  setStatus(canUseFsApi
-    ? 'Open a .takeoff project, or start from a PDF.'
-    : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.');
-  renderLibraryList();
+  setStatus(IDLE_STATUS);
+  renderStartLists();
 }
+// The same link followed into a tab that already has the app open changes
+// only the hash, and the page does not load again.
+window.addEventListener('hashchange', () => {
+  const link = parsePlansLink(location.hash || '');
+  if (!link) return;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch { /* cosmetic */ }
+  plansArchive.openLink(link).catch(err => console.warn('plans link', err));
+});
 requestDraw();
 
 // The catalog backs the name box's autocomplete; a failure to load it must

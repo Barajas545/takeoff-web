@@ -54,6 +54,41 @@ back the next time you open that file.
 
 ---
 
+## Plans from a folder on this computer
+
+On Chrome or Edge on a computer, plans can be opened straight from a folder —
+the company's **Plans Archive**, a synced OneDrive folder holding one folder
+per project, named by the project number (`A249`, or `A249 - 12 Main St - …`).
+
+**Choose it once.** *File › Plans Archive…*, or the start screen: *Choose your
+Plans Archive folder*. The browser asks to let the app see and edit files in
+that folder, and remembers the folder on this computer. After the browser
+restarts it asks once more — press *Reconnect*, or pick *Allow on every visit*
+and that step goes away.
+
+**Find a plan.** Type a project number or part of a name. A project's
+`.takeoff` files are listed newest first, with the older copies (Backups)
+folded away below them. A PDF can be viewed, or a new takeoff started from it.
+
+**Save writes back into the folder** — after checking that nobody saved the
+same file from another computer since you opened it. If somebody did, nothing
+is written over their work: your changes are kept on this device and offered
+back when you open the plan again.
+
+**Links.** `index.html#plans=A249` opens that project's plans.
+
+**Where plans come from** is the company's default (`js/site-config.js`) until
+someone chooses otherwise for their own device in *Settings › Plan files*.
+
+On a phone or a tablet the browser cannot open a folder: use *Open a .takeoff
+project* and pick the file in the OneDrive app; Save hands it back through the
+share sheet.
+
+The folder is read on the device, like any file you open. Nothing about it is
+uploaded anywhere.
+
+---
+
 ## What it does
 
 | | |
