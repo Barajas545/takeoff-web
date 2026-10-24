@@ -52,6 +52,7 @@ const PROGRAM = [
   'js/core/page-store.js',
   'js/core/pdf-import.js',
   'js/core/plans-folder.js',
+  'js/core/device-plans.js',
   'js/core/project.js',
   'js/core/remote-file.js',
   'js/core/revisions.js',

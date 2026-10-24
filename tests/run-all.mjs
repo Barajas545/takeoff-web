@@ -38,6 +38,7 @@ const PORTABLE = [
   'revision-counting',  // what counts == the desktop's own methods (closure-checked)
   'revision-web-flow',  // origins follow their sheets; stamp, book, undo; reports
   'plans-folder',       // the Plans Archive: projects, plan files, save guard, made-up folders
+  'device-plans',       // plans kept on this device: keep, list, remove, the portal's copies after the move
 ];
 
 // NEEDS THE LIBRARY: these read the estimator's real projects, which is the

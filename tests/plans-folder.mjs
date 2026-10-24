@@ -18,6 +18,7 @@ import {
   isHiddenName, isOlderCopiesFolder, listTopFolders, matchProject, describeChosenFolder,
   walkPlans, filesOf, fileStamp, changedSince, resolvePlansSource, parsePlansLink,
   permissionOf, askPermission, canPickFolders, PlansFolders, memoryBackend, PLANS_DIR, restOfName,
+  ARCHIVE_MARKER, isOneDriveArchive,
 } from '../js/core/plans-folder.js';
 import { PLANS_SOURCE } from '../js/site-config.js';
 import { writeProject, openProject } from '../js/core/takeoff-file.js';
@@ -90,6 +91,11 @@ class FakeDir {
   async getDirectoryHandle(name) {
     const h = this.kids.get(name);
     if (!h || h.kind !== 'directory') throw notFound(name);
+    return h;
+  }
+  async getFileHandle(name) {
+    const h = this.kids.get(name);
+    if (!h || h.kind !== 'file') throw notFound(name);
     return h;
   }
   async isSameEntry(o) { return o === this; }
@@ -252,6 +258,24 @@ eq('its parent: no projects, and the folder inside that has them is offered',
   [0, 'DCR - Floor Plans - Archive', 5]);
 const one = await describeChosenFolder(a249);
 eq('one project\'s own folder is recognised as such', [one.projects, one.isProjectFolder, one.suggestion], [0, true, null]);
+
+// ── the OneDrive Plans Archive and its twin ──────────────────────────────
+// A computer that synced the old SharePoint library has a folder of the same
+// name there; only the OneDrive one holds the marker the documents copy writes.
+eq('the marker\'s name is the one copy_documents.mjs writes', ARCHIVE_MARKER, '_DCR Plans Archive - OneDrive.txt');
+const oneDrive = tree('DCR - Floor Plans - Archive', { 'A249/': { 'Main.takeoff': [1] }, [ARCHIVE_MARKER]: [1] });
+const twin = tree('DCR - Floor Plans - Archive', { 'A249/': { 'Main.takeoff': [1] } });
+eq('the OneDrive one holds the marker; the SharePoint twin does not',
+  [await isOneDriveArchive(oneDrive), await isOneDriveArchive(twin), await isOneDriveArchive(null)], [true, false, false]);
+eq('a folder named like the marker is not one',
+  await isOneDriveArchive(tree('X', { [`${ARCHIVE_MARKER}/`]: {} })), false);
+const lookOd = await describeChosenFolder(oneDrive);
+const lookTwin = await describeChosenFolder(twin);
+eq('describeChosenFolder says which is which (same name, same projects)',
+  [lookOd.projects, lookOd.marker, lookTwin.projects, lookTwin.marker], [1, true, 1, false]);
+eq('the marker is never listed as a plan file', (await listTopFolders(oneDrive)).files.map(x => x.name), []);
+const odParent = new FakeDir('OneDrive - Made-up', [oneDrive]);
+eq('a parent folder offers the archive inside, with its marker', (await describeChosenFolder(odParent)).suggestion.marker, true);
 
 // ── what changed under an open project, with a real file ─────────────────
 // A 1×1 PNG, then the app's own writer and reader: the handle a walk hands

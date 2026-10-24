@@ -182,10 +182,34 @@ export function matchProject(projects, code) {
 }
 
 /**
+ * The OneDrive Plans Archive's marker file. DCR Desktop 2's documents copy
+ * (tools/retire/copy_documents.mjs) writes it into the company OneDrive's
+ * "DCR - Floor Plans - Archive" on its first plans copy — and never into
+ * SharePoint's own folder of the same name, which a computer that syncs the
+ * old SharePoint library also has. The browser's folder picker gives no full
+ * path, so the two look the same here; a save into the SharePoint one would be
+ * written into SharePoint by the sync client. Once plans come from the folder,
+ * only a folder that holds this file is the Plans Archive.
+ */
+export const ARCHIVE_MARKER = '_DCR Plans Archive - OneDrive.txt';
+
+/** Whether a folder is the OneDrive Plans Archive: it holds the marker. One lookup, no listing. */
+export async function isOneDriveArchive(handle) {
+  if (!handle || typeof handle.getFileHandle !== 'function') return false;
+  try {
+    const f = await handle.getFileHandle(ARCHIVE_MARKER);
+    return !!f && f.kind !== 'directory';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Whether the folder someone just chose looks like the archive, and if not,
- * which folder inside it does. Two levels of names, nothing more.
+ * which folder inside it does. Two levels of names, nothing more, and whether
+ * it is the OneDrive one (the marker).
  *
- *   { projects, others, isProjectFolder, suggestion: { name, handle, projects } | null }
+ *   { projects, others, isProjectFolder, marker, suggestion: { name, handle, projects, marker } | null }
  *
  * `isProjectFolder` is a single job's folder chosen by mistake (its own name
  * is a project number). `suggestion` is offered only when the chosen folder
@@ -197,6 +221,7 @@ export async function describeChosenFolder(handle) {
     projects: top.projects.length,
     others: top.others.length,
     isProjectFolder: !!projectCodeOf(handle.name),
+    marker: await isOneDriveArchive(handle),
     suggestion: null,
   };
   if (!out.projects) {
@@ -206,6 +231,7 @@ export async function describeChosenFolder(handle) {
       try { n = (await listTopFolders(o.handle)).projects.length; } catch { n = 0; }
       if (n && (!best || n > best.projects)) best = { name: o.name, handle: o.handle, projects: n };
     }
+    if (best) best.marker = await isOneDriveArchive(best.handle);
     out.suggestion = best;
   }
   return out;

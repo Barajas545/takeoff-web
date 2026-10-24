@@ -20,14 +20,24 @@
 
 import * as D from './dialogs.js';
 import {
-  canPickFolders, describeChosenFolder, listTopFolders, walkPlans,
+  canPickFolders, describeChosenFolder, listTopFolders, walkPlans, isOneDriveArchive,
   permissionOf, askPermission, parseProjectCode, projectCodeOf, compareCodes, restOfName,
 } from '../core/plans-folder.js';
 
 const UNSUPPORTED =
   'Opening plans from a folder needs Chrome or Edge on a computer. On a phone '
   + 'or a tablet, use “Open a .takeoff project” and pick the file in the '
-  + 'OneDrive app.';
+  + 'OneDrive app — then File › Keep on This Device keeps it here, to open '
+  + 'with no internet from the list below.';
+
+// The twin: a computer that synced the old SharePoint library has a folder of
+// the same name there, and a save into it goes to SharePoint.
+const NOT_ONEDRIVE =
+  'This computer may also have the old SharePoint copy of the Plans Archive, '
+  + 'with the same name, inside the synced SharePoint library\'s folder. Saving '
+  + 'there would write into SharePoint. Choose “DCR - Floor Plans - Archive” '
+  + 'in the company OneDrive — the one in your own OneDrive folder, or the one '
+  + 'shared with you from it.';
 
 export class PlansArchive {
   /**
@@ -55,14 +65,28 @@ export class PlansArchive {
     return Promise.all(all.map(async rec => ({ rec, perm: await permissionOf(rec.handle) })));
   }
 
+  /**
+   * The folders that can be read now. Once plans come from the folder, only
+   * the OneDrive Plans Archive counts (it holds the marker): a remembered folder
+   * that is SharePoint's synced twin is never browsed or saved into.
+   */
   async readyFolders() {
-    return (await this.folders()).filter(f => f.perm === 'granted').map(f => f.rec);
+    const strict = this.host.mode() === 'folder';
+    const out = [];
+    for (const f of await this.folders()) {
+      if (f.perm !== 'granted') continue;
+      if (strict && !(await isOneDriveArchive(f.rec.handle))) continue;
+      out.push(f.rec);
+    }
+    return out;
   }
 
   /** Where a file handle sits inside one of the folders, or null. */
   async locate(handle) {
     if (!handle) return null;
+    const strict = this.host.mode() === 'folder';
     for (const rec of await this.store.list()) {
+      if (strict && !(await isOneDriveArchive(rec.handle))) continue;     // the synced twin: not the archive
       try {
         const parts = await rec.handle.resolve(handle);
         if (Array.isArray(parts) && parts.length) {
@@ -113,8 +137,22 @@ export class PlansArchive {
       return;
     }
 
+    // After the switch a remembered folder without the marker (SharePoint's
+    // synced twin, chosen while trying the folder out) is said, never used.
+    const twins = [];
+    if (mode === 'folder') {
+      for (const st of states) {
+        if (st.perm === 'granted' && !(await isOneDriveArchive(st.rec.handle))) twins.push(st);
+      }
+      if (seq !== this._renderSeq) return;
+    }
     const parts = [head(states.length ? () => this.manage() : null)];
-    if (!states.length) {
+    for (const t of twins) {
+      parts.push(D.el('p', 'es-arch-note',
+        `${t.rec.name} on this device is not the OneDrive Plans Archive, so it is not used. `
+        + 'Remove it under Folders and choose the OneDrive one. ' + NOT_ONEDRIVE));
+    }
+    if (states.length === twins.length) {
       parts.push(D.el('p', 'es-arch-note',
         'Plan files are kept in the Plans Archive folder in OneDrive. Choose it '
         + 'once on this computer and every plan opens from here — and saves back '
@@ -125,7 +163,7 @@ export class PlansArchive {
       parts.push(b);
     } else {
       const waiting = states.filter(s => s.perm !== 'granted');
-      const ready = states.filter(s => s.perm === 'granted');
+      const ready = states.filter(s => s.perm === 'granted' && !twins.includes(s));
       if (ready.length) {
         const row = D.el('div', 'es-arch-row');
         const find = D.input('', 'search', {
@@ -153,9 +191,11 @@ export class PlansArchive {
           'The browser asks once each time it starts. Choose “Allow on every '
           + 'visit” when it offers, and this step goes away.'));
       }
-      if (recent.length) {
+      // never a recent file of a folder that is not used (SharePoint's synced twin)
+      const shown = recent.filter(r => !twins.some(t => t.rec.id === r.folderId));
+      if (shown.length) {
         const list = D.el('div', 'es-lib-list es-arch-recent');
-        for (const r of recent.slice(0, 6)) list.appendChild(this._recentItem(r));
+        for (const r of shown.slice(0, 6)) list.appendChild(this._recentItem(r));
         parts.push(D.el('div', 'es-arch-sub', 'Recently opened'), list);
       }
     }
@@ -198,6 +238,12 @@ export class PlansArchive {
     // in it — and only then the file's, both while this click still counts.
     const root = (await this.store.list()).find(f => f.id === r.folderId);
     if (root && (await permissionOf(root.handle)) !== 'granted') await askPermission(root.handle);
+    if (this.host.mode() === 'folder' && !(root && (await isOneDriveArchive(root.handle)))) {
+      await D.alertDialog('Not the OneDrive Plans Archive',
+        `${r.name} was opened from a folder that is not the OneDrive Plans Archive, `
+        + 'so it is not opened from there now.\n\n' + NOT_ONEDRIVE);
+      return;
+    }
     let perm = await permissionOf(r.handle);
     if (perm !== 'granted') perm = await askPermission(r.handle);
     if (perm !== 'granted') {
@@ -264,6 +310,23 @@ export class PlansArchive {
           { okLabel: 'Use it anyway' });
         if (!ok) return null;
       }
+    }
+
+    // The OneDrive Plans Archive holds the marker; SharePoint's synced folder
+    // of the same name does not. After the switch the twin is refused; before
+    // it, trying a folder out is still allowed, with the warning.
+    if (!(await isOneDriveArchive(handle))) {
+      if (this.host.mode() === 'folder') {
+        await D.alertDialog('Not the OneDrive Plans Archive',
+          `${handle.name} is not the company's Plans Archive in OneDrive (it does not hold the `
+          + 'file “_DCR Plans Archive - OneDrive.txt”), so plans cannot be opened or saved there.\n\n' + NOT_ONEDRIVE);
+        return null;
+      }
+      const ok = await D.confirmDialog('Not the OneDrive Plans Archive yet',
+        `${handle.name} does not hold the file “_DCR Plans Archive - OneDrive.txt” that marks the `
+        + 'OneDrive Plans Archive (the plans are copied there on the switch day).\n\n' + NOT_ONEDRIVE
+        + '\n\nUse this folder only to try the app out?', { okLabel: 'Use it to try' });
+      if (!ok) return null;
     }
 
     let added;

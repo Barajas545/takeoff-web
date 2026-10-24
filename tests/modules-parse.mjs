@@ -53,7 +53,7 @@ await rm(tmp, { recursive: true, force: true });
 const BROWSER_ONLY = new Set(['main.js', 'settings.js', 'dialogs.js', 'catalog.js',
   'assemblies.js', 'items-panel.js', 'reports.js', 'thumbnails.js', 'plans-archive.js']);
 const IMPORTABLE = [
-  'site-config.js', 'core/plans-folder.js',
+  'site-config.js', 'core/plans-folder.js', 'core/device-plans.js',
   'core/takeoff-file.js', 'core/zlib.js', 'core/page-store.js', 'core/project.js',
   'core/geom.js', 'core/units.js', 'core/measure.js', 'core/xlsx.js',
   'core/revisions.js',

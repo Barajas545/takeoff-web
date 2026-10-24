@@ -84,6 +84,23 @@ On a phone or a tablet the browser cannot open a folder: use *Open a .takeoff
 project* and pick the file in the OneDrive app; Save hands it back through the
 share sheet.
 
+**Only the OneDrive Plans Archive.** A computer that synced the old SharePoint
+library also has a folder called *DCR - Floor Plans - Archive* there, and the
+browser's folder picker cannot tell the two apart by path. The OneDrive one
+holds a file named `_DCR Plans Archive - OneDrive.txt` (written by the copy that
+moved the plans). Once plans come from the folder, a folder without it is
+refused, and a remembered one is shown as not used, so a save never lands in
+SharePoint through its sync client.
+
+**Plans on this device (no signal).** *File › Keep on This Device* copies the
+open plan — from the Plans Archive, or picked in the OneDrive app on a phone —
+into this browser's own storage, and the start screen lists it under *Plans on
+this device*, to open with no internet and remove when it is no longer needed.
+A kept copy is a snapshot: Save never writes into it. The old portal's Plans
+Library copies are listed there too, for the person who saved them (the last
+portal account seen on the device once nobody signs in there any more); after
+the plans move they are marked *From before the move* and can be removed here.
+
 The folder is read on the device, like any file you open. Nothing about it is
 uploaded anywhere.
 

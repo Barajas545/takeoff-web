@@ -10,8 +10,12 @@ import { resolveUiMode } from './ui/settings.js';
 import { RemoteFile } from './core/remote-file.js';
 import {
   PlansFolders, idbBackend, fileStamp, changedSince, permissionOf, askPermission,
-  resolvePlansSource, parsePlansLink,
+  resolvePlansSource, parsePlansLink, projectCodeOf,
 } from './core/plans-folder.js';
+import {
+  PORTAL_INDEX_KEY, PORTAL_DIR, PORTAL_DB, PORTAL_TOKEN_KEY, PORTAL_FILE_RE, KEPT_INDEX_KEY, OWNER_KEY, OPEN_LOCK,
+  libraryOwner, portalCopies, keptCopies, keepFile, keptFile, removeKept, removePortalCopy, sizeText,
+} from './core/device-plans.js';
 import { PlansArchive } from './ui/plans-archive.js';
 import { PLANS_SOURCE } from './site-config.js';
 import { PageStore } from './core/page-store.js';
@@ -2463,6 +2467,10 @@ async function loadProjectFile(file, handle = null, { library = null, archive = 
     app.libraryCopy = library;
     app.fileName = file.name;
     app.fileSize = file.size;
+    // The bytes as opened, for File > Keep on This Device: a File from the
+    // Plans Archive folder or a file picker (a portal link's remote file is
+    // not one, and a copy already on this device needs no second copy).
+    app.sourceFile = !library && typeof Blob !== 'undefined' && file instanceof Blob ? file : null;
     app.project.filePath = file.name;
     // A new session picks up the palette where the project left off, so a
     // fresh item does not repeat the colour of the last one drawn.
@@ -2543,7 +2551,7 @@ async function saveProject({ saveAs = false } = {}) {
       'The saved copy this project was opened from has been removed or replaced '
       + 'on this device, so the project cannot be written from it. Your changes '
       + 'are kept as a draft on this device — open the plan again (from the '
-      + 'Plans Library or SharePoint) to get them back.');
+      + 'Plans Archive, or the list of plans on this device) to get them back.');
     return;
   }
 
@@ -3392,6 +3400,7 @@ function newProject() {
   app.currentPage = 0;
   app.fileHandle = null;
   app.fileName = '';
+  app.sourceFile = null;
   app.archive = null;
   app.saveStartIn = null;
   // The old project is gone, so a library copy it was read from is no
@@ -3459,6 +3468,7 @@ async function runAction(act) {
     // Straight through: the folder picker or the browser's "allow" prompt
     // may be the first thing it shows, and both need this click.
     case 'plans-archive': await plansArchive.open(); break;
+    case 'keep-on-device': await keepOnDevice(); break;
     case 'import-pdf': {
       // The picker is opened first, before anything that could await, so the
       // click's user activation is still live when it runs.
@@ -4424,21 +4434,23 @@ function renewerFor(r) {
   };
 }
 
-// ── saved on this device: the portal's Plans Library ──────────────────────
+// ── plans on this device: the portal's Plans Library and this app's own ───
 /**
- * Plans the portal saved to this device so they open with no signal.
+ * Plans kept on this device so they open with no signal.
  *
  * The portal downloads each .takeoff into the origin-private file system,
  * folder "plans-library", and both apps share an origin — so PTT reads those
  * files directly. They belong to the portal: it keeps its own records in
  * IndexedDB and publishes a small read-only index to localStorage, which is
- * all the start-screen list is built from. PTT never writes the files, the
- * folder or the index; a library copy is a mirror of the SharePoint version.
+ * all the start-screen list is built from. While plans come from SharePoint
+ * PTT never writes the files, the folder or the index; a library copy is a
+ * mirror of the SharePoint version. Once they come from the Plans Archive the
+ * portal's page retires, so PTT removes a copy when the person asks
+ * (removeLibraryCopy), and keeps new ones of its own: File › Keep on This
+ * Device copies the open plan into "plans-kept" (keepOnDevice).
+ *
+ * The names and the rules for both lists are in js/core/device-plans.js.
  */
-const LIBRARY_INDEX_KEY = 'dcr.plansLibrary.v1';
-const LIBRARY_DIR = 'plans-library';
-const LIBRARY_FILE_RE = /^[A-Za-z0-9_-]+\.takeoff$/;
-const PORTAL_TOKEN_KEY = 'dcr_portal_token';
 
 let libraryOpening = false;
 
@@ -4455,15 +4467,18 @@ async function openLibraryCopy(entry) {
     // The name goes straight to getFileHandle, so nothing but a plain file
     // name inside the library folder is ever looked up.
     const name = typeof entry?.file === 'string' ? entry.file : '';
-    if (!LIBRARY_FILE_RE.test(name)) {
+    if (!PORTAL_FILE_RE.test(name)) {
       await D.alertDialog('Could not open', 'That saved plan link is not valid.');
       return;
     }
     const f = await libraryFile(name);
     if (!f) {
       await D.alertDialog('Not on this device',
-        'This saved plan is no longer on this device. Open the Plans Library '
-        + 'in the portal to save it again.');
+        plansSource() === 'folder'
+          ? 'This saved plan is no longer on this device. Open the plan from the '
+            + 'Plans Archive, and use File › Keep on This Device to keep it again.'
+          : 'This saved plan is no longer on this device. Open the Plans Library '
+            + 'in the portal to save it again.');
       return;
     }
     const want = Number(entry.size);
@@ -4509,7 +4524,7 @@ async function libraryFile(name) {
   if (typeof navigator.storage?.getDirectory !== 'function') return null;
   try {
     const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle(LIBRARY_DIR);
+    const dir = await root.getDirectoryHandle(PORTAL_DIR);
     const fh = await dir.getFileHandle(name);
     return await fh.getFile();
   } catch (err) {
@@ -4534,7 +4549,7 @@ function holdLibraryCopy(name, file) {
   let release = () => {};
   if (typeof navigator.locks?.request === 'function') {
     const open = new Promise(resolve => { release = resolve; });
-    navigator.locks.request(`dcr-plans-open:${name}`, { mode: 'shared' }, () => open)
+    navigator.locks.request(`${OPEN_LOCK}${name}`, { mode: 'shared' }, () => open)
       .catch(() => { /* no lock is no worse than a browser without Web Locks */ });
   }
   return { name, file, release };
@@ -4562,76 +4577,69 @@ async function libraryCopyReadable(file) {
 }
 
 /**
- * The signed-in portal user's id — the `sub` in the token's payload — or ''
- * when there is no token or it cannot be read.
- *
- * Its expiry is deliberately not checked. This list exists for opening plans
- * with no signal, which is exactly when a session has most likely lapsed; the
- * owner match is there so one person's saved plans stay out of another's list
- * on a shared device.
+ * This person's finished portal copies, sorted for the list; [] when none.
+ * The signed-in portal account, or — once nobody signs in there any more —
+ * the last one this device saw (js/core/device-plans.js libraryOwner).
  */
-function portalUserId() {
-  try {
-    const part = (localStorage.getItem(PORTAL_TOKEN_KEY) || '').split('.')[1];
-    if (!part) return '';
-    const b64 = part.replace(/-/g, '+').replace(/_/g, '/');
-    const bin = atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
-    const payload = JSON.parse(new TextDecoder().decode(
-      Uint8Array.from(bin, ch => ch.charCodeAt(0))));
-    const sub = payload ? payload.sub : null;
-    return typeof sub === 'string' || typeof sub === 'number' ? String(sub) : '';
-  } catch {
-    return '';
-  }
-}
-
-/** This user's finished library copies, sorted for the list; [] when none. */
 function libraryEntries() {
-  const me = portalUserId();
-  if (!me) return [];
-  let index = null;
   try {
-    index = JSON.parse(localStorage.getItem(LIBRARY_INDEX_KEY) || 'null');
+    return portalCopies(localStorage, libraryOwner(localStorage).owner);
   } catch {
     return [];
   }
-  if (!index || index.v !== 1 || !Array.isArray(index.entries)) return [];
-  const coll = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
-  const code = e => String(e.projectCode ?? '').trim();
-  return index.entries
-    .filter(e => e && typeof e === 'object'
-      && e.status === 'ready'
-      && e.owner != null && String(e.owner) === me
-      // An entry that could never open is not offered at all.
-      && typeof e.file === 'string' && LIBRARY_FILE_RE.test(e.file))
-    .sort((a, b) => coll.compare(code(a), code(b))
-      || coll.compare(String(a.name ?? ''), String(b.name ?? '')));
+}
+
+/** This device's kept copies (File › Keep on This Device); [] when none. */
+function keptEntries() {
+  try { return keptCopies(localStorage); } catch { return []; }
 }
 
 /**
- * Fill the start screen's "Saved on this device" list. The whole section is
- * hidden when there is nothing to show — no portal sign-in, an index this
- * cannot read, or simply no finished copies of this user's.
+ * Fill the start screen's "Plans on this device" list: the plans kept here
+ * with File › Keep on This Device, then the portal's saved copies. The whole
+ * section is hidden when there is nothing to show.
+ *
+ * Once plans come from the Plans Archive the portal's copies are mirrors of
+ * the old SharePoint files that nothing updates any more. They stay listed —
+ * on a phone or a tablet, which cannot open the folder, they may be the only
+ * plans it has with no signal — marked as from before the move, and each can
+ * be removed here (the portal's own Plans Library page retires with it).
  */
 function renderLibraryList() {
   const box = $('esLibrary');
   const list = $('esLibraryList');
   if (!box || !list) return;
-  // Once plans come from the Plans Archive, these copies are mirrors of the
-  // old SharePoint files that nothing updates any more: listing them beside
-  // the archive would offer two versions of one plan with no way to tell.
-  if (plansSource() === 'folder') {
-    list.replaceChildren();
-    box.hidden = true;
-    return;
+  const moved = plansSource() === 'folder';
+  const kept = keptEntries();
+  const portal = libraryEntries();
+  const link = box.querySelector('a.es-lib-manage');
+  // The portal's page is where its copies were managed until the plans moved.
+  if (link) link.hidden = moved;
+  const items = [];
+  if (kept.length && portal.length) items.push(D.el('div', 'es-arch-sub', 'Kept on this device'));
+  for (const e of kept) items.push(keptItem(e));
+  if (portal.length && (kept.length || moved)) {
+    items.push(D.el('div', 'es-arch-sub', moved ? 'Saved from SharePoint before the plans moved' : 'From the Plans Library'));
   }
-  const entries = libraryEntries();
-  list.replaceChildren(...entries.map(libraryItem));
-  box.hidden = !entries.length;
+  for (const e of portal) items.push(libraryItem(e, { moved }));
+  list.replaceChildren(...items);
+  box.hidden = !kept.length && !portal.length;
 }
 
-/** One entry: which job, which file, and how old this copy is. */
-function libraryItem(entry) {
+/** One list row: the open button, and a Remove button beside it when this app may remove it. */
+function libraryRow(button, onRemove) {
+  if (!onRemove) return button;
+  const row = D.el('div', 'es-lib-row');
+  const del = D.el('button', 'es-lib-del', 'Remove');
+  del.type = 'button';
+  del.title = 'Remove this copy from this device';
+  del.addEventListener('click', ev => { ev.stopPropagation(); void onRemove(); });
+  row.append(button, del);
+  return row;
+}
+
+/** One portal copy: which job, which file, and how old this copy is. */
+function libraryItem(entry, { moved = false } = {}) {
   const code = String(entry.projectCode ?? '').trim();
   const title = String(entry.projectTitle ?? '').trim();
   const name = String(entry.name || entry.file);
@@ -4648,16 +4656,183 @@ function libraryItem(entry) {
   const facts = [librarySize(entry.size), libraryVersionDate(entry.lastModified)]
     .filter(Boolean).join(' · ');
   if (facts) meta.appendChild(D.el('span', null, facts));
-  if (entry.updateAvailable === true) {
+  if (moved) {
+    meta.appendChild(D.el('span', 'es-lib-chip', 'From before the move'));
+  } else if (entry.updateAvailable === true) {
     meta.appendChild(D.el('span', 'es-lib-chip', 'Newer version in SharePoint'));
   }
   if (meta.childNodes.length) b.appendChild(meta);
 
   b.addEventListener('click', async () => {
     if (app.project.dirty && !(await confirmDiscard())) return;
-    await openLibraryCopy(entry);
+    await openLibraryCopy(moved ? { ...entry, updateAvailable: false } : entry);
   });
-  return b;
+  // Before the switch the portal's Plans Library page manages its copies.
+  return libraryRow(b, moved ? () => removeLibraryCopy(entry) : null);
+}
+
+/** One kept copy: which job, which file, how big, and when it was kept. */
+function keptItem(entry) {
+  const code = String(entry.code ?? '').trim();
+  const name = String(entry.name || entry.file);
+  const where = [entry.project && entry.project !== code ? entry.project : '', entry.path].filter(Boolean).join(' / ');
+  const b = D.el('button', 'es-lib-item');
+  b.type = 'button';
+  b.appendChild(D.el('span', 'es-lib-title', code ? `${code} — ${name}` : name));
+  if (where) b.appendChild(D.el('span', 'es-lib-file', where));
+  const facts = [librarySize(entry.size), libraryVersionDate(entry.lastModified),
+    entry.keptAt ? `kept ${new Date(Number(entry.keptAt)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : '']
+    .filter(Boolean).join(' · ');
+  if (facts) {
+    const meta = D.el('span', 'es-lib-meta');
+    meta.appendChild(D.el('span', null, facts));
+    b.appendChild(meta);
+  }
+  b.addEventListener('click', async () => {
+    if (app.project.dirty && !(await confirmDiscard())) return;
+    await openKeptCopy(entry);
+  });
+  return libraryRow(b, () => removeKeptCopy(entry));
+}
+
+/** Open a kept copy: like a portal copy, read in place, and Save never writes into it. */
+async function openKeptCopy(entry) {
+  if (libraryOpening) return;
+  libraryOpening = true;
+  try {
+    const root = typeof navigator.storage?.getDirectory === 'function' ? await navigator.storage.getDirectory() : null;
+    const f = root ? await keptFile(root, entry) : null;
+    if (!f || (Number(entry.size) > 0 && f.size !== Number(entry.size))) {
+      await D.alertDialog('Not on this device',
+        'This kept plan is no longer whole on this device (the browser may have '
+        + 'cleared it to make room). Open it from the Plans Archive and keep it again.');
+      return;
+    }
+    const file = new File([f], entry.name || f.name, {
+      type: 'application/octet-stream', lastModified: Number(entry.lastModified) || f.lastModified,
+    });
+    const hold = holdLibraryCopy(entry.file, file);
+    try {
+      await loadProjectFile(file, null, { library: hold });
+    } finally {
+      if (app.libraryCopy !== hold) hold.release();
+    }
+  } catch (err) {
+    await D.alertDialog('Could not open', err.message || String(err));
+  } finally {
+    libraryOpening = false;
+  }
+}
+
+async function removeKeptCopy(entry) {
+  const ok = await D.confirmDialog('Remove from this device?',
+    `Remove “${entry.name || entry.file}” from this device? ${librarySize(entry.size) || 'Its space'} is freed. `
+    + 'The plan itself stays in the Plans Archive.', { okLabel: 'Remove', danger: true });
+  if (!ok) return;
+  try {
+    const root = await navigator.storage.getDirectory();
+    await removeKept({ root, store: localStorage, id: entry.id, locks: navigator.locks || null });
+    setStatus(`Removed ${entry.name || 'the plan'} from this device.`);
+  } catch (err) {
+    await D.alertDialog('Could not remove', err.message || String(err));
+  }
+  renderLibraryList();
+}
+
+async function removeLibraryCopy(entry) {
+  const ok = await D.confirmDialog('Remove from this device?',
+    `Remove “${entry.name || entry.file}” from this device? ${librarySize(entry.size) || 'Its space'} is freed. `
+    + 'It is the copy saved from SharePoint before the plans moved; the plan itself is in the Plans Archive.',
+    { okLabel: 'Remove', danger: true });
+  if (!ok) return;
+  try {
+    const root = await navigator.storage.getDirectory();
+    await removePortalCopy({ root, store: localStorage, entry, locks: navigator.locks || null, dropRecords: dropPortalRecords });
+    setStatus(`Removed ${entry.name || 'the plan'} from this device.`);
+  } catch (err) {
+    await D.alertDialog('Could not remove', err.message || String(err));
+  }
+  renderLibraryList();
+}
+
+/**
+ * The portal's own record of a removed copy (IndexedDB "dcr-plans-library",
+ * store "plans"), so its page — while it is still published — does not list
+ * the copy again. Only an existing database is opened: never created here.
+ */
+function dropPortalRecords(file) {
+  return new Promise(resolve => {
+    let req;
+    try { req = indexedDB.open(PORTAL_DB); } catch { resolve(); return; }
+    req.onupgradeneeded = () => { try { req.transaction.abort(); } catch { /* nothing to drop */ } };
+    req.onerror = () => resolve();
+    req.onblocked = () => resolve();
+    req.onsuccess = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('plans')) { db.close(); resolve(); return; }
+      const tx = db.transaction('plans', 'readwrite');
+      const cur = tx.objectStore('plans').openCursor();
+      cur.onsuccess = () => {
+        const c = cur.result;
+        if (!c) return;
+        const v = c.value || {};
+        if (v.file === file || (v.dl && v.dl.file === file)) c.delete();
+        c.continue();
+      };
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = tx.onabort = () => { db.close(); resolve(); };
+    };
+  });
+}
+
+/**
+ * File › Keep on This Device: the open plan, as last saved, copied into this
+ * browser's own storage so it opens from the start screen with no signal —
+ * on a phone or a tablet the way to have plans offline once they come from
+ * the Plans Archive. A snapshot: saving the project later does not change it,
+ * and opening it again starts from it.
+ */
+async function keepOnDevice() {
+  if (!app.fileName) { setStatus('Open a plan first, then keep it on this device.'); return; }
+  if (app.libraryCopy) { setStatus('This plan is already on this device.'); return; }
+  if (typeof navigator.storage?.getDirectory !== 'function') {
+    await D.alertDialog('Keep on This Device', 'This browser cannot keep plan files on the device. Use Chrome or Edge, or Safari 16.4 or newer on an iPhone or iPad.');
+    return;
+  }
+  let file = app.sourceFile;
+  if (app.fileHandle) {
+    try { file = await app.fileHandle.getFile(); } catch { file = app.sourceFile; }
+  }
+  if (!file) {
+    await D.alertDialog('Keep on This Device',
+      'Keep on This Device works for a plan opened from the Plans Archive or from a file on this device.');
+    return;
+  }
+  if (app.project.dirty && !(await D.confirmDialog('Keep the plan as last saved?',
+    'The copy kept on this device is the plan as it was last saved. Your unsaved changes are not in it.',
+    { okLabel: 'Keep it' }))) return;
+  showProgress('Keeping on this device…', 0, 1, app.fileName);
+  try {
+    try { await navigator.storage.persist?.(); } catch { /* the browser decides */ }
+    const root = await navigator.storage.getDirectory();
+    const meta = {
+      name: app.fileName,
+      code: (app.archive && app.archive.code) || projectCodeOf(String(app.fileName || '').split(/[\\/]/).pop()) || '',
+      project: (app.archive && app.archive.project) || '',
+      path: (app.archive && app.archive.path) || '',
+      from: app.archive ? 'Plans Archive' : 'a file on this device',
+    };
+    const { entry, existed } = await keepFile({ root, store: localStorage, file, meta,
+      estimate: navigator.storage.estimate ? () => navigator.storage.estimate() : null });
+    setStatus(existed
+      ? `${entry.name} is already kept on this device.`
+      : `Kept on this device: ${entry.name} (${sizeText(entry.size)}). It opens from the start screen with no internet.`);
+  } catch (err) {
+    await D.alertDialog('Could not keep it on this device', err.message || String(err));
+  } finally {
+    hideProgress();
+  }
+  renderLibraryList();
 }
 
 function librarySize(bytes) {
@@ -4680,7 +4855,7 @@ function libraryVersionDate(ms) {
 // removes a plan — or someone signs in or out there — the list follows. A
 // null key is the whole store being cleared.
 window.addEventListener('storage', ev => {
-  if (ev.key === null || ev.key === LIBRARY_INDEX_KEY || ev.key === PORTAL_TOKEN_KEY) {
+  if (ev.key === null || ev.key === PORTAL_INDEX_KEY || ev.key === PORTAL_TOKEN_KEY || ev.key === KEPT_INDEX_KEY || ev.key === OWNER_KEY) {
     renderLibraryList();
   }
 });

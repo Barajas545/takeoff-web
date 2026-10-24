@@ -56,6 +56,7 @@ try {
           <button data-act="new-project">New Project<kbd>Ctrl+N</kbd></button>
           <button data-act="open-project">Open Project…<kbd>Ctrl+O</kbd></button>
           <button data-act="plans-archive">Plans Archive…</button>
+          <button data-act="keep-on-device">Keep on This Device</button>
           <button data-act="import-pdf">Import PDF…<kbd>Ctrl+I</kbd></button>
           <hr>
           <button data-act="save">Save<kbd>Ctrl+S</kbd></button>
@@ -343,12 +344,13 @@ try {
                search box and the recently opened plans. Hidden until a
                folder is chosen while plans still come from the portal. -->
           <div class="es-lib es-arch" id="esArchive" hidden></div>
-          <!-- Plans the portal's Plans Library saved to this device, so they
-               open with no signal. Filled by renderLibraryList() in
-               js/main.js from the portal's read-only index; hidden when there
-               is nothing of the signed-in user's to list. -->
+          <!-- Plans kept on this device, so they open with no signal: this
+               app's own (File > Keep on This Device) and the portal's Plans
+               Library copies. Filled by renderLibraryList() in js/main.js;
+               hidden when there is nothing to list. The link to the portal's
+               page goes once plans come from the Plans Archive. -->
           <div class="es-lib" id="esLibrary" hidden>
-            <div class="es-lib-head"><span>Saved on this device</span><a class="es-lib-manage" href="../dcr-portal/plans-library.html">Plans Library</a></div>
+            <div class="es-lib-head"><span>Plans on this device</span><a class="es-lib-manage" href="../dcr-portal/plans-library.html">Plans Library</a></div>
             <div class="es-lib-list" id="esLibraryList"></div>
           </div>
         </div>
