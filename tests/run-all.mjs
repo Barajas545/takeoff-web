@@ -52,6 +52,9 @@ const LOCAL = [
   'remote-round-trip',
   // needs the desktop app itself, run offscreen: desktop -> web -> desktop
   'desktop-round-trip',
+  // needs a checkout of the employee portal (PTT_PORTAL): its plan links
+  // and this app's Plans Archive agree on the #plans link and the switch
+  'portal-plans-link',
 ];
 
 const only = process.argv.includes('--portable');

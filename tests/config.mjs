@@ -43,6 +43,12 @@ export const LIBRARY = process.env.PTT_LIBRARY || local.LIBRARY || '';
 /** The desktop app's source, for the differential tests. */
 export const DESKTOP_SRC = process.env.PTT_DESKTOP_SRC || local.DESKTOP_SRC || '';
 
+/**
+ * A checkout of the employee portal's pages, for the one contract test that
+ * runs the portal's own code against this app's (tests/portal-plans-link.mjs).
+ */
+export const PORTAL = process.env.PTT_PORTAL || local.PORTAL || '';
+
 /** Fixtures that are NOT committed — real files, kept local. */
 export const FIXTURES = new URL('./fixtures/', import.meta.url);
 
