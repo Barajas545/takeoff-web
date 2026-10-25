@@ -83,6 +83,14 @@ const ok = (label, cond) => eq(label, !!cond, true);
   const empty = { id: 'e', date: '01/01/2026', match: { 0: 0 }, extra: {}, pageCount: 0 };
   eq('a revision with no images is not visible', visibleRevisions([empty]).length, 0);
 
+  // A HIDDEN revision is a way of looking: not a version of the sheet, and
+  // not the newest even when it is the latest-dated (desktop sheet_versions
+  // and _sheet_ranks both walk _visible_revisions).
+  const hid = { id: 'h', date: '08/01/2026', visible: false, match: { 0: 0 }, extra: {}, pageCount: 1 };
+  eq('a hidden revision is not a version',
+    sheetVersions(0, [a, hid]).map(v => v.revId), ['', 'a']);
+  eq('a hidden revision is not the newest', newestVersionOf(0, [a, hid], 'date'), 'a');
+
   eq('unfilled slot is not a row',
     resolveLatestSheets(['A1'], [{ id: 'xs-z', after: 0, label: 'Z' }], [a],
       { order: 'date', includeNew: false }).rows.length, 1);
@@ -115,6 +123,10 @@ const ok = (label, cond) => eq(label, !!cond, true);
 // ═══ shared: run one truth record through the port ════════════════════════
 function checkAgainst(p, label) {
   const revs = p.revisions.map((r, i) => ({ ...r, pageCount: p.blob_counts[i] || 0 }));
+  // What the Current Set chooses from, in both apps: the VISIBLE revisions
+  // (the web's latestSheets(), the desktop's export and merge). Column
+  // numbers in the truth's rows index this list.
+  const vis = visibleRevisions(revs);
 
   p.revisions.forEach((rev, c) => {
     eq(`${label} · parseRevisionDate(${JSON.stringify(rev.date)})`,
@@ -133,7 +145,7 @@ function checkAgainst(p, label) {
     for (const includeNew of [true, false]) {
       const key = `latest.${order}.${includeNew ? 'new' : 'nonew'}`;
       const want = p[key];
-      const got = resolveLatestSheets(p.main_labels, p.extra_sheets, revs,
+      const got = resolveLatestSheets(p.main_labels, p.extra_sheets, vis,
         { order, includeNew });
       eq(`${label} · ${key} · notes`, got.notes, want.notes);
       eq(`${label} · ${key} · row count`, got.rows.length, want.rows.length);
@@ -154,7 +166,7 @@ function checkAgainst(p, label) {
 
   // The row plan and the Current Set must agree about which rows exist.
   eq(`${label} · rowPlan length matches the no-orphan row count`,
-    rowPlan(p.main_labels, p.extra_sheets, revs).length,
+    rowPlan(p.main_labels, p.extra_sheets, vis).length,
     p['latest.date.nonew'].rows.length);
 
   // sheetVersions and newestVersionOf must agree with the column the Current
@@ -165,8 +177,25 @@ function checkAgainst(p, label) {
     if (!row) continue;
     eq(`${label} · sheet ${i} version count`,
       sheetVersions(i, revs).length, Object.keys(row.cols).length);
-    const wantId = row.used_col === 0 ? '' : String(revs[row.used_col - 1].id);
+    const wantId = row.used_col === 0 ? '' : String(vis[row.used_col - 1].id);
     eq(`${label} · sheet ${i} newestVersionOf`, newestVersionOf(i, revs, 'date'), wantId);
+  }
+
+  // And against the desktop's own sheet_versions / newest_version_of, run on
+  // a stand-in viewer with the job's sheet_origin. Live only: the committed
+  // snapshot was made before the truth script carried them.
+  if (p.sheet_versions) {
+    const org = p.sheet_origin || {};
+    p.sheet_versions.forEach((want, i) => {
+      eq(`${label} · sheet ${i} sheet_versions`,
+        sheetVersions(i, revs, org).map(v => [v.revId, v.revPage]), want);
+    });
+    for (const order of ['date', 'column']) {
+      p.newest[order].forEach((want, i) => {
+        eq(`${label} · sheet ${i} newest_version_of (${order})`,
+          newestVersionOf(i, revs, order, org), want);
+      });
+    }
   }
 }
 

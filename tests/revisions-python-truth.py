@@ -59,9 +59,67 @@ def extract(src_text):
     return "\n".join(out)
 
 
+# The viewer's own answers to "which versions does this sheet have" and "which
+# one is newest". They are methods on the main window, so they are lifted the
+# same way and run on a stand-in that carries only what they read.
+METHODS = [
+    "_visible_revisions", "sheet_versions", "_sheet_ranks", "_origin_date",
+    "newest_version_of",
+]
+
+
+def extract_methods(src_text):
+    """Pull out each wanted method with its whole body, dedented to top level."""
+    lines = src_text.splitlines(True)
+    starts = {}
+    for i, ln in enumerate(lines):
+        m = re.match(r"^    def\s+(\w+)\s*\(self", ln)
+        if not m or m.group(1) not in METHODS:
+            continue
+        if m.group(1) in starts:
+            raise SystemExit(f"{m.group(1)} is defined twice in {SRC}")
+        starts[m.group(1)] = i
+    out = []
+    for name in METHODS:
+        i = starts.get(name)
+        if i is None:
+            raise SystemExit(f"could not find method {name} in {SRC}")
+        j = i + 1
+        while j < len(lines):
+            ln = lines[j]
+            if ln.strip() and len(ln) - len(ln.lstrip()) <= 4:
+                break
+            j += 1
+        out.append("".join(ln[4:] if ln.startswith("    ") else ln
+                           for ln in lines[i:j]))
+    return "\n".join(out)
+
+
 NS = {"re": re, "io": io, "json": json, "os": os, "struct": struct, "zlib": zlib}
 with open(SRC, "r", encoding="utf-8") as fh:
-    exec(compile(extract(fh.read()), "<extracted>", "exec"), NS)
+    SRC_TEXT = fh.read()
+exec(compile(extract(SRC_TEXT), "<extracted>", "exec"), NS)
+_methods = {}
+exec(compile(extract_methods(SRC_TEXT), "<extracted-methods>", "exec"),
+     NS, _methods)
+
+
+class Viewer:
+    """The main window, as far as the lifted methods can tell."""
+
+    def __init__(self, meta, revs, order="date"):
+        self.metadata = meta
+        # The desktop keeps a revision only when its pages came with it
+        # (`if _r["images"]` at load), so a record with none never gets here.
+        self._revisions = [r for r in revs if r["images"]]
+        self.settings = {"latest_set_order": order}
+
+    def rev_name(self, rev_id, hidden_note=False):
+        return str(rev_id)            # the label is not what is checked
+
+
+for _name in METHODS:
+    setattr(Viewer, _name, _methods[_name])
 
 MAGIC, REVS = b"PDFCACHE1", b"TKREVS01"
 
@@ -153,10 +211,16 @@ def truth_for(path, anon=False, index=0):
            "revisions": [{k: v for k, v in r.items() if k != "images"}
                          for r in revs]}
 
+    # The desktop hands resolve_latest_sheets self._visible_revisions() --
+    # the export and the merge both do -- and so does the web's
+    # latestSheets(). Fed every revision, a HIDDEN one's pages were
+    # candidates here and versions nowhere else, so each sheet it reissues
+    # counted one version more than either app shows.
+    vis = Viewer(meta, revs)._visible_revisions()
     for order in ("date", "column"):
         for include_new in (True, False):
             rows, notes = NS["resolve_latest_sheets"](
-                main_labels, meta.get("extra_sheets") or [], revs,
+                main_labels, meta.get("extra_sheets") or [], vis,
                 order=order, include_new=include_new)
             out[f"latest.{order}.{'new' if include_new else 'nonew'}"] = {
                 "rows": [{**r, "from": list(r["from"]),
@@ -173,6 +237,17 @@ def truth_for(path, anon=False, index=0):
         for c, r in enumerate(revs)]
     out["normalized_labels"] = {lb: NS["normalize_sheet_label"](lb)
                                 for lb in main_labels}
+
+    # The viewer's own sheet_versions and newest_version_of, sheet by sheet,
+    # with the job's sheet_origin -- the version bar and the matrix read these.
+    out["sheet_origin"] = meta.get("sheet_origin") or {}
+    v = Viewer(meta, revs)
+    out["sheet_versions"] = [[[rid, rp] for rid, _l, _d, _s, _r, rp
+                              in v.sheet_versions(i)]
+                             for i in range(page_count)]
+    out["newest"] = {order: [Viewer(meta, revs, order).newest_version_of(i)
+                             for i in range(page_count)]
+                     for order in ("date", "column")}
     return out
 
 
