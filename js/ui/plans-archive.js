@@ -4,9 +4,9 @@
 // walks a person through choosing the folder once and reconnecting to it
 // after each browser restart, the browser that lists every project in it and
 // each project's plan files, and the short list of folders this device knows.
-// Where no folder can be opened at all (Firefox or Safari on a computer, any
-// phone or tablet), the panel a #plans link shows instead: linkPanel, over
-// js/core/plans-link.js.
+// Where no folder is opened (Firefox or Safari on a computer, any phone or
+// tablet — even one whose browser has showDirectoryPicker), the panel a
+// #plans link shows instead: linkPanel, over js/core/plans-link.js.
 //
 // Opening a file is not done here. The host (main.js) opens a .takeoff with
 // its file handle — so Save writes back into the folder — and starts a new
@@ -23,10 +23,12 @@
 
 import * as D from './dialogs.js';
 import {
-  canPickFolders, describeChosenFolder, listTopFolders, walkPlans, isOneDriveArchive,
+  describeChosenFolder, listTopFolders, walkPlans, isOneDriveArchive,
   permissionOf, askPermission, parseProjectCode, projectCodeOf, compareCodes, restOfName,
 } from '../core/plans-folder.js';
-import { INVALID_LINK, isPhoneOrTablet, linkPanelModel, copyText } from '../core/plans-link.js';
+import {
+  INVALID_LINK, isPhoneOrTablet, canOpenArchiveFolder, linkPanelModel, copyText,
+} from '../core/plans-link.js';
 
 const UNSUPPORTED =
   'Opening plans from a folder needs Chrome or Edge on a computer. On a phone '
@@ -52,7 +54,9 @@ export class PlansArchive {
    *                           startFromPdf(entry) → Promise,
    *                           devicePlans() → { kept, portal },
    *                           devicePlanRows({ kept, portal }, { beforeOpen }) → Node[],
-   *                           openFile() — the start screen's "Open a .takeoff project" }
+   *                           openFile({ beforeOpen }) — the start screen's "Open a .takeoff project" }
+   *        (`beforeOpen` runs only once the open goes ahead: past "Unsaved
+   *        changes", and for openFile once a file is chosen)
    * @param {Window} [o.win]
    */
   constructor({ store, host, win = window }) {
@@ -66,7 +70,13 @@ export class PlansArchive {
     this._linkClose = null;
   }
 
-  supported() { return canPickFolders(this.win); }
+  /**
+   * Chrome or Edge on a computer. A phone or a tablet never opens the folder,
+   * even where its browser has showDirectoryPicker (Chrome for Android 132+):
+   * it is told to pick the file in the OneDrive app (UNSUPPORTED), and a
+   * #plans link shows its panel.
+   */
+  supported() { return canOpenArchiveFolder(this.win); }
 
   /** Every folder this device knows, with whether the browser lets it be read now. */
   async folders() {
@@ -444,10 +454,12 @@ export class PlansArchive {
       }
 
       // Straight from the click, no await first: Firefox and Safari open the
-      // file picker only while the tap still counts.
+      // file picker only while the tap still counts. The panel stays until a
+      // file is chosen, so backing out of "Unsaved changes" or of the picker
+      // comes back to it — the link it came from is gone from the address.
       const open = D.el('button', 'es-btn primary es-arch-btn pl-btn pl-open', 'Open a .takeoff project');
       open.type = 'button';
-      open.addEventListener('click', () => { close(null); this.host.openFile(); });
+      open.addEventListener('click', () => { this.host.openFile({ beforeOpen: () => close(null) }); });
       body.append(open, D.el('p', 'pa-note pl-hint', m.openHint));
 
       if (m.browserNote) {

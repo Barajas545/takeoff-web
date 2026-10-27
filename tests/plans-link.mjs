@@ -11,8 +11,8 @@
 //
 // Run: node tests/plans-link.mjs
 import {
-  INVALID_LINK, HANDHELD_HINT, COMPUTER_HINT, isPhoneOrTablet, keptCode, portalCode,
-  plansForProject, plansLinkHref, copyText, linkPanelModel,
+  INVALID_LINK, HANDHELD_HINT, COMPUTER_HINT, isPhoneOrTablet, canOpenArchiveFolder, keptCode, portalCode,
+  plansForProject, plansLinkHref, copyText, linkPanelModel, openAfterAsking,
 } from '../js/core/plans-link.js';
 import { parsePlansLink } from '../js/core/plans-folder.js';
 import {
@@ -44,15 +44,22 @@ const UA = {
   winFirefox: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0',
   winEdge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0',
   linuxFirefox: 'Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0',
+  linuxChrome: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
   chromebook: 'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
   odd: 'SomethingElse/1.0',
 };
-const browser = ({ ua = '', mobile, touch = 0, coarse = false, mm = true } = {}) => ({
+// An Android tablet asking for the desktop site — Chrome's default on a big
+// tablet, Samsung Internet's and Firefox's when ticked — sends the desktop
+// Linux user agent: no "Android", userAgentData.mobile false.
+UA.tabletDesktopSite = UA.linuxChrome;
+UA.tabletDesktopFirefox = UA.linuxFirefox;
+const browser = ({ ua = '', mobile, touch = 0, coarse = false, mm = true, folders = false } = {}) => ({
   navigator: {
     userAgent: ua, maxTouchPoints: touch,
     ...(mobile === undefined ? {} : { userAgentData: { mobile, brands: [] } }),
   },
   ...(mm ? { matchMedia: q => ({ matches: q === '(pointer: coarse)' ? coarse : false }) } : {}),
+  ...(folders ? { showDirectoryPicker: async () => { throw new Error('made up'); } } : {}),
 });
 for (const [label, b, want] of [
   ['Chrome on an Android phone (userAgentData says mobile)', browser({ ua: UA.androidChrome, mobile: true, touch: 5, coarse: true }), true],
@@ -66,6 +73,13 @@ for (const [label, b, want] of [
   ['Firefox on a Windows touch laptop folded into a tablet', browser({ ua: UA.winFirefox, touch: 10, coarse: true }), false],
   ['Edge on Windows (userAgentData says not mobile)', browser({ ua: UA.winEdge, mobile: false }), false],
   ['Firefox on Linux', browser({ ua: UA.linuxFirefox }), false],
+  ['Chrome on Linux with a mouse', browser({ ua: UA.linuxChrome, mobile: false }), false],
+  ['a Linux computer with a touch screen and a mouse (fine pointer)', browser({ ua: UA.linuxChrome, mobile: false, touch: 10, coarse: false }), false],
+  ['a Linux computer with a touch screen and no matchMedia', browser({ ua: UA.linuxFirefox, touch: 10, mm: false }), false],
+  ['Chrome on an Android tablet asking for the desktop site (Linux UA, mobile:false, touch, coarse)',
+    browser({ ua: UA.tabletDesktopSite, mobile: false, touch: 10, coarse: true }), true],
+  ['Firefox on an Android tablet in desktop mode (Linux UA, touch, coarse)',
+    browser({ ua: UA.tabletDesktopFirefox, touch: 5, coarse: true }), true],
   ['a Chromebook with a touch screen', browser({ ua: UA.chromebook, mobile: false, touch: 10, coarse: true }), false],
   ['an unknown browser with touch and a coarse pointer', browser({ ua: UA.odd, touch: 5, coarse: true }), true],
   ['an unknown browser with touch and a mouse', browser({ ua: UA.odd, touch: 5, coarse: false }), false],
@@ -75,6 +89,51 @@ for (const [label, b, want] of [
 ]) eq(`isPhoneOrTablet: ${label}`, isPhoneOrTablet(b), want);
 eq('isPhoneOrTablet: a matchMedia that throws is a fine pointer',
   isPhoneOrTablet({ navigator: { userAgent: UA.odd, maxTouchPoints: 2 }, matchMedia() { throw new Error('made up'); } }), false);
+
+// ── where the Plans Archive folder is opened ─────────────────────────────
+// Chrome and Edge on a computer. Chrome for Android has had
+// showDirectoryPicker since 132, but a phone or a tablet still gets the
+// panel (and the start screen's phone note), never the folder path.
+for (const [label, b, want] of [
+  ['Edge on Windows', browser({ ua: UA.winEdge, mobile: false, folders: true }), true],
+  ['Edge on a Windows touch laptop', browser({ ua: UA.winEdge, mobile: false, touch: 10, coarse: true, folders: true }), true],
+  ['Chrome on a Chromebook with a touch screen', browser({ ua: UA.chromebook, mobile: false, touch: 10, coarse: true, folders: true }), true],
+  ['Chrome on Linux with a mouse', browser({ ua: UA.linuxChrome, mobile: false, folders: true }), true],
+  ['Firefox on Windows (no showDirectoryPicker)', browser({ ua: UA.winFirefox }), false],
+  ['Safari on a Mac (no showDirectoryPicker)', browser({ ua: UA.mac }), false],
+  ['Chrome on an Android phone WITH showDirectoryPicker (132+)', browser({ ua: UA.androidChrome, mobile: true, touch: 5, coarse: true, folders: true }), false],
+  ['Chrome on an Android tablet WITH showDirectoryPicker', browser({ ua: UA.androidTablet, mobile: false, touch: 10, coarse: true, folders: true }), false],
+  ['Chrome on an Android tablet on the desktop site WITH showDirectoryPicker',
+    browser({ ua: UA.tabletDesktopSite, mobile: false, touch: 10, coarse: true, folders: true }), false],
+  ['Safari on an iPhone', browser({ ua: UA.iphone, touch: 5, coarse: true }), false],
+  ['no window at all', null, false],
+]) eq(`canOpenArchiveFolder: ${label}`, canOpenArchiveFolder(b), want);
+
+// ── opening from a list: "Unsaved changes" before the panel closes ───────
+{
+  const run = async ({ dirty, answer }) => {
+    const calls = [];
+    const p = openAfterAsking({
+      dirty,
+      confirmDiscard: async () => { calls.push('ask'); return answer; },
+      beforeOpen: () => calls.push('close panel'),
+      open: async () => { calls.push('open'); },
+    });
+    const sync = [...calls];
+    return { sync, result: await p, calls };
+  };
+  const clean = await run({ dirty: false });
+  eq('nothing unsaved: no question, the panel closes, the plan opens', [clean.result, clean.calls], [true, ['close panel', 'open']]);
+  eq('… all inside the tap (no await before open)', clean.sync, ['close panel', 'open']);
+  const stay = await run({ dirty: true, answer: false });
+  eq('unsaved, Cancel: asked, the panel stays, nothing opens', [stay.result, stay.calls], [false, ['ask']]);
+  const gone = await run({ dirty: true, answer: true });
+  eq('unsaved, Discard and open: asked first, then the panel closes and the plan opens', [gone.result, gone.calls], [true, ['ask', 'close panel', 'open']]);
+  const plain = [];
+  eq('no beforeOpen (the start screen\'s own list): asked, then opened',
+    await openAfterAsking({ dirty: true, confirmDiscard: async () => { plain.push('ask'); return true; }, open: async () => { plain.push('open'); } })
+      && plain, ['ask', 'open']);
+}
 
 // ── which plans: the project-number rule ────────────────────────────────
 // What a kept copy's line in the app's own index looks like (keepFile writes

@@ -16,6 +16,7 @@ import {
   PORTAL_INDEX_KEY, PORTAL_DIR, PORTAL_DB, PORTAL_TOKEN_KEY, PORTAL_FILE_RE, KEPT_INDEX_KEY, OWNER_KEY, OPEN_LOCK,
   libraryOwner, portalCopies, keptCopies, keepFile, keptFile, removeKept, removePortalCopy, sizeText,
 } from './core/device-plans.js';
+import { openAfterAsking } from './core/plans-link.js';
 import { PlansArchive } from './ui/plans-archive.js';
 import { PLANS_SOURCE } from './site-config.js';
 import { PageStore } from './core/page-store.js';
@@ -2395,7 +2396,13 @@ const plansArchive = new PlansArchive({
     // device, as the start screen lists and opens them, and its open button.
     devicePlans: () => ({ kept: keptEntries(), portal: libraryEntries() }),
     devicePlanRows: (plans, opts) => devicePlanRows(plans, { ...opts, removable: false }),
-    openFile: () => safeRun('open-project'),
+    // safeRun('open-project') by another door — called inside the tap, no
+    // await before the picker — with the panel closed only once a file is
+    // chosen (beforeOpen), so Cancel on "Unsaved changes" or on the picker
+    // comes back to it.
+    openFile: ({ beforeOpen = null } = {}) => {
+      openProjectFile({ beforeOpen }).catch(err => reportActionError('open-project', err));
+    },
   },
 });
 
@@ -2405,8 +2412,12 @@ const plansArchive = new PlansArchive({
  * The unsaved-changes prompt is checked SYNCHRONOUSLY first. Awaiting it
  * unconditionally cost the user activation the file picker needs in Firefox,
  * even when there was nothing to confirm — which is every first open.
+ *
+ * `beforeOpen` runs once a file has been chosen, just before it is opened: a
+ * #plans link's panel closes itself there, and stays on screen when the
+ * person backs out of the question or the picker.
  */
-async function openProjectFile() {
+async function openProjectFile({ beforeOpen = null } = {}) {
   if (app.project.dirty) {
     if (!(await confirmDiscard())) return;
   }
@@ -2428,6 +2439,7 @@ async function openProjectFile() {
     file = await pickFileFallback(`${FILE_EXTENSION},${LEGACY_EXTENSION}`);
     if (!file) return;
   }
+  if (beforeOpen) beforeOpen();
   await loadProjectFile(file, handle);
 }
 
@@ -4628,7 +4640,8 @@ function renderLibraryList() {
  * The rows of a list of plans on this device: the kept copies, then the
  * portal's, each headed when both are there. The start screen's list, and a
  * #plans link's panel (js/ui/plans-archive.js linkPanel) — which offers no
- * Remove and closes itself (`beforeOpen`) as a plan is opened.
+ * Remove and closes itself (`beforeOpen`) as a plan is opened, once any
+ * "Unsaved changes" question is answered yes.
  */
 function devicePlanRows({ kept = [], portal = [] }, { removable = true, beforeOpen = null } = {}) {
   const moved = plansSource() === 'folder';
@@ -4679,11 +4692,11 @@ function libraryItem(entry, { moved = false, removable = true, beforeOpen = null
   }
   if (meta.childNodes.length) b.appendChild(meta);
 
-  b.addEventListener('click', async () => {
-    if (beforeOpen) beforeOpen();
-    if (app.project.dirty && !(await confirmDiscard())) return;
-    await openLibraryCopy(moved ? { ...entry, updateAvailable: false } : entry);
-  });
+  // The link panel closes (beforeOpen) only past "Unsaved changes": Cancel keeps it.
+  b.addEventListener('click', () => openAfterAsking({
+    dirty: app.project.dirty, confirmDiscard, beforeOpen,
+    open: () => openLibraryCopy(moved ? { ...entry, updateAvailable: false } : entry),
+  }));
   // Before the switch the portal's Plans Library page manages its copies.
   return libraryRow(b, moved && removable ? () => removeLibraryCopy(entry) : null);
 }
@@ -4705,11 +4718,9 @@ function keptItem(entry, { removable = true, beforeOpen = null } = {}) {
     meta.appendChild(D.el('span', null, facts));
     b.appendChild(meta);
   }
-  b.addEventListener('click', async () => {
-    if (beforeOpen) beforeOpen();
-    if (app.project.dirty && !(await confirmDiscard())) return;
-    await openKeptCopy(entry);
-  });
+  b.addEventListener('click', () => openAfterAsking({
+    dirty: app.project.dirty, confirmDiscard, beforeOpen, open: () => openKeptCopy(entry),
+  }));
   return libraryRow(b, removable ? () => removeKeptCopy(entry) : null);
 }
 

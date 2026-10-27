@@ -5,9 +5,10 @@
  * takeoff — for everyone who can see the project, field crews on phones
  * included — and it opens this app at `index.html#plans=<number>`. Chrome and
  * Edge on a computer open the Plans Archive folder at that job
- * (js/ui/plans-archive.js). Firefox and Safari on a computer, and every phone
- * and tablet, cannot open a folder at all, so the link would land on the
- * plain start screen with the project number already gone from the address.
+ * (js/ui/plans-archive.js). Firefox and Safari on a computer cannot open a
+ * folder at all, and a phone or a tablet does not open it whatever its
+ * browser offers (canOpenArchiveFolder), so the link would land on the plain
+ * start screen with the project number already gone from the address.
  *
  * What it shows there instead, as data: the job's plans already kept on this
  * device (one tap opens one), the way to open a plan file, and — on a
@@ -16,7 +17,7 @@
  * with made-up lists and made-up browsers. Nothing here touches the network.
  */
 
-import { parseProjectCode, projectCodeOf } from './plans-folder.js';
+import { canPickFolders, parseProjectCode, projectCodeOf } from './plans-folder.js';
 
 /** Said when a link's number is not a project number (the wording the app has always used). */
 export const INVALID_LINK = 'That link did not name a project number — showing the whole Plans Archive.';
@@ -42,9 +43,14 @@ function coarsePointer(win) {
  *     have no userAgentData);
  *   · iPadOS asks for the desktop site and calls itself a Mac — but a Mac has
  *     no touch screen, so a "Mac" with touch points is an iPad;
- *   · Windows, ChromeOS and Linux are computers, touch screen or not: a
- *     touch laptop folded into a tablet still has Edge;
- *   · anything else: touch points with a coarse pointer.
+ *   · Windows and ChromeOS are computers, touch screen or not: a touch
+ *     laptop folded into a tablet still has Edge;
+ *   · anything else — a desktop Linux user agent included — touch points
+ *     with a coarse pointer. An Android tablet asking for the desktop site
+ *     (Chrome's default on a big tablet; Samsung Internet and Firefox when
+ *     it is ticked) sends "X11; Linux x86_64" with no "Android" and
+ *     userAgentData.mobile false, but it still has a touch screen and no
+ *     mouse. A Linux computer with a mouse has a fine pointer.
  */
 export function isPhoneOrTablet(win = globalThis) {
   const nav = (win && win.navigator) || {};
@@ -54,8 +60,33 @@ export function isPhoneOrTablet(win = globalThis) {
   if (/Android|iPhone|iPad|iPod|Mobile|Silk|Kindle|BlackBerry|Opera Mini|IEMobile/i.test(ua)) return true;
   const touch = Number(nav.maxTouchPoints) > 0;
   if (touch && /Macintosh/.test(ua)) return true;
-  if (/Windows NT|CrOS|X11|Linux/.test(ua)) return false;
+  if (/Windows NT|CrOS/.test(ua)) return false;
   return touch && coarsePointer(win);
+}
+
+/**
+ * Whether the Plans Archive FOLDER is opened here: Chrome or Edge on a
+ * computer. Not on a phone or a tablet, even one whose browser has
+ * showDirectoryPicker — Chrome for Android has had it since 132. There the
+ * plans are picked one file at a time from the OneDrive app (what the start
+ * screen has always told a phone), so a #plans link shows its panel.
+ */
+export function canOpenArchiveFolder(win = globalThis) {
+  return canPickFolders(win) && !isPhoneOrTablet(win);
+}
+
+/**
+ * Open a plan from a list, asking about unsaved changes first: `beforeOpen`
+ * (the link panel closing itself) runs only once the answer is yes, so
+ * Cancel leaves the panel where it was. With nothing unsaved there is no
+ * await before `open` — it starts inside the tap. Resolves true when it
+ * opened, false when the person kept their work.
+ */
+export async function openAfterAsking({ dirty = false, confirmDiscard, beforeOpen = null, open }) {
+  if (dirty && !(await confirmDiscard())) return false;
+  if (beforeOpen) beforeOpen();
+  await open();
+  return true;
 }
 
 // ── which plans ───────────────────────────────────────────────────────────

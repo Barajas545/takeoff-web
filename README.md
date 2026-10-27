@@ -76,10 +76,11 @@ is written over their work: your changes are kept on this device and offered
 back when you open the plan again.
 
 **Links.** `index.html#plans=A249` opens that project's plans. Where the
-browser cannot open the folder — Firefox or Safari on a computer, any phone or
-tablet — the link shows *Plans for A249* instead: that project's plans already
-kept on this device (one tap opens one), *Open a .takeoff project*, and on a
-computer the link to copy into Edge or Chrome.
+folder is not opened — Firefox or Safari on a computer, any phone or tablet,
+even one whose Chrome has the folder picker — the link shows *Plans for A249*
+instead: that project's plans already kept on this device (one tap opens one),
+*Open a .takeoff project*, and on a computer the link to copy into Edge or
+Chrome.
 
 **Where plans come from** is the company's default (`js/site-config.js`) until
 someone chooses otherwise for their own device in *Settings › Plan files*.
