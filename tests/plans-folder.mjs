@@ -304,7 +304,8 @@ ok('a different size reads as changed', changedSince(ours, new File([new Uint8Ar
 ok('no stamp, or no file: changed (never written over blind)', changedSince(null, await fh.getFile()) && changedSince(ours, null));
 
 // ── which way plans come in ──────────────────────────────────────────────
-eq('the company default is still SharePoint (the switch is one line)', PLANS_SOURCE, 'sharepoint');
+// The switch shipped on 2026-10-24/25 (4b8619d): plans come from the folder.
+eq('the company default is the Plans Archive folder (the switch is one line)', PLANS_SOURCE, 'folder');
 for (const [p, c, want] of [
   [null, 'sharepoint', 'sharepoint'], [null, 'folder', 'folder'], ['folder', 'sharepoint', 'folder'],
   ['sharepoint', 'folder', 'sharepoint'], ['nonsense', 'folder', 'folder'], [undefined, undefined, 'sharepoint'],
