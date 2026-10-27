@@ -174,6 +174,7 @@ const archive = tree('DCR - Floor Plans - Archive', {
     '~$Main set.takeoff': [9500],
     'Backups/': { 'Main set 2026-01-02.takeoff': [1500] },
     'Archive/': { 'Bid set.pdf': [900] },
+    'Rev 2/': { 'Rev 2.takeoff': [2500], 'Sheets.pdf': [2400] },
   },
   'A250 - 9 Sample Rd - Exampleton/': { 'Plans.takeoff': [5000] },
   'A249-B/': { 'Follow-up.takeoff': [4000] },
@@ -199,48 +200,56 @@ const a249 = top.projects.find(p => p.code === 'A249').handle;
 const t = await walkPlans(a249);
 eq('own files newest first; lock files and notes left out',
   t.files.map(f => f.name), ['Main set.takeoff', 'Early set.takeoff']);
-eq('older-copies folders last, marked', t.folders.map(f => [f.name, f.older, f.count]),
-  [['Archive', true, 1], ['Backups', true, 1]]);
+// the owner, 2026-10-27: "do not show *.takeoff files inside any sub-folder" (a project folder keeps its older
+// copies in Backups) - a takeoff counts only right in the project folder, and the older-copies folders are not read
+eq('a sub-folder shows its drawings only: its takeoff is no plan of the project', t.folders.map(f => [f.name, f.count]),
+  [['Rev 2', 1]]);
+eq('… the PDF', t.folders[0].files.map(f => f.name), ['Sheets.pdf']);
+eq('the older-copies folders are never read (Backups, Archive)',
+  [listed(a249.kids.get('Backups')), listed(a249.kids.get('Archive'))], [0, 0]);
 eq('a file carries its folder handle (Save As starts there) and its path',
-  [t.folders[1].files[0].dir === t.folders[1].handle, t.folders[1].files[0].path], [true, 'Backups']);
+  [t.folders[0].files[0].dir === t.folders[0].handle, t.folders[0].files[0].path], [true, 'Rev 2']);
 eq('size and date come from the file', [t.files[0].size, t.files[0].lastModified], [4, 3000]);
-eq('count', t.count, 4);
+eq('count', t.count, 3);
 ok('nothing cut', !t.truncated);
-eq('filesOf leaves the older copies out by default', filesOf(t).map(f => f.name),
-  ['Main set.takeoff', 'Early set.takeoff']);
-eq('… and puts them in when asked', filesOf(t, { older: true }).map(f => f.name),
-  ['Main set.takeoff', 'Early set.takeoff', 'Main set 2026-01-02.takeoff', 'Bid set.pdf']);
-const empty = await walkPlans(top.projects.find(p => p.code === 'A251').handle);
+eq('filesOf: every file shown, newest first', filesOf(t).map(f => f.name),
+  ['Main set.takeoff', 'Sheets.pdf', 'Early set.takeoff']);
+const a251 = top.projects.find(p => p.code === 'A251').handle;
+const empty = await walkPlans(a251);
 eq('a folder with only an empty Backups has nothing to show', [empty.count, empty.folders.length], [0, 0]);
+eq('… and its Backups was not read', listed(a251.kids.get('Backups')), 0);
+const nested = tree('A252', { 'Plans/': { 'Rev 1/': { 'Rev 1.takeoff': [10] }, 'Backups/': { 'Old.pdf': [11] } } });
+eq('a takeoff deeper down is none either, nor older drawings', [(await walkPlans(nested)).count, listed(nested.kids.get('Plans').kids.get('Backups'))], [0, 0]);
 
 // A desktop project folder: PDFs are plans only under Floor Plans, and Photos
 // is never read at all.
 const desk = tree('A300 - 1 Test St - Testville - Sample', {
+  'Main.takeoff': [650],
   [`${PLANS_DIR}/`]: { 'Permit set.pdf': [800], 'Level 2/': { 'L2.pdf': [810] } },
   'Photos/': { '2026-10-09/': { 'IMG_0001.jpg': [1], 'odd.takeoff': [2] } },
   'Documents/': { 'Contract.pdf': [700], 'Estimate takeoff.takeoff': [720], 'Items/': { '12 - Walls/': { 'Detail.pdf': [730] } } },
   'Site plan.pdf': [600],
 });
 const dt = await walkPlans(desk);
-const all = filesOf(dt, { older: true }).map(f => `${f.path || '.'}|${f.name}`).sort();
-eq('desktop layout: drawings from Floor Plans, takeoffs from anywhere, nothing from Photos', all,
-  ['Documents|Estimate takeoff.takeoff', 'Floor Plans / Level 2|L2.pdf', 'Floor Plans|Permit set.pdf']);
+const all = filesOf(dt).map(f => `${f.path || '.'}|${f.name}`).sort();
+eq('desktop layout: drawings from Floor Plans, a takeoff right in the project folder only, nothing from Photos', all,
+  ['.|Main.takeoff', 'Floor Plans / Level 2|L2.pdf', 'Floor Plans|Permit set.pdf']);
 eq('Photos was never listed', listed(desk.kids.get('Photos')), 0);
 eq('… nor any day folder in it', listed(desk.kids.get('Photos').kids.get('2026-10-09')), 0);
 
-// The archive layout is all plans, PDFs included, wherever they are.
-const loosePdf = tree('A260', { 'Docs/': { 'Contract.pdf': [1] }, 'Photos/': { 'x.takeoff': [2] } });
-eq('archive layout: every PDF and takeoff counts, Photos included',
-  filesOf(await walkPlans(loosePdf), { older: true }).map(f => f.name).sort(), ['Contract.pdf', 'x.takeoff']);
+// The archive layout: every PDF wherever it is (Photos included); a takeoff right in the project folder only.
+const loosePdf = tree('A260', { 'Docs/': { 'Contract.pdf': [1] }, 'Photos/': { 'x.takeoff': [2], 'y.pdf': [3] }, 'z.takeoff': [4] });
+eq('archive layout: every PDF counts, a takeoff only right in the project folder',
+  filesOf(await walkPlans(loosePdf)).map(f => f.name).sort(), ['Contract.pdf', 'y.pdf', 'z.takeoff']);
 
 // Bounded.
 const big = tree('A270', Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`p${i}.takeoff`, [i]])));
 const capped = await walkPlans(big, { maxFiles: 5 });
 eq('maxFiles: five read, and it says the rest were not', [capped.files.length, !!capped.truncated], [5, true]);
-const deep = tree('A271', { 'a/': { 'b/': { 'c/': { 'd/': { 'e/': { 'x.takeoff': [1] } } } } } });
+const deep = tree('A271', { 'a/': { 'b/': { 'c/': { 'd/': { 'e/': { 'x.pdf': [1] } } } } } });
 eq('maxDepth: cut, and said', [(await walkPlans(deep, { maxDepth: 2 })).count, !!(await walkPlans(deep, { maxDepth: 2 })).truncated], [0, true]);
 eq('deep enough finds it', (await walkPlans(deep, { maxDepth: 5 })).count, 1);
-const wide = tree('A272', Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`f${i}/`, { 'x.takeoff': [i] }])));
+const wide = tree('A272', Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`f${i}/`, { 'x.pdf': [i] }])));
 const w = await walkPlans(wide, { maxFolders: 4 });
 eq('maxFolders: the listings stop, and it says so', [w.count, !!w.truncated], [3, true]);
 
@@ -340,15 +349,15 @@ await store.add(projectsRoot);
 await rejects('past the limit it is refused, not dropped', () => store.add(tree('Third', {})), /Up to 2 folders/);
 await rejects('a file is not a folder', () => store.add(new FakeFile('x.takeoff')), /not a folder/);
 
-const files = filesOf(t, { older: true });
+const files = filesOf(t).concat(dt.files);       // A249's three, then the desktop folder's own takeoff: four
 for (const f of files) {
   await store.noteRecent({ handle: f.handle, dir: f.dir, name: f.name, folderId: r1.record.id, code: 'A249' });
 }
 eq('recent: newest first, capped', (await store.recent()).map(r => r.name),
-  ['Bid set.pdf', 'Main set 2026-01-02.takeoff', 'Early set.takeoff']);
-await store.noteRecent({ handle: files[2].handle, name: files[2].name, folderId: r1.record.id });
+  ['Main.takeoff', 'Early set.takeoff', 'Sheets.pdf']);
+await store.noteRecent({ handle: files[1].handle, name: files[1].name, folderId: r1.record.id });
 eq('reopening moves it to the top, once', (await store.recent()).map(r => r.name),
-  ['Main set 2026-01-02.takeoff', 'Bid set.pdf', 'Early set.takeoff']);
+  ['Sheets.pdf', 'Main.takeoff', 'Early set.takeoff']);
 await store.remove(r1.record.id);
 eq('removing a folder forgets it and its recent files — and nothing else',
   [(await store.list()).map(r => r.name), (await store.recent()).length], [['Projects'], 0]);

@@ -735,7 +735,7 @@ export class PlansArchive {
   }
 }
 
-/** A project folder's tree as rows: its own files, its folders, older copies folded away. */
+/** A project folder's tree as rows: its own files, then its folders' (drawings). */
 function renderTree(tree, ctx) {
   const out = [];
   if (!tree.count) {
@@ -749,19 +749,7 @@ function renderTree(tree, ctx) {
       if (node.path) into.push(D.el('div', 'pa-sub', node.path));
       for (const f of node.files) into.push(fileRow(f, ctx));
     }
-    for (const sub of node.folders) {
-      if (sub.older) {
-        const det = D.el('details', 'pa-older');
-        det.appendChild(D.el('summary', null,
-          `Older copies — ${sub.path} (${sub.count} file${sub.count === 1 ? '' : 's'})`));
-        const inner = [];
-        section({ ...sub, older: false }, inner);
-        det.append(...inner);
-        into.push(det);
-      } else {
-        section(sub, into);
-      }
-    }
+    for (const sub of node.folders) section(sub, into);
   };
   section(tree, out);
   if (tree.truncated) {

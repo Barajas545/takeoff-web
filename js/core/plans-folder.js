@@ -27,6 +27,12 @@
  *     the portal's plans menu has always used, so a folder that opened as
  *     A249 there opens as A249 here.
  *
+ *   · **A project's takeoff files are the ones right in its folder.** A
+ *     .takeoff in a sub-folder is never shown, and the older-copies folders
+ *     (Backups, Archive, Old…) are never read at all — the owner, 2026-10-27:
+ *     "do not show *.takeoff files inside any sub-folder". The portal's
+ *     plans menu and its Plans Library list the same files.
+ *
  *   · **Bounded.** A project folder is walked to a fixed depth, folder count
  *     and file count, so a whole synced tree dropped into the archive cannot
  *     turn one click into minutes of disk reads. What was cut is said.
@@ -128,7 +134,7 @@ export function isHiddenName(name) {
   return /\.(part|tmp|crdownload|autosave)$/.test(l);
 }
 
-/** Folders that hold older copies by what they are called, whatever their dates say. */
+/** Folders that hold older copies by what they are called, whatever their dates say: never read (walkPlans). */
 export function isOlderCopiesFolder(name) {
   return /^(backups?|archived?|archives|old|superseded)$/i.test(String(name || '').trim());
 }
@@ -240,14 +246,16 @@ export async function describeChosenFolder(handle) {
 /**
  * One project folder's plan files, as a tree:
  *
- *   { name, path, handle, older, files: [file], folders: [node], count, truncated? }
+ *   { name, path, handle, files: [file], folders: [node], count, truncated? }
  *   file: { name, kind, size, lastModified, path, handle, dir }
  *
- * `path` is the folder's place inside the project folder ("Backups",
- * "Floor Plans / Level 2"), for showing; `dir` is the folder handle a file
- * sits in, which Save As starts in. Files are newest first. Folders follow
- * by name, with the older-copies folders (Backups…) last and marked `older`.
- * Folders with no plan file anywhere below them are left out.
+ * `path` is the folder's place inside the project folder ("Floor Plans /
+ * Level 2"), for showing; `dir` is the folder handle a file sits in, which
+ * Save As starts in. Files are newest first. Folders follow by name. Takeoff
+ * files count only right in the project folder — one in a sub-folder never
+ * does — and the older-copies folders (Backups…) are not read at all; a
+ * sub-folder is walked for its drawings (PDFs). Folders with no plan file
+ * anywhere below them are left out.
  *
  * Bounded three ways — depth, folder listings and files — and `truncated`
  * says something was not looked at. A file that vanished between the listing
@@ -260,10 +268,7 @@ export async function walkPlans(dir, {
   const budget = { listings: 0, files: 0 };
 
   async function walk(handle, nodeName, path, depth, rules) {
-    const node = {
-      name: nodeName, path, handle, older: isOlderCopiesFolder(nodeName),
-      files: [], folders: [], count: 0,
-    };
+    const node = { name: nodeName, path, handle, files: [], folders: [], count: 0 };
     if (budget.listings >= maxFolders || budget.files >= maxFiles) {
       node.truncated = true;
       return node;
@@ -286,12 +291,14 @@ export async function walkPlans(dir, {
       if (isHiddenName(k.name)) continue;
       if (k.kind === 'directory') {
         if (rules.desk && depth === 0 && PHOTO_DIRS.test(k.name)) continue;
+        if (isOlderCopiesFolder(k.name)) continue;      // older copies: never shown, so never read
         subs.push(k);
         continue;
       }
       if (k.kind !== 'file') continue;
       const kind = fileKind(k.name);
       if (!kind) continue;
+      if (kind === 'takeoff' && depth > 0) continue;   // a takeoff in a sub-folder is no plan of the project
       if (kind === 'pdf' && rules.desk && !rules.underPlans) continue;
       if (budget.files >= maxFiles) { node.truncated = true; continue; }
       budget.files += 1;
@@ -317,7 +324,7 @@ export async function walkPlans(dir, {
         if (sub.truncated) node.truncated = true;
         if (sub.count) node.folders.push(sub);
       }
-      node.folders.sort((a, b) => (a.older - b.older) || byName(a, b));
+      node.folders.sort(byName);
     }
     node.count = node.files.length + node.folders.reduce((n, f) => n + f.count, 0);
     return node;
@@ -326,11 +333,10 @@ export async function walkPlans(dir, {
   return walk(dir, name, '', 0, { desk: false, underPlans: false });
 }
 
-/** Every file in a tree, outside the older-copies folders unless asked. Newest first. */
-export function filesOf(tree, { older = false } = {}) {
+/** Every file in a tree, newest first. */
+export function filesOf(tree) {
   const out = [];
   (function go(n) {
-    if (n.older && !older && n !== tree) return;
     out.push(...n.files);
     n.folders.forEach(go);
   })(tree);
