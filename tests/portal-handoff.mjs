@@ -10,8 +10,8 @@
 //
 // Run: node tests/portal-handoff.mjs
 import {
-  PORTAL_ORIGINS, HANDOFF_VERSION, parsePortalHash, isPortalOrigin, readyMessage, renewMessage, linkOk,
-  openFromMessage, linkFromMessage,
+  PORTAL_ORIGINS, HANDOFF_VERSION, HANDOFF_WAIT_MS, parsePortalHash, isPortalOrigin, readyMessage, renewMessage, offlineMessage,
+  linkOk, openFromMessage, linkFromMessage,
 } from '../js/core/portal-handoff.js';
 import { parsePlansLink } from '../js/core/plans-folder.js';
 
@@ -50,6 +50,8 @@ for (const o of ['http://portal.dcrframing.com', 'https://portal.dcrframing.com:
 }
 eq('the ready word', readyMessage(NONCE), { type: 'ptt-ready', v: HANDOFF_VERSION, nonce: NONCE });
 eq('the renew word', renewMessage(NONCE, 'r1'), { type: 'ptt-renew', v: HANDOFF_VERSION, nonce: NONCE, req: 'r1' });
+eq('the offline word', offlineMessage(NONCE), { type: 'ptt-offline', v: HANDOFF_VERSION, nonce: NONCE });
+ok('the tab waits longer for the plan than the portal waits for the tab (90 s)', HANDOFF_WAIT_MS > 90 * 1000);
 
 // ── links ────────────────────────────────────────────────────────────────
 ok('a OneDrive download link', linkOk(LINK));

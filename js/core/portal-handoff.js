@@ -26,7 +26,9 @@
  *          through a pre-authenticated link (js/core/remote-file.js);
  *   4. when that link expires (about an hour) this app asks the portal tab
  *      for a fresh one: `{type: 'ptt-renew', v, nonce, req}`, answered
- *      `{type: 'ptt-link', v, nonce, req, url}` ('' when there is none).
+ *      `{type: 'ptt-link', v, nonce, req, url}` ('' when there is none);
+ *   5. once this device keeps the app for offline use (its service worker in
+ *      charge, its program cached), it says `{type: 'ptt-offline', v, nonce}`.
  *
  * A message counts only when it comes from the window that opened this tab,
  * from a portal address, with this tab's nonce, and in exactly this shape.
@@ -36,8 +38,9 @@
 /** Where the portal lives. A message from anywhere else is not the portal's. */
 export const PORTAL_ORIGINS = Object.freeze(['https://portal.dcrframing.com']);
 export const HANDOFF_VERSION = 1;
-/** How long the new tab waits for the portal's plan before it says so. */
-export const HANDOFF_WAIT_MS = 30 * 1000;
+/** How long the new tab waits for the portal's plan before it says so (the portal may first ask OneDrive for a
+ *  link: a walk of the project's folders, and its own wait for this tab is 90 s). */
+export const HANDOFF_WAIT_MS = 120 * 1000;
 /** How long a fresh link may take to come back. */
 export const RENEW_WAIT_MS = 30 * 1000;
 
@@ -63,6 +66,12 @@ export function readyMessage(nonce) {
 
 export function renewMessage(nonce, req) {
   return { type: 'ptt-renew', v: HANDOFF_VERSION, nonce, req };
+}
+
+/** This device keeps the app for offline use now (its service worker and its program): the portal's Plans Library
+ *  says saved plans open with no signal only once it has heard this. */
+export function offlineMessage(nonce) {
+  return { type: 'ptt-offline', v: HANDOFF_VERSION, nonce };
 }
 
 /** A pre-authenticated OneDrive link: https on a sharepoint.com host, no credentials in it. */

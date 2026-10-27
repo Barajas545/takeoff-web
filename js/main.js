@@ -19,7 +19,7 @@ import {
 import { openAfterAsking } from './core/plans-link.js';
 import {
   PORTAL_ORIGINS, HANDOFF_WAIT_MS, RENEW_WAIT_MS, parsePortalHash, isPortalOrigin, readyMessage, renewMessage,
-  openFromMessage, linkFromMessage,
+  offlineMessage, openFromMessage, linkFromMessage,
 } from './core/portal-handoff.js';
 import { PlansArchive } from './ui/plans-archive.js';
 import { PLANS_SOURCE } from './site-config.js';
@@ -2571,8 +2571,11 @@ async function saveProject({ saveAs = false } = {}) {
     await D.alertDialog('Saved copy no longer on this device',
       'The saved copy this project was opened from has been removed or replaced '
       + 'on this device, so the project cannot be written from it. Your changes '
-      + 'are kept as a draft on this device — open the plan again (from the '
-      + 'Plans Archive, or the list of plans on this device) to get them back.');
+      + 'are kept as a draft on this device — open the plan again ('
+      + (app.libraryCopy.portal
+        ? 'from the portal: 📐 on the project, or its Plans Library'
+        : 'from the Plans Archive, or the list of plans on this device')
+      + ') to get them back.');
     return;
   }
 
@@ -4456,55 +4459,79 @@ function renewerFor(r) {
 }
 
 // ── handed over by Portal 2 (another site) ────────────────────────────────
+/** Said when a hand-over brought nothing: a reload of a used tab, a tab
+ *  opened without its opener (an iPhone or iPad home-screen app opens other
+ *  sites that way), or a portal page that went away before it answered. */
+const NOTHING_FROM_PORTAL = 'Nothing came from the portal — open the plan again from the portal (Search, or its Plans Library). '
+  + 'On an iPhone or iPad, open the portal in Safari rather than from its home-screen icon.';
+
+/** While a hand-over is waiting for its plan, a new version of this app must
+ *  not reload the page under it (reloadForUpdateIfIdle). */
+let portalWaiting = false;
+
 /**
  * A plan Portal 2 hands over: its Plans Library's copy on this device, or a
  * plan in the OneDrive Plans Archive over a download link. Portal 2 is not
  * this app's site, so the two windows talk (js/core/portal-handoff.js): this
  * tab tells its opener it is ready, and takes the plan only from that window,
  * from a portal address, with this tab's nonce. Resolves when it is open (or
- * nothing came); every failure is shown here.
+ * nothing came); every failure is shown here. Once this device keeps the app
+ * for offline use, the portal is told so (tellPortalOffline).
  */
 async function receiveFromPortal(nonce) {
   const opener = window.opener;
   if (!opener) {
-    // A reload of a used tab, or a browser that opened it without its opener.
-    setStatus('Nothing came from the portal — open the plan again from the portal (Search, or its Plans Library).');
+    setStatus(NOTHING_FROM_PORTAL);
     return;
   }
-  const got = await new Promise(resolve => {
-    const timer = setTimeout(() => finish(null), HANDOFF_WAIT_MS);
-    function onMessage(ev) {
-      if (ev.source !== opener || !isPortalOrigin(ev.origin)) return;
-      const plan = openFromMessage(ev.data, nonce);
-      if (plan) finish({ plan, origin: ev.origin });
-    }
-    function finish(v) {
-      clearTimeout(timer);
-      window.removeEventListener('message', onMessage);
-      resolve(v);
-    }
-    window.addEventListener('message', onMessage);
-    // Said only to the portal's own address: any other opener hears nothing.
-    for (const origin of PORTAL_ORIGINS) {
-      try { opener.postMessage(readyMessage(nonce), origin); } catch { /* that window is gone */ }
-    }
-  });
+  portalWaiting = true;
+  let got;
+  try {
+    got = await new Promise(resolve => {
+      const timer = setTimeout(() => finish(null), HANDOFF_WAIT_MS);
+      function onMessage(ev) {
+        if (ev.source !== opener || !isPortalOrigin(ev.origin)) return;
+        const plan = openFromMessage(ev.data, nonce);
+        if (plan) finish({ plan, origin: ev.origin });
+      }
+      function finish(v) {
+        clearTimeout(timer);
+        window.removeEventListener('message', onMessage);
+        resolve(v);
+      }
+      window.addEventListener('message', onMessage);
+      // Said only to the portal's own address: any other opener hears nothing.
+      for (const origin of PORTAL_ORIGINS) {
+        try { opener.postMessage(readyMessage(nonce), origin); } catch { /* that window is gone */ }
+      }
+    });
+  } finally {
+    portalWaiting = false;
+  }
   if (!got) {
-    setStatus('Nothing came from the portal — open the plan again from the portal (Search, or its Plans Library).');
+    setStatus(NOTHING_FROM_PORTAL);
     return;
   }
   const { plan, origin } = got;
+  tellPortalOffline(opener, origin, nonce);
   if (plan.kind === 'file') {
     // Wrapped only to carry the plan's name and the version's date; no bytes
     // are copied. The copy is the portal's: Save never writes into it (Save
     // As or a download, as for any copy kept on this device), and the save
     // check finds out if the portal has replaced it since (libraryCopyReadable).
+    // No date from the portal: the copy's own, never "now" (a draft newer
+    // than "now" would read as already saved, and be dropped).
     const file = new File([plan.file], plan.name, {
-      type: 'application/octet-stream', lastModified: plan.lastModified || Date.now(),
+      type: 'application/octet-stream', lastModified: plan.lastModified || plan.file.lastModified || 0,
     });
-    const hold = { name: plan.name, file, release() {} };
+    // Nothing on this site can hold the portal's copy open (Web Locks are per
+    // site): the portal keeps a copy it handed over for a week. `portal` makes
+    // the save check send the person back to the portal, and lets File › Keep
+    // on This Device copy it into this app's own storage.
+    const hold = { name: plan.name, file, portal: true, number: plan.number, release() {} };
     const opened = await loadProjectFile(file, null, { library: hold });
     if (opened) {
+      app.sourceFile = file;
       setStatus(plan.updateAvailable
         ? 'Opened the copy saved on this device — a newer version is in the Plans Archive; the portal downloads it while it is open.'
         : 'Opened the copy saved on this device (the portal\'s Plans Library). Save goes to Save As.');
@@ -4521,14 +4548,46 @@ async function receiveFromPortal(nonce) {
 }
 
 /**
+ * Tell the portal, once this device really keeps the app for offline use (its
+ * service worker in charge and the program in its cache), so its Plans
+ * Library can say saved plans open with no signal. Asked for a few minutes:
+ * a first visit installs the worker after the page has loaded.
+ */
+async function tellPortalOffline(opener, origin, nonce) {
+  const until = Date.now() + 3 * 60 * 1000;
+  while (Date.now() < until) {
+    let ready = false;
+    try {
+      ready = !!navigator.serviceWorker?.controller
+        && !!(await caches.match(new URL('js/core/takeoff-file.js', document.baseURI).href));
+    } catch { ready = false; }
+    if (ready) {
+      try { if (!opener.closed) opener.postMessage(offlineMessage(nonce), origin); } catch { /* that window is gone */ }
+      return;
+    }
+    await new Promise(r => setTimeout(r, 3000));
+  }
+}
+
+/**
  * A fresh download link from the portal tab that handed the plan over, for
- * RemoteFile when the link in hand expires. '' when the portal has none or
- * its tab is gone (the plan then stays readable only as far as it was read).
+ * RemoteFile when the link in hand expires. '' when the portal has none, its
+ * tab is gone or left that page (the plan then stays readable only as far as
+ * it was read) - and after one such answer every later ask is '' at once, with
+ * one word on the status line, rather than half a minute of waiting a sheet.
  */
 function portalRenewer(opener, origin, nonce) {
   let seq = 0;
+  let dead = false;
+  const giveUp = () => {
+    if (!dead) {
+      dead = true;
+      setStatus('The portal page that opened this plan has closed or moved on — open the plan again from the portal to read more sheets.');
+    }
+    return '';
+  };
   return () => new Promise(resolve => {
-    if (!opener || opener.closed) { resolve(''); return; }
+    if (dead || !opener || opener.closed) { resolve(giveUp()); return; }
     const req = `r${++seq}`;
     const timer = setTimeout(() => finish(''), RENEW_WAIT_MS);
     function onMessage(ev) {
@@ -4539,7 +4598,7 @@ function portalRenewer(opener, origin, nonce) {
     function finish(url) {
       clearTimeout(timer);
       window.removeEventListener('message', onMessage);
-      resolve(url);
+      resolve(url || giveUp());
     }
     window.addEventListener('message', onMessage);
     try { opener.postMessage(renewMessage(nonce, req), origin); } catch { finish(''); }
@@ -4918,7 +4977,7 @@ function dropPortalRecords(file) {
  */
 async function keepOnDevice() {
   if (!app.fileName) { setStatus('Open a plan first, then keep it on this device.'); return; }
-  if (app.libraryCopy) { setStatus('This plan is already on this device.'); return; }
+  if (app.libraryCopy && !app.libraryCopy.portal) { setStatus('This plan is already on this device.'); return; }
   if (typeof navigator.storage?.getDirectory !== 'function') {
     await D.alertDialog('Keep on This Device', 'This browser cannot keep plan files on the device. Use Chrome or Edge, or Safari 16.4 or newer on an iPhone or iPad.');
     return;
@@ -4941,10 +5000,11 @@ async function keepOnDevice() {
     const root = await navigator.storage.getDirectory();
     const meta = {
       name: app.fileName,
-      code: (app.archive && app.archive.code) || projectCodeOf(String(app.fileName || '').split(/[\\/]/).pop()) || '',
+      code: (app.archive && app.archive.code) || (app.libraryCopy && app.libraryCopy.number)
+        || projectCodeOf(String(app.fileName || '').split(/[\\/]/).pop()) || '',
       project: (app.archive && app.archive.project) || '',
       path: (app.archive && app.archive.path) || '',
-      from: app.archive ? 'Plans Archive' : 'a file on this device',
+      from: app.archive ? 'Plans Archive' : app.libraryCopy && app.libraryCopy.portal ? 'the portal' : 'a file on this device',
     };
     const { entry, existed } = await keepFile({ root, store: localStorage, file, meta,
       estimate: navigator.storage.estimate ? () => navigator.storage.estimate() : null });
@@ -5010,6 +5070,7 @@ if (PORTAL_HANDOFF) {
     await D.alertDialog('Could not open', err.message || String(err));
   }).finally(() => {
     if (!$('emptyState').hidden) renderStartLists();
+    reloadForUpdateIfIdle();
   });
 } else if (HANDOFF) {
   setStatus('Opening the project from the portal…');
@@ -5063,7 +5124,7 @@ let updateReloading = false;
 function reloadForUpdateIfIdle() {
   if (!updateWaiting || updateReloading) return false;
   const idle = !$('emptyState').hidden && !app.project.dirty
-    && $('progress').hidden && !libraryOpening && !D.dialogsOpen();
+    && $('progress').hidden && !libraryOpening && !portalWaiting && !D.dialogsOpen();
   if (!idle) return false;
   updateReloading = true;
   location.reload();
