@@ -4,6 +4,9 @@
 // walks a person through choosing the folder once and reconnecting to it
 // after each browser restart, the browser that lists every project in it and
 // each project's plan files, and the short list of folders this device knows.
+// Where no folder can be opened at all (Firefox or Safari on a computer, any
+// phone or tablet), the panel a #plans link shows instead: linkPanel, over
+// js/core/plans-link.js.
 //
 // Opening a file is not done here. The host (main.js) opens a .takeoff with
 // its file handle — so Save writes back into the folder — and starts a new
@@ -23,6 +26,7 @@ import {
   canPickFolders, describeChosenFolder, listTopFolders, walkPlans, isOneDriveArchive,
   permissionOf, askPermission, parseProjectCode, projectCodeOf, compareCodes, restOfName,
 } from '../core/plans-folder.js';
+import { INVALID_LINK, isPhoneOrTablet, linkPanelModel, copyText } from '../core/plans-link.js';
 
 const UNSUPPORTED =
   'Opening plans from a folder needs Chrome or Edge on a computer. On a phone '
@@ -45,7 +49,10 @@ export class PlansArchive {
    * @param {import('../core/plans-folder.js').PlansFolders} o.store
    * @param {object} o.host  { mode() → 'folder'|'sharepoint', status(text),
    *                           refreshStart(), openTakeoff(entry) → Promise<bool>,
-   *                           startFromPdf(entry) → Promise }
+   *                           startFromPdf(entry) → Promise,
+   *                           devicePlans() → { kept, portal },
+   *                           devicePlanRows({ kept, portal }, { beforeOpen }) → Node[],
+   *                           openFile() — the start screen's "Open a .takeoff project" }
    * @param {Window} [o.win]
    */
   constructor({ store, host, win = window }) {
@@ -55,6 +62,8 @@ export class PlansArchive {
     // A link asked for a project before the folder was ready: opened once it is.
     this.pending = null;
     this._renderSeq = 0;
+    // The link panel on screen, if any: a second link replaces it.
+    this._linkClose = null;
   }
 
   supported() { return canPickFolders(this.win); }
@@ -382,11 +391,13 @@ export class PlansArchive {
   /**
    * A `#plans` / `#plans=A249` link. Opens the browser when the folder can be
    * read; otherwise says which step comes first and remembers the project.
+   * Where no folder can be opened at all, the link panel (linkPanel).
    */
   async openLink(link) {
     const code = (link && link.code) || '';
-    if (link && link.invalid) this.host.status('That link did not name a project number — showing the whole Plans Archive.');
-    if (!this.supported()) { this.host.status(UNSUPPORTED); return; }
+    const invalid = !!(link && link.invalid);
+    if (invalid) this.host.status(INVALID_LINK);
+    if (!this.supported()) { await this.linkPanel({ code, invalid }); return; }
     const states = await this.folders();
     if (states.some(s => s.perm === 'granted')) { await this.browse({ code, query: code }); return; }
     this.pending = { code };
@@ -395,6 +406,88 @@ export class PlansArchive {
       ? `Press “Reconnect” below to open ${what}.`
       : `Choose your Plans Archive folder below to open ${what}.`);
     this.host.refreshStart();
+  }
+
+  /**
+   * A link that landed where this browser cannot open a folder — Firefox or
+   * Safari on a computer, any phone or tablet. "Plans for A249": that job's
+   * plans already kept on this device, each opened by the start screen's own
+   * open path; "Open a .takeoff project", with where to pick the file; and on
+   * a computer, the link itself to copy into Edge or Chrome. A dialog, so a
+   * link followed into a tab with a project open shows it too.
+   */
+  async linkPanel({ code = '', invalid = false } = {}) {
+    if (this._linkClose) this._linkClose(null);
+    let plans = { kept: [], portal: [] };
+    try { plans = this.host.devicePlans() || plans; } catch { /* storage blocked: nothing listed */ }
+    const handheld = isPhoneOrTablet(this.win);
+    const m = linkPanelModel({
+      code, invalid, handheld, kept: plans.kept, portal: plans.portal,
+      pageHref: (this.win.location && this.win.location.href) || '',
+    });
+    let mine = null;
+    await D.showDialog(close => {
+      mine = close;
+      this._linkClose = close;
+      const body = D.el('div', 'pl');
+      if (m.invalidNote) body.appendChild(D.el('p', 'pa-note pa-warn', m.invalidNote));
+
+      const head = D.el('div', 'es-lib-head');
+      head.appendChild(D.el('span', null, 'Plans on this device'));
+      body.appendChild(head);
+      if (m.count) {
+        const list = D.el('div', 'es-lib-list pl-list');
+        list.append(...this.host.devicePlanRows({ kept: m.kept, portal: m.portal }, { beforeOpen: () => close(null) }));
+        body.appendChild(list);
+      } else {
+        body.appendChild(D.el('p', 'pa-note pl-empty', m.emptyText));
+      }
+
+      // Straight from the click, no await first: Firefox and Safari open the
+      // file picker only while the tap still counts.
+      const open = D.el('button', 'es-btn primary es-arch-btn pl-btn pl-open', 'Open a .takeoff project');
+      open.type = 'button';
+      open.addEventListener('click', () => { close(null); this.host.openFile(); });
+      body.append(open, D.el('p', 'pa-note pl-hint', m.openHint));
+
+      if (m.browserNote) {
+        const other = D.el('div', 'pl-other');
+        other.appendChild(D.el('p', 'pa-note', m.browserNote));
+        if (m.href) {
+          const row = D.el('div', 'pl-copy');
+          const copy = D.el('button', 'es-btn es-arch-btn pl-btn pl-copy-btn', 'Copy link');
+          copy.type = 'button';
+          let shown = null;
+          const showLink = () => {
+            // The clipboard said no: the link itself, selected, to copy by hand.
+            if (!shown) {
+              shown = D.input(m.href, 'text', { readonly: '', 'aria-label': 'The link to these plans', spellcheck: 'false' });
+              shown.className = 'pl-link';
+              shown.addEventListener('focus', () => shown.select());
+              other.append(D.el('p', 'pa-note', 'Copy this link, then open it in Edge or Chrome:'), shown);
+            }
+            shown.focus();
+            shown.select();
+          };
+          copy.addEventListener('click', async () => {
+            if (await copyText(this.win.navigator, m.href)) {
+              copy.textContent = 'Link copied';
+              this.host.status('Link copied. Paste it into Edge or Chrome.');
+            } else {
+              showLink();
+            }
+          });
+          row.appendChild(copy);
+          other.appendChild(row);
+        }
+        body.appendChild(other);
+      }
+
+      const done = D.button('Close', 'pl-btn', () => close(null));
+      done.type = 'button';
+      return D.dlg({ title: m.title, body, buttons: [done] });
+    });
+    if (this._linkClose === mine) this._linkClose = null;
   }
 
   // ── the folders this device knows ───────────────────────────────────────

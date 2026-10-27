@@ -2391,6 +2391,11 @@ const plansArchive = new PlansArchive({
     refreshStart: () => renderArchiveSection(),
     openTakeoff: entry => openArchiveTakeoff(entry),
     startFromPdf: entry => startArchivePdf(entry),
+    // A #plans link where no folder can be opened: the plans already on this
+    // device, as the start screen lists and opens them, and its open button.
+    devicePlans: () => ({ kept: keptEntries(), portal: libraryEntries() }),
+    devicePlanRows: (plans, opts) => devicePlanRows(plans, { ...opts, removable: false }),
+    openFile: () => safeRun('open-project'),
   },
 });
 
@@ -4615,15 +4620,26 @@ function renderLibraryList() {
   const link = box.querySelector('a.es-lib-manage');
   // The portal's page is where its copies were managed until the plans moved.
   if (link) link.hidden = moved;
+  list.replaceChildren(...devicePlanRows({ kept, portal }));
+  box.hidden = !kept.length && !portal.length;
+}
+
+/**
+ * The rows of a list of plans on this device: the kept copies, then the
+ * portal's, each headed when both are there. The start screen's list, and a
+ * #plans link's panel (js/ui/plans-archive.js linkPanel) — which offers no
+ * Remove and closes itself (`beforeOpen`) as a plan is opened.
+ */
+function devicePlanRows({ kept = [], portal = [] }, { removable = true, beforeOpen = null } = {}) {
+  const moved = plansSource() === 'folder';
   const items = [];
   if (kept.length && portal.length) items.push(D.el('div', 'es-arch-sub', 'Kept on this device'));
-  for (const e of kept) items.push(keptItem(e));
+  for (const e of kept) items.push(keptItem(e, { removable, beforeOpen }));
   if (portal.length && (kept.length || moved)) {
     items.push(D.el('div', 'es-arch-sub', moved ? 'Saved from SharePoint before the plans moved' : 'From the Plans Library'));
   }
-  for (const e of portal) items.push(libraryItem(e, { moved }));
-  list.replaceChildren(...items);
-  box.hidden = !kept.length && !portal.length;
+  for (const e of portal) items.push(libraryItem(e, { moved, removable, beforeOpen }));
+  return items;
 }
 
 /** One list row: the open button, and a Remove button beside it when this app may remove it. */
@@ -4639,7 +4655,7 @@ function libraryRow(button, onRemove) {
 }
 
 /** One portal copy: which job, which file, and how old this copy is. */
-function libraryItem(entry, { moved = false } = {}) {
+function libraryItem(entry, { moved = false, removable = true, beforeOpen = null } = {}) {
   const code = String(entry.projectCode ?? '').trim();
   const title = String(entry.projectTitle ?? '').trim();
   const name = String(entry.name || entry.file);
@@ -4664,15 +4680,16 @@ function libraryItem(entry, { moved = false } = {}) {
   if (meta.childNodes.length) b.appendChild(meta);
 
   b.addEventListener('click', async () => {
+    if (beforeOpen) beforeOpen();
     if (app.project.dirty && !(await confirmDiscard())) return;
     await openLibraryCopy(moved ? { ...entry, updateAvailable: false } : entry);
   });
   // Before the switch the portal's Plans Library page manages its copies.
-  return libraryRow(b, moved ? () => removeLibraryCopy(entry) : null);
+  return libraryRow(b, moved && removable ? () => removeLibraryCopy(entry) : null);
 }
 
 /** One kept copy: which job, which file, how big, and when it was kept. */
-function keptItem(entry) {
+function keptItem(entry, { removable = true, beforeOpen = null } = {}) {
   const code = String(entry.code ?? '').trim();
   const name = String(entry.name || entry.file);
   const where = [entry.project && entry.project !== code ? entry.project : '', entry.path].filter(Boolean).join(' / ');
@@ -4689,10 +4706,11 @@ function keptItem(entry) {
     b.appendChild(meta);
   }
   b.addEventListener('click', async () => {
+    if (beforeOpen) beforeOpen();
     if (app.project.dirty && !(await confirmDiscard())) return;
     await openKeptCopy(entry);
   });
-  return libraryRow(b, () => removeKeptCopy(entry));
+  return libraryRow(b, removable ? () => removeKeptCopy(entry) : null);
 }
 
 /** Open a kept copy: like a portal copy, read in place, and Save never writes into it. */

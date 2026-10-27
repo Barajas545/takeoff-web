@@ -909,6 +909,35 @@ button.es-lib-manage { background: none; border: 0; cursor: pointer; font-family
 .pa-warn { color: var(--warn); }
 .pa-folders { display: flex; flex-direction: column; gap: 6px; }
 
+/* A #plans link where this browser cannot open the folder — Firefox or Safari
+   on a computer, any phone or tablet (js/ui/plans-archive.js linkPanel). The
+   start screen's own rows and buttons, in a dialog. */
+.pl { display: flex; flex-direction: column; gap: 8px; }
+.pl > .es-lib-head { margin-bottom: 0; }
+.pl .pa-note { margin: 0; }
+.pl-list { max-height: min(320px, 40vh); }
+/* The dialog is --chip-bg too: a darker row, edged, so it reads as a button. */
+.pl .es-lib-item { background: var(--row-a); border-color: #383838; }
+.pl .es-lib-item:hover { background: var(--btn-press); }
+.pl .es-arch-btn { margin: 0; }
+.pl-other {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 6px; padding-top: 12px; border-top: 1px solid #333;
+}
+.pl-copy { display: flex; gap: 8px; flex-wrap: wrap; }
+.pl-copy .es-arch-btn { width: auto; }
+.pl-link {
+  width: 100%; min-width: 0; min-height: var(--ctl-h);
+  background: var(--field-bg); color: var(--text);
+  border: 1px solid #303030; border-radius: 6px;
+  padding: 7px 9px; font-family: var(--mono);
+}
+.dlg-foot .pl-btn { min-height: var(--ctl-h); }
+/* A fingertip, whichever layout is chosen: 44 px. */
+@media (pointer: coarse) {
+  .pl .es-lib-item, .pl .pl-btn, .pl-link, .dlg-foot .pl-btn { min-height: 44px; }
+}
+
 .drop-veil[hidden] { display: none; }
 .drop-veil {
   position: absolute; inset: 12px; z-index: 30;

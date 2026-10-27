@@ -20,7 +20,7 @@
  * fails when one main.js can reach is missing, and when an entry names a
  * file that does not exist — that would fail every install.
  */
-const CACHE = 'ptt-web-v13';
+const CACHE = 'ptt-web-v14';
 
 /**
  * The program, precached on install: the page, the stylesheet, and every
@@ -53,6 +53,7 @@ const PROGRAM = [
   'js/core/pdf-import.js',
   'js/core/plans-folder.js',
   'js/core/device-plans.js',
+  'js/core/plans-link.js',
   'js/core/project.js',
   'js/core/remote-file.js',
   'js/core/revisions.js',
