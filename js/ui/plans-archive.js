@@ -712,15 +712,14 @@ export class PlansArchive {
       for (const f of g.folders) {
         let tree;
         try {
-          tree = await walkPlans(f.handle, { name: f.name, maxDepth: f.looseOnly ? 0 : 4 });
+          tree = await walkPlans(f.handle, { name: f.name, filesOnly: !!f.looseOnly });
         } catch (err) {
           parts.push(D.el('p', 'pa-note pa-warn', `Could not read ${f.name || f.rec.name}: ${err.message || err}`));
           continue;
         }
-        if (f.looseOnly) tree.folders = [];
         const ctx = {
           folderId: f.rec.id, folderName: f.rec.name, code: g.code,
-          project: f.name, openEntry,
+          project: f.name, projectDir: f.handle, openEntry,
         };
         if (multi) parts.push(D.el('div', 'pa-sub', `In ${f.rec.name}`));
         parts.push(...renderTree(tree, ctx));
@@ -771,7 +770,7 @@ function fileRow(f, ctx) {
   const entry = {
     handle: f.handle, dir: f.dir, name: f.name, kind: f.kind, size: f.size,
     lastModified: f.lastModified, path: f.path, code: ctx.code, project: ctx.project,
-    folderId: ctx.folderId, folderName: ctx.folderName,
+    folderId: ctx.folderId, folderName: ctx.folderName, projectDir: ctx.projectDir,
   };
   if (f.kind === 'pdf') {
     acts.appendChild(D.button('View', '', () => { void viewPdf(f.handle); }));

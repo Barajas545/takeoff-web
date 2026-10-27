@@ -218,6 +218,11 @@ const a251 = top.projects.find(p => p.code === 'A251').handle;
 const empty = await walkPlans(a251);
 eq('a folder with only an empty Backups has nothing to show', [empty.count, empty.folders.length], [0, 0]);
 eq('… and its Backups was not read', listed(a251.kids.get('Backups')), 0);
+const read249 = listed(archive.kids.get('A249'));
+const loose = await walkPlans(archive, { filesOnly: true });
+eq('filesOnly: the loose files at the top, no project folder read, nothing said to be cut',
+  [loose.files.map(f => f.name), loose.folders.length, !!loose.truncated, listed(archive.kids.get('A249')) - read249],
+  [['Loose plan.takeoff'], 0, false, 0]);
 const nested = tree('A252', { 'Plans/': { 'Rev 1/': { 'Rev 1.takeoff': [10] }, 'Backups/': { 'Old.pdf': [11] } } });
 eq('a takeoff deeper down is none either, nor older drawings', [(await walkPlans(nested)).count, listed(nested.kids.get('Plans').kids.get('Backups'))], [0, 0]);
 

@@ -2624,9 +2624,11 @@ async function saveProject({ saveAs = false } = {}) {
 
   if (saveAs || !handle) {
     if (canUseFsApi) {
-      // Save As starts in the folder the plan came from — the archive
-      // project's own folder, or the PDF's — so a new takeoff lands beside
-      // its drawings unless the estimator moves it.
+      // Save As starts in the archive project's own folder — the plan's, or
+      // for a takeoff started from a PDF the project the PDF is in, even when
+      // the PDF sits in a sub-folder: a takeoff counts only right in a
+      // project's folder (the owner, 2026-10-27) — so the new one is listed
+      // with the project's plans unless the estimator moves it.
       const startIn = (app.archive && app.archive.dir) || app.saveStartIn || null;
       const pick = withStart => window.showSaveFilePicker({
         suggestedName: suggestedFileName(),
@@ -2762,7 +2764,7 @@ async function openArchiveTakeoff(entry) {
   return ok;
 }
 
-/** Start a new takeoff from a PDF in the archive; Save As then starts in its folder. */
+/** Start a new takeoff from a PDF in the archive; Save As then starts in its project's folder. */
 async function startArchivePdf(entry) {
   let file;
   try {
@@ -2772,7 +2774,7 @@ async function startArchivePdf(entry) {
       `${entry.name} is no longer where it was — it may have been moved, renamed or deleted.`);
     return;
   }
-  await importPdfFile(file, { saveStartIn: entry.dir || null });
+  await importPdfFile(file, { saveStartIn: entry.projectDir || entry.dir || null });
 }
 
 /**

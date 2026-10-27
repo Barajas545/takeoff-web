@@ -257,13 +257,16 @@ export async function describeChosenFolder(handle) {
  * sub-folder is walked for its drawings (PDFs). Folders with no plan file
  * anywhere below them are left out.
  *
+ * `filesOnly`: the folder's own files and no sub-folder at all (the loose
+ * files at the top of the archive, whose sub-folders are the projects).
+ *
  * Bounded three ways — depth, folder listings and files — and `truncated`
  * says something was not looked at. A file that vanished between the listing
  * and its size being read (OneDrive moving it, someone deleting it) is
  * skipped, not an error.
  */
 export async function walkPlans(dir, {
-  maxDepth = 4, maxFiles = 400, maxFolders = 60, name = dir.name,
+  maxDepth = 4, maxFiles = 400, maxFolders = 60, name = dir.name, filesOnly = false,
 } = {}) {
   const budget = { listings: 0, files: 0 };
 
@@ -290,6 +293,7 @@ export async function walkPlans(dir, {
     for (const k of kids) {
       if (isHiddenName(k.name)) continue;
       if (k.kind === 'directory') {
+        if (filesOnly) continue;
         if (rules.desk && depth === 0 && PHOTO_DIRS.test(k.name)) continue;
         if (isOlderCopiesFolder(k.name)) continue;      // older copies: never shown, so never read
         subs.push(k);

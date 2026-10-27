@@ -67,8 +67,10 @@ restarts it asks once more — press *Reconnect*, or pick *Allow on every visit*
 and that step goes away.
 
 **Find a plan.** Type a project number or part of a name. A project's
-`.takeoff` files are listed newest first, with the older copies (Backups)
-folded away below them. A PDF can be viewed, or a new takeoff started from it.
+`.takeoff` files — the ones right in its folder — are listed newest first;
+the older copies in Backups, and any takeoff in a sub-folder, are not shown.
+A PDF in a sub-folder is listed under its folder. A PDF can be viewed, or a
+new takeoff started from it (Save As then starts in the project's folder).
 
 **Save writes back into the folder** — after checking that nobody saved the
 same file from another computer since you opened it. If somebody did, nothing
