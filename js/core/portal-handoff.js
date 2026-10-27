@@ -41,8 +41,9 @@ export const HANDOFF_VERSION = 1;
 /** How long the new tab waits for the portal's plan before it says so (the portal may first ask OneDrive for a
  *  link: a walk of the project's folders, and its own wait for this tab is 90 s). */
 export const HANDOFF_WAIT_MS = 120 * 1000;
-/** How long a fresh link may take to come back. */
-export const RENEW_WAIT_MS = 30 * 1000;
+/** How long a fresh link may take to come back (the portal asks OneDrive for it: a walk of the project's folders, and
+ *  once more after a short busy answer). */
+export const RENEW_WAIT_MS = 90 * 1000;
 
 const NONCE_RE = /^[A-Za-z0-9_-]{16,64}$/;
 const NUMBER_RE = /^[^\u0000-\u001f\u007f]{1,40}$/;

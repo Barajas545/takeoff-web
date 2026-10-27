@@ -4526,12 +4526,13 @@ async function receiveFromPortal(nonce) {
     });
     // Nothing on this site can hold the portal's copy open (Web Locks are per
     // site): the portal keeps a copy it handed over for a week. `portal` makes
-    // the save check send the person back to the portal, and lets File › Keep
-    // on This Device copy it into this app's own storage.
+    // the save check send the person back to the portal. File › Keep on This
+    // Device refuses it: the copy carries prices and belongs to the person who
+    // saved it in the portal, which removes it when their Sees prices goes; a
+    // copy kept by this app belongs to the device, out of the portal's reach.
     const hold = { name: plan.name, file, portal: true, number: plan.number, release() {} };
     const opened = await loadProjectFile(file, null, { library: hold });
     if (opened) {
-      app.sourceFile = file;
       setStatus(plan.updateAvailable
         ? 'Opened the copy saved on this device — a newer version is in the Plans Archive; the portal downloads it while it is open.'
         : 'Opened the copy saved on this device (the portal\'s Plans Library). Save goes to Save As.');
@@ -4571,10 +4572,13 @@ async function tellPortalOffline(opener, origin, nonce) {
 
 /**
  * A fresh download link from the portal tab that handed the plan over, for
- * RemoteFile when the link in hand expires. '' when the portal has none, its
- * tab is gone or left that page (the plan then stays readable only as far as
- * it was read) - and after one such answer every later ask is '' at once, with
- * one word on the status line, rather than half a minute of waiting a sheet.
+ * RemoteFile when the link in hand expires. '' when there is none:
+ *   · the portal page never answered (its tab closed, or it moved on to
+ *     another page): every later ask is '' at once, with one word on the
+ *     status line, rather than a wait on every sheet;
+ *   · it answered with no link (OneDrive busy just then, or the plan was
+ *     saved again in OneDrive since it was opened): said on the status line,
+ *     and the next sheet asks again.
  */
 function portalRenewer(opener, origin, nonce) {
   let seq = 0;
@@ -4589,19 +4593,23 @@ function portalRenewer(opener, origin, nonce) {
   return () => new Promise(resolve => {
     if (dead || !opener || opener.closed) { resolve(giveUp()); return; }
     const req = `r${++seq}`;
-    const timer = setTimeout(() => finish(''), RENEW_WAIT_MS);
+    const timer = setTimeout(() => finish('', false), RENEW_WAIT_MS);
     function onMessage(ev) {
       if (ev.source !== opener || ev.origin !== origin) return;
       const url = linkFromMessage(ev.data, nonce, req);
-      if (url !== null) finish(url);
+      if (url !== null) finish(url, true);
     }
-    function finish(url) {
+    function finish(url, answered) {
       clearTimeout(timer);
       window.removeEventListener('message', onMessage);
-      resolve(url || giveUp());
+      if (url) { resolve(url); return; }
+      if (!answered) { resolve(giveUp()); return; }
+      setStatus('The portal could not give a fresh link just now, or the plan was saved again in OneDrive — '
+        + 'try the sheet again, or open the plan again from the portal.');
+      resolve('');
     }
     window.addEventListener('message', onMessage);
-    try { opener.postMessage(renewMessage(nonce, req), origin); } catch { finish(''); }
+    try { opener.postMessage(renewMessage(nonce, req), origin); } catch { finish('', false); }
   });
 }
 
@@ -4977,7 +4985,12 @@ function dropPortalRecords(file) {
  */
 async function keepOnDevice() {
   if (!app.fileName) { setStatus('Open a plan first, then keep it on this device.'); return; }
-  if (app.libraryCopy && !app.libraryCopy.portal) { setStatus('This plan is already on this device.'); return; }
+  if (app.libraryCopy) {
+    setStatus(app.libraryCopy.portal
+      ? 'This plan is saved on this device by the portal\'s Plans Library — it opens from there.'
+      : 'This plan is already on this device.');
+    return;
+  }
   if (typeof navigator.storage?.getDirectory !== 'function') {
     await D.alertDialog('Keep on This Device', 'This browser cannot keep plan files on the device. Use Chrome or Edge, or Safari 16.4 or newer on an iPhone or iPad.');
     return;
@@ -5000,11 +5013,10 @@ async function keepOnDevice() {
     const root = await navigator.storage.getDirectory();
     const meta = {
       name: app.fileName,
-      code: (app.archive && app.archive.code) || (app.libraryCopy && app.libraryCopy.number)
-        || projectCodeOf(String(app.fileName || '').split(/[\\/]/).pop()) || '',
+      code: (app.archive && app.archive.code) || projectCodeOf(String(app.fileName || '').split(/[\\/]/).pop()) || '',
       project: (app.archive && app.archive.project) || '',
       path: (app.archive && app.archive.path) || '',
-      from: app.archive ? 'Plans Archive' : app.libraryCopy && app.libraryCopy.portal ? 'the portal' : 'a file on this device',
+      from: app.archive ? 'Plans Archive' : 'a file on this device',
     };
     const { entry, existed } = await keepFile({ root, store: localStorage, file, meta,
       estimate: navigator.storage.estimate ? () => navigator.storage.estimate() : null });
