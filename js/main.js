@@ -17,6 +17,10 @@ import {
   libraryOwner, portalCopies, keptCopies, keepFile, keptFile, removeKept, removePortalCopy, sizeText,
 } from './core/device-plans.js';
 import { openAfterAsking } from './core/plans-link.js';
+import {
+  PORTAL_ORIGINS, HANDOFF_WAIT_MS, RENEW_WAIT_MS, parsePortalHash, isPortalOrigin, readyMessage, renewMessage,
+  openFromMessage, linkFromMessage,
+} from './core/portal-handoff.js';
 import { PlansArchive } from './ui/plans-archive.js';
 import { PLANS_SOURCE } from './site-config.js';
 import { PageStore } from './core/page-store.js';
@@ -4451,6 +4455,97 @@ function renewerFor(r) {
   };
 }
 
+// ── handed over by Portal 2 (another site) ────────────────────────────────
+/**
+ * A plan Portal 2 hands over: its Plans Library's copy on this device, or a
+ * plan in the OneDrive Plans Archive over a download link. Portal 2 is not
+ * this app's site, so the two windows talk (js/core/portal-handoff.js): this
+ * tab tells its opener it is ready, and takes the plan only from that window,
+ * from a portal address, with this tab's nonce. Resolves when it is open (or
+ * nothing came); every failure is shown here.
+ */
+async function receiveFromPortal(nonce) {
+  const opener = window.opener;
+  if (!opener) {
+    // A reload of a used tab, or a browser that opened it without its opener.
+    setStatus('Nothing came from the portal — open the plan again from the portal (Search, or its Plans Library).');
+    return;
+  }
+  const got = await new Promise(resolve => {
+    const timer = setTimeout(() => finish(null), HANDOFF_WAIT_MS);
+    function onMessage(ev) {
+      if (ev.source !== opener || !isPortalOrigin(ev.origin)) return;
+      const plan = openFromMessage(ev.data, nonce);
+      if (plan) finish({ plan, origin: ev.origin });
+    }
+    function finish(v) {
+      clearTimeout(timer);
+      window.removeEventListener('message', onMessage);
+      resolve(v);
+    }
+    window.addEventListener('message', onMessage);
+    // Said only to the portal's own address: any other opener hears nothing.
+    for (const origin of PORTAL_ORIGINS) {
+      try { opener.postMessage(readyMessage(nonce), origin); } catch { /* that window is gone */ }
+    }
+  });
+  if (!got) {
+    setStatus('Nothing came from the portal — open the plan again from the portal (Search, or its Plans Library).');
+    return;
+  }
+  const { plan, origin } = got;
+  if (plan.kind === 'file') {
+    // Wrapped only to carry the plan's name and the version's date; no bytes
+    // are copied. The copy is the portal's: Save never writes into it (Save
+    // As or a download, as for any copy kept on this device), and the save
+    // check finds out if the portal has replaced it since (libraryCopyReadable).
+    const file = new File([plan.file], plan.name, {
+      type: 'application/octet-stream', lastModified: plan.lastModified || Date.now(),
+    });
+    const hold = { name: plan.name, file, release() {} };
+    const opened = await loadProjectFile(file, null, { library: hold });
+    if (opened) {
+      setStatus(plan.updateAvailable
+        ? 'Opened the copy saved on this device — a newer version is in the Plans Archive; the portal downloads it while it is open.'
+        : 'Opened the copy saved on this device (the portal\'s Plans Library). Save goes to Save As.');
+    }
+    return;
+  }
+  await loadProjectFile(new RemoteFile({
+    url: plan.url,
+    name: plan.name,
+    size: plan.size,
+    lastModified: plan.lastModified,
+    renew: portalRenewer(opener, origin, nonce),
+  }));
+}
+
+/**
+ * A fresh download link from the portal tab that handed the plan over, for
+ * RemoteFile when the link in hand expires. '' when the portal has none or
+ * its tab is gone (the plan then stays readable only as far as it was read).
+ */
+function portalRenewer(opener, origin, nonce) {
+  let seq = 0;
+  return () => new Promise(resolve => {
+    if (!opener || opener.closed) { resolve(''); return; }
+    const req = `r${++seq}`;
+    const timer = setTimeout(() => finish(''), RENEW_WAIT_MS);
+    function onMessage(ev) {
+      if (ev.source !== opener || ev.origin !== origin) return;
+      const url = linkFromMessage(ev.data, nonce, req);
+      if (url !== null) finish(url);
+    }
+    function finish(url) {
+      clearTimeout(timer);
+      window.removeEventListener('message', onMessage);
+      resolve(url);
+    }
+    window.addEventListener('message', onMessage);
+    try { opener.postMessage(renewMessage(nonce, req), origin); } catch { finish(''); }
+  });
+}
+
 // ── plans on this device: the portal's Plans Library and this app's own ───
 /**
  * Plans kept on this device so they open with no signal.
@@ -4896,15 +4991,27 @@ window.addEventListener('pageshow', ev => {
 
 /* Checked synchronously: an async check would let the idle status below land
    on top of "Opening project…". */
-const HANDOFF = /(?:^|[#&])open=([^&]+)/.exec(location.hash || '');
+// `#portal=<nonce>`: Portal 2 handing a plan over, window to window.
+const PORTAL_HANDOFF = parsePortalHash(location.hash || '');
+const HANDOFF = PORTAL_HANDOFF ? null : /(?:^|[#&])open=([^&]+)/.exec(location.hash || '');
 // `#plans` / `#plans=A249`: the portal's search, or a bookmark, asking for the
 // Plans Archive or one job's plans in it. A project number is no credential,
 // so unlike a handoff it may travel in the address.
-const PLANS_LINK = HANDOFF ? null : parsePlansLink(location.hash || '');
+const PLANS_LINK = HANDOFF || PORTAL_HANDOFF ? null : parsePlansLink(location.hash || '');
 const IDLE_STATUS = canUseFsApi
   ? 'Open a .takeoff project, or start from a PDF.'
   : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.';
-if (HANDOFF) {
+if (PORTAL_HANDOFF) {
+  // Consumed: a reload must not wait for a plan that already came.
+  try { history.replaceState(null, '', location.pathname + location.search); } catch { /* cosmetic */ }
+  setStatus('Opening the plan from the portal…');
+  receiveFromPortal(PORTAL_HANDOFF).catch(async err => {
+    setStatus('Could not open that plan.');
+    await D.alertDialog('Could not open', err.message || String(err));
+  }).finally(() => {
+    if (!$('emptyState').hidden) renderStartLists();
+  });
+} else if (HANDOFF) {
   setStatus('Opening the project from the portal…');
   openFromPortal(HANDOFF[1]).catch(async err => {
     setStatus('Could not open that project.');

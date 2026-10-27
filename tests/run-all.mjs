@@ -40,6 +40,7 @@ const PORTABLE = [
   'plans-folder',       // the Plans Archive: projects, plan files, save guard, made-up folders
   'device-plans',       // plans kept on this device: keep, list, remove, the portal's copies after the move
   'plans-link',         // a #plans link where no folder opens: that job's plans here, the link to copy
+  'portal-handoff',     // Portal 2 hands a plan over window to window: only from it, only in its shape
 ];
 
 // NEEDS THE LIBRARY: these read the estimator's real projects, which is the
