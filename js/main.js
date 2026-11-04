@@ -15,7 +15,7 @@ import {
 import {
   PORTAL_INDEX_KEY, PORTAL_DIR, PORTAL_DB, PORTAL_TOKEN_KEY, PORTAL_FILE_RE, KEPT_INDEX_KEY, OWNER_KEY, OPEN_LOCK,
   libraryOwner, portalCopies, keptCopies, keepFile, keptFile, removeKept, removePortalCopy, sizeText,
-  keepWriterFor, workerWriter, CANNOT_KEEP,
+  keepWriterFor, workerWriter, CANNOT_KEEP, sweepKept,
 } from './core/device-plans.js';
 import { openAfterAsking, isPhoneOrTablet } from './core/plans-link.js';
 import {
@@ -2390,6 +2390,14 @@ const handheld = isPhoneOrTablet(window);
  * replace it. Each open, and each new project, moves this on.
  */
 let openEpoch = 0;
+
+/**
+ * A sweep of Keep on This Device leftovers is under way (sweepKeptLeftovers).
+ * Up here rather than beside it: the start screen's list is drawn — and
+ * sweeps — while this module is still being evaluated, before a `let` further
+ * down would exist.
+ */
+let sweepingKept = false;
 
 /**
  * Where plans come from on this device: 'folder' (the Plans Archive folder)
@@ -4939,6 +4947,28 @@ function libraryEntries() {
   }
 }
 
+/**
+ * A copy cut off part-way — the tab closed or killed while the worker was
+ * writing it, or a worker ended while it still held the file — leaves a file
+ * in plans-kept that no list names, taking room no list offers to free.
+ * Whenever the list is drawn those are removed (sweepKept: only this app's
+ * own names, never one a window is still writing or has open). One sweep at
+ * a time (sweepingKept, declared near the top); nothing here may stop the
+ * list from being drawn.
+ */
+function sweepKeptLeftovers() {
+  if (sweepingKept || typeof navigator.storage?.getDirectory !== 'function' || !navigator.locks) return;
+  sweepingKept = true;
+  (async () => {
+    try {
+      const root = await navigator.storage.getDirectory();
+      await sweepKept({ root, store: localStorage, locks: navigator.locks });
+    } catch { /* the next drawing of the list tries again */ } finally {
+      sweepingKept = false;
+    }
+  })();
+}
+
 /** This device's kept copies (File › Keep on This Device); [] when none. */
 function keptEntries() {
   try { return keptCopies(localStorage); } catch { return []; }
@@ -4956,6 +4986,7 @@ function keptEntries() {
  * be removed here (the portal's own Plans Library page retires with it).
  */
 function renderLibraryList() {
+  sweepKeptLeftovers();
   const box = $('esLibrary');
   const list = $('esLibraryList');
   if (!box || !list) return;
@@ -5202,6 +5233,7 @@ async function keepOnDevice() {
       })
       : null;
     const { entry, existed } = await keepFile({ root, store: localStorage, file, meta, syncWrite,
+      locks: navigator.locks || null,
       estimate: navigator.storage.estimate ? () => navigator.storage.estimate() : null });
     setStatus(existed
       ? `${entry.name} is already kept on this device.`
