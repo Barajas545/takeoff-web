@@ -15,6 +15,7 @@ import {
 import {
   PORTAL_INDEX_KEY, PORTAL_DIR, PORTAL_DB, PORTAL_TOKEN_KEY, PORTAL_FILE_RE, KEPT_INDEX_KEY, OWNER_KEY, OPEN_LOCK,
   libraryOwner, portalCopies, keptCopies, keepFile, keptFile, removeKept, removePortalCopy, sizeText,
+  keepWriterFor, workerWriter, CANNOT_KEEP,
 } from './core/device-plans.js';
 import { openAfterAsking } from './core/plans-link.js';
 import {
@@ -4993,8 +4994,13 @@ async function keepOnDevice() {
       : 'This plan is already on this device.');
     return;
   }
-  if (typeof navigator.storage?.getDirectory !== 'function') {
-    await D.alertDialog('Keep on This Device', 'This browser cannot keep plan files on the device. Use Chrome or Edge, or Safari 16.4 or newer on an iPhone or iPad.');
+  // The page writes with createWritable() where it has it; Safari before 26
+  // has not, and writes through a worker instead (js/core/opfs-write-worker.js),
+  // which is where the last word on "can it" is said — a refusal from there
+  // comes back as the error below, in the same words.
+  const writer = keepWriterFor(window);
+  if (!writer) {
+    await D.alertDialog('Keep on This Device', CANNOT_KEEP);
     return;
   }
   let file = app.sourceFile;
@@ -5020,7 +5026,14 @@ async function keepOnDevice() {
       path: (app.archive && app.archive.path) || '',
       from: app.archive ? 'Plans Archive' : 'a file on this device',
     };
-    const { entry, existed } = await keepFile({ root, store: localStorage, file, meta,
+    const syncWrite = writer === 'worker'
+      ? workerWriter(() => new Worker(new URL('./core/opfs-write-worker.js', import.meta.url)), {
+        // In MB: the bar's own counter reads "done / total".
+        onProgress: (done, size) => showProgress('Keeping on this device… (MB copied)',
+          Math.floor(done / 1048576), Math.max(1, Math.ceil(size / 1048576)), app.fileName),
+      })
+      : null;
+    const { entry, existed } = await keepFile({ root, store: localStorage, file, meta, syncWrite,
       estimate: navigator.storage.estimate ? () => navigator.storage.estimate() : null });
     setStatus(existed
       ? `${entry.name} is already kept on this device.`

@@ -20,7 +20,7 @@
  * fails when one main.js can reach is missing, and when an entry names a
  * file that does not exist — that would fail every install.
  */
-const CACHE = 'ptt-web-v16';
+const CACHE = 'ptt-web-v17';
 
 /**
  * The program, precached on install: the page, the stylesheet, and every
@@ -83,6 +83,9 @@ const PROGRAM = [
   'js/ui/thumbnails.js',
   'js/ui/version-bar.js',
   'js/ui/assemblies.js',          // imported on demand by the materials manager
+  // A worker, not an import: started by Keep on This Device where the page has
+  // no createWritable (Safari before 26), so offline it must be here too.
+  'js/core/opfs-write-worker.js',
 ];
 
 /**

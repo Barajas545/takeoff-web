@@ -131,6 +131,9 @@ export async function copyInUse(locks, file) {
   }
 }
 
+/** Bytes read and written at a time where a file cannot be streamed: never the whole plan at once. */
+export const KEEP_SLICE = 8 * 1024 * 1024;
+
 async function* chunksOf(file) {
   if (typeof file.stream === 'function') {
     const reader = file.stream().getReader();
@@ -140,7 +143,97 @@ async function* chunksOf(file) {
       yield value;
     }
   }
-  yield new Uint8Array(await file.arrayBuffer());
+  // A 2 GB plan read in one arrayBuffer() is a killed tab on a phone.
+  const size = Number(file.size) || 0;
+  for (let at = 0; at < size; at += KEEP_SLICE) {
+    yield new Uint8Array(await file.slice(at, Math.min(at + KEEP_SLICE, size)).arrayBuffer());
+  }
+}
+
+/** Said when this browser has no way to write a file into its own storage. */
+export const CANNOT_KEEP = 'This browser cannot keep plan files on the device. On an iPhone or iPad it needs '
+  + 'Safari 16.4 or newer (iPadOS 16.4); on a computer, Chrome, Edge or Firefox.';
+
+/**
+ * How this browser can write a kept copy, as far as the page can tell:
+ *
+ *   'stream'  createWritable() on the page — Chrome, Edge, Firefox, Safari 26+
+ *   'worker'  no createWritable here, but workers exist: the synchronous
+ *             access handle is a worker-only API, invisible from the page, so
+ *             only the worker can say for sure (js/core/opfs-write-worker.js
+ *             refuses with "unsupported" where it is missing or too old)
+ *   null      no origin-private file system, or neither way
+ *
+ * Safari 16.4 to 18 on an iPad is the 'worker' case — and the reason it
+ * exists: before it, Keep on This Device failed there with
+ * "createWritable is not a function" while the app said 16.4 was enough.
+ */
+export function keepWriterFor(win = globalThis) {
+  const nav = (win && win.navigator) || {};
+  if (!nav.storage || typeof nav.storage.getDirectory !== 'function') return null;
+  const FH = win && win.FileSystemFileHandle;
+  if (FH && FH.prototype && 'createWritable' in FH.prototype) return 'stream';
+  if (win && typeof win.Worker === 'function') return 'worker';
+  return null;
+}
+
+/**
+ * A `syncWrite` for keepFile that hands the copy to the writer worker
+ * (js/core/opfs-write-worker.js) and waits for it: resolves { size } once the
+ * worker has written, flushed and closed the file; rejects with the worker's
+ * own words. One worker per copy, ended either way.
+ *
+ *   makeWorker  () => Worker — new Worker(new URL('./core/opfs-write-worker.js', import.meta.url)) in the page;
+ *               a made-up one in the tests
+ *   onProgress  (done, size) after every slice, for the progress bar
+ *   stallMs     no word from the worker for this long: it has died (a tab
+ *               short of memory can lose a worker without a word)
+ */
+export function workerWriter(makeWorker, { onProgress = null, stallMs = 60000 } = {}) {
+  return ({ dir, name, file }) => new Promise((resolve, reject) => {
+    let w = null;
+    let timer = null;
+    let over = false;
+    const end = (fn, v) => {
+      if (over) return;
+      over = true;
+      clearTimeout(timer);
+      try { if (w) w.terminate(); } catch { /* already gone */ }
+      fn(v);
+    };
+    const watch = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => end(reject, new Error('The copy stopped part-way and did not go on. Nothing was kept.')), stallMs);
+    };
+    try {
+      w = makeWorker();
+    } catch {
+      end(reject, new Error(CANNOT_KEEP));
+      return;
+    }
+    w.onmessage = ev => {
+      const m = (ev && ev.data) || {};
+      if (m.type === 'progress') {
+        watch();
+        if (onProgress) { try { onProgress(Number(m.done) || 0, Number(m.size) || 0); } catch { /* the bar only */ } }
+      } else if (m.type === 'done') {
+        end(resolve, { size: Number(m.size) || 0 });
+      } else if (m.type === 'error') {
+        end(reject, Object.assign(new Error(String(m.message || 'The copy could not be written.')), { code: String(m.code || 'failed') }));
+      }
+    };
+    // The script would not load (offline before it was ever cached) or threw.
+    w.onerror = ev => {
+      try { if (ev && typeof ev.preventDefault === 'function') ev.preventDefault(); } catch { /* fine */ }
+      end(reject, new Error(`${CANNOT_KEEP} (Its file writer could not start.)`));
+    };
+    watch();
+    try {
+      w.postMessage({ op: 'write', dir, name, file });
+    } catch {
+      end(reject, new Error(CANNOT_KEEP));
+    }
+  });
 }
 
 /**
@@ -152,8 +245,14 @@ async function* chunksOf(file) {
  *
  *   meta: { name, code, project, path, from }   what the list shows
  *   estimate: () => { quota, usage }           navigator.storage.estimate, optional
+ *   syncWrite: ({ dir, name, file }) => Promise  writes the bytes when the
+ *       file handle has no createWritable() (Safari before 26): the worker
+ *       (workerWriter). Without one such a browser is told it cannot keep here.
+ *
+ * Where the handle has createWritable() it is used, on the page, as it always
+ * was; the worker is only for the browsers that lack it.
  */
-export async function keepFile({ root, store, file, meta = {}, estimate = null, now = () => Date.now(), makeId = newId }) {
+export async function keepFile({ root, store, file, meta = {}, estimate = null, now = () => Date.now(), makeId = newId, syncWrite = null }) {
   if (!file || !(Number(file.size) > 0)) throw new Error('There is nothing to keep: the plan file is empty.');
   const name = String(meta.name || file.name || 'Plan.takeoff');
   const lastModified = Number(file.lastModified) || 0;
@@ -179,13 +278,19 @@ export async function keepFile({ root, store, file, meta = {}, estimate = null, 
   const fh = await dir.getFileHandle(fname, { create: true });
   let ok = false;
   try {
-    const w = await fh.createWritable();
-    try {
-      for await (const chunk of chunksOf(file)) await w.write(chunk);
-      await w.close();
-    } catch (err) {
-      try { await w.abort(); } catch { /* already closed */ }
-      throw err;
+    if (typeof fh.createWritable === 'function') {
+      const w = await fh.createWritable();
+      try {
+        for await (const chunk of chunksOf(file)) await w.write(chunk);
+        await w.close();
+      } catch (err) {
+        try { await w.abort(); } catch { /* already closed */ }
+        throw err;
+      }
+    } else if (syncWrite) {
+      await syncWrite({ dir: KEPT_DIR, name: fname, file });
+    } else {
+      throw new Error(CANNOT_KEEP);
     }
     const got = await fh.getFile();
     if (got.size !== Number(file.size)) throw new Error('The copy did not come out whole. Nothing was kept.');

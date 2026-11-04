@@ -10,11 +10,22 @@
 // only in this process, a localStorage stand-in and Web Locks that say which
 // copy is open. Made-up projects and accounts; no browser, no network.
 //
+// And a second one shaped like Safari before 26 — an iPad on iPadOS 16.4 to
+// 18 — whose file handles have no createWritable(), only the worker-only
+// synchronous access handle. There the copy is written by the real
+// js/core/opfs-write-worker.js, run here against that made-up file system.
+//
 // Run: node tests/device-plans.mjs
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   PORTAL_INDEX_KEY, PORTAL_DIR, PORTAL_TOKEN_KEY, OWNER_KEY, KEPT_INDEX_KEY, KEPT_DIR, OPEN_LOCK, KEPT_FILE_RE,
   tokenSub, libraryOwner, portalCopies, keptCopies, keepFile, keptFile, removeKept, removePortalCopy, copyInUse, sizeText,
+  keepWriterFor, workerWriter, CANNOT_KEEP, KEEP_SLICE,
 } from '../js/core/device-plans.js';
+
+const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 let fails = 0;
 let checks = 0;
@@ -60,21 +71,23 @@ class OpfsFile {
 }
 
 class OpfsDir {
-  constructor(name) { this.kind = 'directory'; this.name = name; this.kids = new Map(); this.onCreateFile = null; }
+  constructor(name, FileKind = OpfsFile) { this.kind = 'directory'; this.name = name; this.kids = new Map(); this.onCreateFile = null; this.FileKind = FileKind; }
   async getDirectoryHandle(name, { create = false } = {}) {
     let h = this.kids.get(name);
-    if (!h && create) { h = new OpfsDir(name); this.kids.set(name, h); }
+    if (!h && create) { h = new OpfsDir(name, this.FileKind); this.kids.set(name, h); }
     if (!h || h.kind !== 'directory') throw notFound(name);
     return h;
   }
   async getFileHandle(name, { create = false } = {}) {
     let h = this.kids.get(name);
-    if (!h && create) { h = new OpfsFile(name); if (this.onCreateFile) this.onCreateFile(h); this.kids.set(name, h); }
+    if (!h && create) { h = new this.FileKind(name); if (this.onCreateFile) this.onCreateFile(h); this.kids.set(name, h); }
     if (!h || h.kind !== 'file') throw notFound(name);
     return h;
   }
   async removeEntry(name) {
     if (!this.kids.has(name)) throw notFound(name);
+    // OPFS will not remove a file a worker still holds open.
+    if (this.kids.get(name).openHandle) throw Object.assign(new Error(`${name} is open`), { name: 'NoModificationAllowedError' });
     this.kids.delete(name);
   }
 }
@@ -191,6 +204,187 @@ eq('a failing record drop does not stop the removal',
 eq('the remembered account\'s list follows', portalCopies(store, libraryOwner(store).owner).map(e => e.id), []);
 
 eq('sizes', [sizeText(0), sizeText(900), sizeText(5 * 1048576), sizeText(2.5 * 1073741824)], ['', '1 KB', '5.0 MB', '2.5 GB']);
+
+// ── which writer this browser has ────────────────────────────────────────
+const storage = { getDirectory: async () => null };
+class WithWritable { createWritable() {} }
+class WithoutWritable { createSyncAccessHandle() {} }   // what the PAGE sees in Safari 16.4-18: no createWritable
+function Worker() {}
+eq('Chrome, Edge, Firefox, Safari 26+: the page writes', keepWriterFor({ navigator: { storage }, FileSystemFileHandle: WithWritable, Worker }), 'stream');
+eq('Safari 16.4 to 18 (an iPad on iPadOS 16.4-18): the worker writes', keepWriterFor({ navigator: { storage }, FileSystemFileHandle: WithoutWritable, Worker }), 'worker');
+eq('… and with no FileSystemFileHandle to look at, the worker still decides', keepWriterFor({ navigator: { storage }, Worker }), 'worker');
+eq('no workers either: cannot keep here', keepWriterFor({ navigator: { storage }, FileSystemFileHandle: WithoutWritable }), null);
+eq('no private file system: cannot keep here', [keepWriterFor({ navigator: {}, Worker }), keepWriterFor({ navigator: { storage: {} }, Worker }), keepWriterFor(null)], [null, null, null]);
+ok('the refusal names the real minimum, Safari 16.4', /Safari 16\.4/.test(CANNOT_KEEP));
+
+// ── Safari before 26: the worker and its synchronous access handle ───────
+const quotaError = () => Object.assign(new Error('The quota has been exceeded (made up).'), { name: 'QuotaExceededError' });
+
+/** A file whose handle has NO createWritable, only createSyncAccessHandle — and that, only in a worker. */
+class SafariFile {
+  constructor(name) {
+    this.kind = 'file'; this.name = name; this.data = new Uint8Array(0); this.lastModified = 1;
+    this.openHandle = null; this.closed = 0;
+    this.room = Infinity;          // bytes the device can still take
+    this.oldSafari = false;        // 15.2-16.3: the handle's methods answer with Promises
+    this.shortWrites = false;      // write() takes fewer bytes than it was given
+  }
+  async getFile() { return new File([this.data], this.name, { lastModified: this.lastModified }); }
+  async createSyncAccessHandle() {
+    if (this.openHandle) throw Object.assign(new Error('already open'), { name: 'NoModificationAllowedError' });
+    const f = this;
+    let buf = new Uint8Array(Math.max(1024, f.data.length));
+    buf.set(f.data);
+    let len = f.data.length;
+    const sync = {
+      getSize: () => len,
+      truncate: n => { len = n; },
+      write: (bytes, { at = 0 } = {}) => {
+        const view = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        if (at + view.length > f.room) throw quotaError();
+        if (at + view.length > buf.length) {
+          const bigger = new Uint8Array(Math.max(buf.length * 2, at + view.length));
+          bigger.set(buf.subarray(0, len));
+          buf = bigger;
+        }
+        const n = f.shortWrites ? Math.max(0, view.length - 1) : view.length;
+        buf.set(view.subarray(0, n), at);
+        len = Math.max(len, at + n);
+        return n;
+      },
+      flush: () => { f.data = buf.slice(0, len); },
+      close: () => { f.data = buf.slice(0, len); f.openHandle = null; f.closed += 1; },
+    };
+    const handle = f.oldSafari
+      ? Object.fromEntries(Object.entries(sync).map(([k, fn]) => [k, async (...a) => fn(...a)]))
+      : sync;
+    f.openHandle = handle;
+    return handle;
+  }
+}
+
+const WORKER_SRC = readFileSync(path.join(APP, 'js', 'core', 'opfs-write-worker.js'), 'utf8');
+
+/**
+ * The real worker script, run in this process: its `self` and `navigator` are
+ * made up, messages cross with a turn of the event loop between, as they do
+ * between a page and a worker. (A File crosses into a real worker by
+ * reference, so handing over the same object is what a browser does.)
+ */
+class MadeUpWorker {
+  constructor(root) {
+    this.onmessage = null; this.onerror = null; this.ended = false;
+    this.inside = { postMessage: m => { setTimeout(() => { if (!this.ended && this.onmessage) this.onmessage({ data: m }); }, 0); } };
+    new Function('self', 'navigator', WORKER_SRC)(this.inside, { storage: { getDirectory: async () => root } });
+  }
+  postMessage(m) { setTimeout(() => this.inside.onmessage({ data: m }), 0); }
+  terminate() { this.ended = true; }
+}
+
+/** A plan File that records how it is read: slice sizes, and any read of the whole thing. */
+function watched(file, { breakAt = null } = {}) {
+  const reads = [];
+  return {
+    reads,
+    file: {
+      name: file.name, size: file.size, lastModified: file.lastModified, type: '',
+      slice: (a, b) => {
+        reads.push(b - a);
+        if (breakAt !== null && a >= breakAt) {
+          return { arrayBuffer: async () => { throw Object.assign(new Error('the file changed (made up)'), { name: 'NotReadableError' }); } };
+        }
+        return file.slice(a, b);
+      },
+      arrayBuffer: () => { reads.push('WHOLE FILE'); return file.arrayBuffer(); },
+      stream: () => { reads.push('STREAM'); return file.stream(); },
+    },
+  };
+}
+
+const sroot = new OpfsDir('opfs', SafariFile);
+const sstore = memoryStore();
+const viaWorker = (o = {}) => workerWriter(() => new MadeUpWorker(sroot), o);
+const big = planFile('A104 Full set.takeoff', 17 * 1048576 + 12345, 3000);   // three slices: 8 + 8 + a bit
+const bigWatch = watched(big);
+const progress = [];
+const kept = await keepFile({ root: sroot, store: sstore, file: bigWatch.file, meta: { code: 'A104', from: 'a file on this device' },
+  makeId, now: () => 77, syncWrite: viaWorker({ onProgress: (done, size) => progress.push([done, size]) }) });
+const sdir = await sroot.getDirectoryHandle(KEPT_DIR);
+const skept = sdir.kids.get(kept.entry.file);
+eq('Safari before 26: kept, through the worker', [kept.existed, KEPT_FILE_RE.test(kept.entry.file), kept.entry.size, kept.entry.keptAt], [false, true, big.size, 77]);
+ok('… the kept bytes are the plan\'s bytes', skept.data.length === big.size && skept.data.every((v, i) => v === (i * 7) % 251));
+eq('… read a slice at a time, never the whole plan at once', bigWatch.reads, [KEEP_SLICE, KEEP_SLICE, big.size - 2 * KEEP_SLICE]);
+eq('… progress after every slice, to the last byte', progress.map(p => p[0]), [KEEP_SLICE, 2 * KEEP_SLICE, big.size]);
+eq('… and the worker closed its handle', [skept.closed, skept.openHandle], [1, null]);
+eq('… listed like any kept plan', keptCopies(sstore).map(e => [e.code, e.name, e.size]), [['A104', 'A104 Full set.takeoff', big.size]]);
+const sagain = await keepFile({ root: sroot, store: sstore, file: big, meta: { code: 'A104' }, makeId, syncWrite: () => { throw new Error('not needed'); } });
+eq('… the same version again is the one copy, with no second write', [sagain.existed, sdir.kids.size], [true, 1]);
+
+const sBefore = () => [sdir.kids.size, keptCopies(sstore).length];
+const was = sBefore();
+await rejects('no createWritable and no worker to write: refused in plain words',
+  () => keepFile({ root: sroot, store: sstore, file: planFile('B.takeoff', 100), makeId }), /cannot keep plan files on the device/);
+eq('… nothing left behind', sBefore(), was);
+
+sdir.onCreateFile = h => { h.createSyncAccessHandle = undefined; };
+await rejects('a browser with no access handle in its workers either: refused, naming Safari 16.4',
+  () => keepFile({ root: sroot, store: sstore, file: planFile('C.takeoff', 100), makeId, syncWrite: viaWorker() }), /Safari 16\.4/);
+eq('… nothing left behind', sBefore(), was);
+
+sdir.onCreateFile = h => { h.oldSafari = true; };
+await rejects('Safari 15.2-16.3 (the handle answers with Promises): not used — it would write nothing',
+  () => keepFile({ root: sroot, store: sstore, file: planFile('D.takeoff', 100), makeId, syncWrite: viaWorker() }), /Safari 16\.4/);
+eq('… nothing left behind, the handle closed', sBefore(), was);
+
+sdir.onCreateFile = h => { h.room = 5 * 1048576; };
+await rejects('the device fills up part-way', () => keepFile({ root: sroot, store: sstore, file: planFile('E.takeoff', 9 * 1048576), makeId, syncWrite: viaWorker() }), /does not have room/);
+eq('… the part written is removed again (the worker let go of it first)', sBefore(), was);
+
+sdir.onCreateFile = h => { h.shortWrites = true; };
+await rejects('a write that takes less than it was given', () => keepFile({ root: sroot, store: sstore, file: planFile('F.takeoff', 1000), makeId, syncWrite: viaWorker() }), /does not have room/);
+eq('… nothing left behind', sBefore(), was);
+sdir.onCreateFile = null;
+
+const changing = watched(planFile('G.takeoff', 2 * KEEP_SLICE + 10), { breakAt: KEEP_SLICE });
+await rejects('the plan cannot be read part-way (changed or moved)', () => keepFile({ root: sroot, store: sstore, file: changing.file, makeId, syncWrite: viaWorker() }), /could not be read while it was being copied/);
+eq('… nothing left behind', sBefore(), was);
+
+await rejects('no worker can be started', () => keepFile({ root: sroot, store: sstore, file: planFile('H.takeoff', 10), makeId,
+  syncWrite: workerWriter(() => { throw new Error('SecurityError (made up)'); }) }), /cannot keep plan files on the device/);
+eq('… nothing left behind', sBefore(), was);
+
+class NoScript { constructor() { this.onerror = null; } postMessage() { setTimeout(() => this.onerror && this.onerror({ preventDefault() {} }), 0); } terminate() {} }
+await rejects('the writer\'s script will not load (offline, never cached)', () => keepFile({ root: sroot, store: sstore, file: planFile('I.takeoff', 10), makeId,
+  syncWrite: workerWriter(() => new NoScript()) }), /could not start/);
+eq('… nothing left behind', sBefore(), was);
+
+class Silent { postMessage() {} terminate() { this.ended = true; } }
+let silent = null;
+await rejects('a worker that goes quiet (lost to memory) is given up on', () => keepFile({ root: sroot, store: sstore, file: planFile('J.takeoff', 10), makeId,
+  syncWrite: workerWriter(() => (silent = new Silent()), { stallMs: 30 }) }), /stopped part-way/);
+eq('… ended, and nothing left behind', [silent.ended, ...sBefore()], [true, ...was]);
+
+// The worker itself writes nothing outside this app's own kept copies.
+async function askWorker(msg) {
+  const w = new MadeUpWorker(sroot);
+  return new Promise(resolve => { w.onmessage = ev => { if (ev.data.type !== 'progress') resolve(ev.data); }; w.postMessage(msg); });
+}
+eq('the worker refuses a name that is not a kept copy', (await askWorker({ op: 'write', dir: KEPT_DIR, name: '../plans-library/p9-1-abc.takeoff', file: planFile('x', 1) })).code, 'refused');
+eq('… and any folder but plans-kept', (await askWorker({ op: 'write', dir: PORTAL_DIR, name: 'kab-cd.takeoff', file: planFile('x', 1) })).code, 'refused');
+eq('… and creates nothing of its own (a name the page did not make is not there)', (await askWorker({ op: 'write', dir: KEPT_DIR, name: 'kzz-none.takeoff', file: planFile('x', 1) })).type, 'error');
+eq('… and still nothing extra in the folder', sdir.kids.size, was[0]);
+
+// Where the page has createWritable it is used, worker or not.
+let workerUsed = false;
+const chrome = await keepFile({ root: new OpfsDir('opfs2'), store: memoryStore(), file: planFile('K.takeoff', 50), makeId,
+  syncWrite: async () => { workerUsed = true; } });
+eq('a browser with createWritable keeps writing on the page, as before', [chrome.existed, workerUsed], [false, false]);
+// …and one with no Blob.stream reads slices too, never one whole arrayBuffer.
+const noStream = watched(planFile('L.takeoff', KEEP_SLICE + 5));
+delete noStream.file.stream;
+const croot = new OpfsDir('opfs3');
+await keepFile({ root: croot, store: memoryStore(), file: noStream.file, makeId });
+eq('… a file it cannot stream is read in slices, not all at once', noStream.reads, [KEEP_SLICE, 5]);
 
 console.log(fails
   ? `\n${fails} of ${checks} checks FAILED`

@@ -103,6 +103,9 @@ SharePoint through its sync client.
 open plan — from the Plans Archive, or picked in the OneDrive app on a phone —
 into this browser's own storage, and the start screen lists it under *Plans on
 this device*, to open with no internet and remove when it is no longer needed.
+(Safari before 26 cannot write such a file from the page, so on an iPad the
+copy is written by a small worker, `js/core/opfs-write-worker.js`, a slice at
+a time; it works from Safari 16.4.)
 A kept copy is a snapshot: Save never writes into it. The old portal's Plans
 Library copies are listed there too, for the person who saved them (the last
 portal account seen on the device once nobody signs in there any more); after
