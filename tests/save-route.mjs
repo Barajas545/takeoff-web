@@ -11,6 +11,12 @@
 // it was composed, and the work is said to be "kept" only where a draft of it
 // can really be offered back.
 //
+// Inside the portal a plan it said it would take a save of goes back to it
+// (C2): saved only when the portal answers "kept"; refused, no room, failed,
+// two minutes of silence or a closed portal page keep the draft and say so.
+// Those are driven end to end here out of the same pure pieces main.js
+// joins, with a made-up portal and clock.
+//
 // Then a few pins on js/main.js itself (browser-only, so read as text, not
 // run): the draft is written before the heavy part of a save, the outcome
 // decides, and the file picker no longer turns a slow file into a cancel.
@@ -22,10 +28,12 @@ import { fileURLToPath } from 'node:url';
 import {
   SHARE_CAP_BYTES, SHEET_MIN_MS, downloadUrlKeepMs, saveRoute, shareErrorKind, deliverFile, afterSave,
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
-  HANDHELD_SAVE, REPLACE_WARNING,
+  HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
 } from '../js/core/save-route.js';
 import { Project } from '../js/core/project.js';
 import { HANDHELD_HINT } from '../js/core/plans-link.js';
+import { askPortalToKeep, SAVE_WAIT_MS } from '../js/core/portal-handoff.js';
+import { writeProject } from '../js/core/takeoff-file.js';
 
 const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -316,6 +324,160 @@ eq('counts not known and unsaved work there: asked about', lateArrival({ epochAt
 eq('a PDF\'s check (only the epoch): open', lateArrival({ epochAtPick: 3, epochNow: 3 }), 'open');
 ok('the waiting words say it opens when it arrives', /opens when it arrives/.test(STILL_COMING) && /OneDrive/.test(STILL_COMING));
 
+// ── a save handed back to the portal (inside it: C2) ─────────────────────
+{
+  const hold = { name: 'A000T1 Made up plan.takeoff', portal: true };
+  const portal = { canSave: true, hold, kind: 'file' };
+  ok('the portal said it takes a save of this plan, and it is the one open: to the portal', savesToPortal({ portal, libraryCopy: hold }));
+  eq('… not a Save As (a new file, as on any phone)', savesToPortal({ portal, libraryCopy: hold, saveAs: true }), false);
+  eq('… not once another project is open (its copy is not what is open now)', savesToPortal({ portal, libraryCopy: { portal: true } }), false);
+  eq('… not after New Project (no copy open)', savesToPortal({ portal, libraryCopy: null }), false);
+  eq('… not without the portal\'s say-so', savesToPortal({ portal: { ...portal, canSave: false }, libraryCopy: hold }), false);
+  eq('… not for a "true" that is not true', savesToPortal({ portal: { ...portal, canSave: 'true' }, libraryCopy: hold }), false);
+  eq('… not for a plan opened over the internet (no copy, no hold)', savesToPortal({ portal: { canSave: false, hold: null, kind: 'link' }, libraryCopy: null }), false);
+  eq('… not with no portal at all', savesToPortal({ libraryCopy: hold }), false);
+}
+{
+  const kept = afterSave('kept', { name: 'A000T1 Made up plan.takeoff', device: 'iPad', keptIn: 'A000T1 Made up plan.takeoff' });
+  eq('kept: saved, the draft goes, confirmed, nothing to tell', [kept.markSaved, kept.dropDraft, kept.confirmed, kept.tell], [true, true, true, false]);
+  eq('… and the words (C2)', kept.status, 'Saved on this iPad — the portal sends it to OneDrive.');
+  eq('… on an iPhone it says so', afterSave('kept', { device: 'iPhone' }).status, 'Saved on this iPhone — the portal sends it to OneDrive.');
+  const not = why => afterSave('not-kept', { why, keptIn: 'A000T1 Made up plan.takeoff', device: 'iPad' });
+  for (const why of ['refused', 'no-room', 'failed', 'timeout', 'gone', 'not-sent', '']) {
+    const n = not(why);
+    eq(`not kept (${why || 'no reason'}): NOT saved, the draft stays, it is told, nothing confirmed`, [n.markSaved, n.dropDraft, n.tell, n.confirmed], [false, false, true, false]);
+    ok(`… (${why || 'no reason'}) it says nothing reached the portal or OneDrive, that the work is kept, and what to do`,
+      /^Not saved to the portal or OneDrive\./.test(n.status) && /kept on this device: opening A000T1 Made up plan\.takeoff again offers them back/.test(n.status)
+      && /Save again, or save a copy to Files\./.test(n.status));
+  }
+  ok('refused: the portal\'s own words', /did not take this save: Not a plan the portal handed over\./.test(
+    afterSave('not-kept', { why: 'refused', portalWhy: 'Not a plan the portal handed over.' }).status));
+  ok('no room: says the device is full, and what frees room', /no room for the portal to keep the save/.test(not('no-room').status) && /Plans Library can remove/.test(not('no-room').status));
+  ok('failed with no words: says it gave none', /could not keep the save: it did not say why\./.test(not('failed').status));
+  ok('timeout: the two minutes', /did not answer within 2 minutes/.test(not('timeout').status));
+  ok('gone: the portal page closed', /has closed/.test(not('gone').status));
+  ok('no draft home (sheets added since it opened): never "kept", the page is the only place',
+    /in this page only: keep it open/.test(afterSave('not-kept', { why: 'refused', keptIn: '' }).status)
+    && !/kept on this device/.test(afterSave('not-kept', { why: 'refused', keptIn: '' }).status));
+  ok('nothing unsaved: nothing is lost', /no unsaved changes, so nothing is lost/.test(afterSave('not-kept', { why: 'timeout', dirty: false }).status));
+  // edited while the portal was keeping it, or another project opened meanwhile: P1's rules, for 'kept' too
+  const edited = afterSave('kept', { device: 'iPad', moved: 'edited' });
+  eq('kept, but edited while it was on its way: not marked saved, the draft stays, the file is one', [edited.markSaved, edited.dropDraft, edited.confirmed],
+    [false, false, true]);
+  ok('… and says the later changes are not in it', /^Saved on this iPad — the portal sends it to OneDrive — but changes made while it was being saved are not in it/.test(edited.status));
+  const replaced = afterSave('kept', { device: 'iPad', moved: 'replaced' });
+  eq('kept, but another project opened meanwhile: that project\'s draft goes, the open one is untouched',
+    [replaced.markSaved, replaced.dropDraft, replaced.confirmed], [false, true, true]);
+  eq('not kept and edited: still nothing saved, nothing dropped', [afterSave('not-kept', { why: 'refused', moved: 'edited' }).markSaved,
+    afterSave('not-kept', { why: 'refused', moved: 'edited' }).dropDraft], [false, false]);
+}
+{
+  eq('news: sending, how far', portalNewsWords({ state: 'sending', pct: 45 }, { name: 'A.takeoff', device: 'iPad' }),
+    'The portal is sending A.takeoff to OneDrive — 45%. It is saved on this iPad.');
+  eq('news: sending, no number', portalNewsWords({ state: 'sending', pct: null }, { name: 'A.takeoff', device: 'iPad' }),
+    'The portal is sending A.takeoff to OneDrive. It is saved on this iPad.');
+  eq('news: sent', portalNewsWords({ state: 'sent' }, { name: 'A.takeoff' }), 'The portal sent A.takeoff to OneDrive.');
+  ok('news: a separate file, named, nothing overwritten (C3\'s words)', /saved as “A - iPad 2026-11-04 1415\.takeoff” next to it — nothing was overwritten/.test(
+    portalNewsWords({ state: 'copy', name: 'A - iPad 2026-11-04 1415.takeoff' }, { device: 'iPad' })));
+  ok('… with no name: a separate file', /saved as a separate file next to it/.test(portalNewsWords({ state: 'copy', name: '' })));
+  ok('news: a send that failed after kept says it is still saved here', /could not send A\.takeoff to OneDrive yet: no signal\. It is saved on this iPad/.test(
+    portalNewsWords({ state: 'failed', why: 'no signal.' }, { name: 'A.takeoff', device: 'iPad' })));
+  eq('news: anything else says nothing', [portalNewsWords({ state: 'kept' }), portalNewsWords(null)], ['', '']);
+}
+
+// A save end to end, out of the same pieces main.js puts together — a made-up
+// portal and clock, a real Project and its change count, the drafts as a set:
+// compose, hand over, wait, judge (savedStill), conclude (afterSave), apply.
+function fakeClock() {
+  let now = 0, id = 0;
+  const timers = new Map();
+  return {
+    setTimeout: (fn, ms) => { timers.set(++id, { fn, at: now + ms, every: 0 }); return id; },
+    clearTimeout: i => { timers.delete(i); },
+    setInterval: (fn, ms) => { timers.set(++id, { fn, at: now + ms, every: ms }); return id; },
+    clearInterval: i => { timers.delete(i); },
+    advance(ms) {
+      const end = now + ms;
+      for (;;) {
+        let next = null;
+        for (const [k, t] of timers) if (t.at <= end && (!next || t.at < next[1].at)) next = [k, t];
+        if (!next) break;
+        now = next[1].at;
+        if (next[1].every) next[1].at += next[1].every; else timers.delete(next[0]);
+        next[1].fn();
+      }
+      now = end;
+    },
+  };
+}
+const NONCE = 'Zk3pQ9_x-7LmN2aBcD4e';
+const PLAN_NAME = 'A000T1 Made up plan.takeoff';
+async function portalSave({ answer = 'kept', why = '', editWhileWaiting = false, openAnother = false } = {}) {
+  const project = new Project();
+  project.markDirty();                                   // an hour of takeoff, not saved
+  const drafts = new Set([`${PLAN_NAME}|4321`]);         // written before the save (saveDraftNow)
+  let epoch = 1;
+  const epochAtSave = epoch;
+  const changesAtCompose = project.changeCount;
+  const file = new Blob([new Uint8Array(4321)]);
+  const c = fakeClock();
+  const win = { closed: false };
+  const handlers = new Set();
+  const posted = [];
+  const peer = { via: 'frame', win, origin: 'https://portal.dcrframing.com' };
+  const waiting = askPortalToKeep({ peer, nonce: NONCE, req: 's123', name: PLAN_NAME, size: file.size, file }, {
+    ...c, waitMs: SAVE_WAIT_MS, pollMs: 2000,
+    listen: fn => { handlers.add(fn); return () => handlers.delete(fn); },
+    post: (w, msg, origin) => posted.push({ w, msg, origin }),
+    peerGone: () => win.closed,
+  });
+  if (editWhileWaiting) project.markDirty();             // a keyboard undo works under the bar
+  if (openAnother) epoch += 1;
+  if (answer === 'timeout') c.advance(SAVE_WAIT_MS);
+  else if (answer === 'gone') { win.closed = true; c.advance(2000); }
+  else for (const h of [...handlers]) h({ source: win, origin: peer.origin, data: { type: 'ptt-save-state', v: 1, nonce: NONCE, req: 's123', state: answer, why } });
+  const { ending, why: portalWhy } = await waiting;
+  const outcome = ending === 'kept' ? 'kept' : 'not-kept';
+  const moved = savedStill({ epochAtSave, epochNow: epoch, changesAtCompose, changesNow: project.changeCount });
+  const next = afterSave(outcome, {
+    name: PLAN_NAME, why: ending, portalWhy, keptIn: PLAN_NAME, dirty: true, device: 'iPad', moved: moved === 'same' ? '' : moved,
+  });
+  if (moved !== 'replaced' && next.markSaved) project.markSaved();
+  if (next.dropDraft) drafts.clear();
+  return { posted: posted.length, dirty: project.dirty, drafts: drafts.size, status: next.status, tell: next.tell };
+}
+{
+  const k = await portalSave({ answer: 'kept' });
+  eq('end to end — kept: posted once, the project saved, its draft dropped', [k.posted, k.dirty, k.drafts, k.tell], [1, false, 0, false]);
+  for (const [answer, why] of [['refused', 'Not allowed.'], ['no-room', ''], ['failed', 'The copy did not check out.'], ['timeout', ''], ['gone', '']]) {
+    const r = await portalSave({ answer, why });
+    eq(`end to end — ${answer}: the project stays unsaved, the draft stays, and it is told`, [r.dirty, r.drafts, r.tell], [true, 1, true]);
+  }
+  const e = await portalSave({ answer: 'kept', editWhileWaiting: true });
+  eq('end to end — kept, but edited while waiting: still unsaved, the draft stays', [e.dirty, e.drafts], [true, 1]);
+  ok('… and it says so', /changes made while it was being saved are not in it/.test(e.status));
+  const o = await portalSave({ answer: 'kept', openAnother: true });
+  eq('end to end — kept, but another project opened meanwhile: the saved one\'s draft goes, the open one is not marked', [o.drafts, o.dirty], [0, true]);
+}
+
+// A file-kind plan is composed without reading a sheet: every untouched sheet
+// (and revision sheet) is a slice of the portal's own File, passed through.
+{
+  let reads = 0;
+  class NoRead extends Blob {
+    arrayBuffer() { reads += 1; return Promise.reject(new Error('read')); }
+    text() { reads += 1; return Promise.reject(new Error('read')); }
+    stream() { reads += 1; throw new Error('read'); }
+    bytes() { reads += 1; return Promise.reject(new Error('read')); }
+  }
+  const sheet = n => ({ kind: 'slice', data: new NoRead([new Uint8Array(n)]) });
+  const pageSources = [sheet(3000), sheet(5000), sheet(7000)];
+  const revisionSources = [[{ kind: 'slice', data: new NoRead([new Uint8Array(2000)]) }]];
+  const blob = await writeProject({ metadata: { project_name: 'Made up' }, pageSources, revisionSources });
+  eq('composing a file-kind plan reads no sheet (slices pass through)', reads, 0);
+  ok('… and the file holds every sheet\'s bytes', blob.size > 3000 + 5000 + 7000 + 2000);
+}
+
 // ── js/main.js, read as text ─────────────────────────────────────────────
 const main = readFileSync(path.join(APP, 'js', 'main.js'), 'utf8');
 const body = (name) => {
@@ -376,6 +538,42 @@ ok('the picker settles on change and on cancel', /addEventListener\('change'/.te
 ok('… the wait is said when the page is touched again too, not only on a focus event',
   /addEventListener\('pointerdown', onBack/.test(picker) && /addEventListener\('focus', onBack/.test(picker));
 ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/.test(picker));
+// The portal route (C2), in main.js.
+{
+  const toAt = save.indexOf('const toPortal = savesToPortal({ portal: app.portal, libraryCopy: app.libraryCopy, saveAs });');
+  ok('saveProjectOnce decides the portal route before any picker, and a portal save opens none',
+    toAt > 0 && toAt < save.indexOf('if (!toPortal && (saveAs || !handle)) {'));
+  const branch = save.slice(save.indexOf('} else if (toPortal) {'), save.indexOf('// The file leaves as a new one'));
+  ok('… composed like any save (the draft first, then writeProject), then handed to the portal under the opened plan\'s name',
+    save.indexOf('} else if (toPortal) {') > save.indexOf('await writeProject(') && /savedName = app\.portal\.name;/.test(branch)
+    && /await handToPortal\(blob, savedName\)/.test(branch));
+  ok('… anything but kept: the bar down, the words said, and a copy to Files offered',
+    /if \(outcome !== 'kept'\) \{\s*hideProgress\(\);[\s\S]*afterSave\('not-kept'[\s\S]*await offerCopyToFiles\(blob, copyName, words/.test(branch));
+  ok('… a copy, if taken, is judged as any phone\'s save; none taken, the dialog has said it', /\(\{ outcome, why, asked = false \} = copy\)/.test(branch)
+    && /asked = true;/.test(branch));
+  const hand = body('handToPortal');
+  ok('handToPortal waits for askPortalToKeep, 120 s, with "Saving to the portal…" up and the update reload held',
+    /showProgress\('Saving to the portal…'/.test(hand) && /portalSaving = true;[\s\S]*await askPortalToKeep\([\s\S]*waitMs: SAVE_WAIT_MS[\s\S]*finally \{\s*portalSaving = false;/.test(hand));
+  ok('… a fresh req for every save, the peer and nonce kept on app.portal', /req: newSaveReq\(\)/.test(hand) && /peer: p\.peer, nonce: p\.nonce/.test(hand));
+  ok('… the news of the send only on the status line', /onNews: news => \{[\s\S]*portalNewsWords\(news[\s\S]*setStatus\(words\)/.test(hand));
+  ok('… and only kept is a save', /if \(ending === 'kept'\) \{[\s\S]*return \{ outcome: 'kept'/.test(hand) && /return \{ outcome: 'not-kept', why: ending, portalWhy: why \}/.test(hand));
+  const offer = body('offerCopyToFiles');
+  ok('"Save a copy to Files" starts the phone\'s save INSIDE its tap (the share sheet needs it)',
+    /D\.button\(COPY_TO_FILES, 'primary', \(\) => close\(deliverBlob\(blob, name, \{ bigWords \}\)\)\)/.test(offer));
+  ok('an update never reloads the page under a save the portal is keeping', /!portalWaiting && !portalSaving/.test(body('reloadForUpdateIfIdle')));
+  const recv = body('receiveFromPortal');
+  ok('the hand-over talks to the peer (the opener, or the same-site parent) and only hears it',
+    /const peer = portalPeer\(window\);/.test(recv) && /if \(!fromPeer\(ev, peer\)\) return;/.test(recv) && /for \(const origin of peerTargets\(peer\)\)/.test(recv));
+  ok('… the peer pinned to the plan\'s address, kept on app.portal with the nonce, for both kinds',
+    /const pinned = \{ \.\.\.peer, origin \};/.test(recv)
+    && /app\.portal = \{ peer: pinned, nonce, kind: 'file', name: plan\.name, canSave: !!plan\.canSave, hold, epoch: openEpoch \};/.test(recv)
+    && /app\.portal = \{ peer: pinned, nonce, kind: 'link', name: plan\.name, canSave: false, hold: null, epoch: openEpoch \};/.test(recv));
+  ok('… a fresh link and "offline" go to that peer too', /portalRenewer\(pinned, nonce\)/.test(recv) && /tellPortalOffline\(pinned, nonce\)/.test(recv)
+    && /if \(!fromPeer\(ev, peer\)\) return;/.test(body('portalRenewer')));
+  ok('main.js never reaches for window.opener itself, and never posts to "*"', !/window\.opener/.test(main) && !/postMessage\([^)]*['"]\*['"]/.test(main));
+  ok('a plan over the internet on a phone is told how its work reaches OneDrive', /portalLinkOpen\(\)\) words \+= ` \$\{TO_ONEDRIVE_HINT\}`/.test(save)
+    && /Opened \$\{plan\.name\} from OneDrive, over the internet\. \$\{NO_SAVE_BACK\}/.test(recv));
+}
 // Found in the browser: the start screen draws its lists (and sweeps) while main.js is still being evaluated,
 // so a module-level `let` the sweep reads must come before that first top-level call, or the module throws.
 {

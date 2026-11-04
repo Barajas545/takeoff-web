@@ -24,17 +24,26 @@ import { HANDHELD_SAVE, REPLACE_WARNING } from './save-route.js';
 export const INVALID_LINK = 'That link did not name a project number — showing the whole Plans Archive.';
 
 /**
- * Under a phone's or a tablet's "Open a .takeoff project". What exists, and no
- * more: the file is picked in the Files app (where the OneDrive app's files
- * are), Keep on This Device keeps it, the portal's 📐 menu opens plans for the
- * people who see prices — in Safari only, since its home-screen icon cannot
- * hand a plan over — and what Save really does there (HANDHELD_SAVE: the
- * share sheet only up to its cap, a download above it), with what replacing
- * the plan in Files would do (REPLACE_WARNING).
+ * Where a phone or a tablet gets its plans, before anything else is said:
+ * the DCR Portal, for the people who see prices there (a crew without prices
+ * would be sent round in a loop: their 📐 leads back here). On an iPhone or
+ * iPad the portal opens this app INSIDE itself (its own copy, in a frame
+ * over its page — from its home-screen icon too), which is the one way a
+ * plan saved on the device reaches it there.
  */
-export const HANDHELD_HINT = 'Pick the plan from the Plans Archive in the Files app (the OneDrive app’s files). '
-  + 'Then File › Keep on This Device keeps it here for next time. If you see prices in the portal, '
-  + '📐 on the project opens its plans too — with the portal in Safari, not from its home-screen icon. '
+export const FROM_THE_PORTAL = 'Plans come from the DCR Portal: if you see prices there, use 📐 on the project — '
+  + 'on an iPhone or iPad the takeoff tool opens inside the portal.';
+
+/**
+ * Under a phone's or a tablet's "Open a .takeoff project". What exists, and no
+ * more: the portal's 📐 menu (FROM_THE_PORTAL), or the file picked in the
+ * Files app (where the OneDrive app's files are) and kept with Keep on This
+ * Device — and what Save really does here (HANDHELD_SAVE: the share sheet
+ * only up to its cap, a download above it), with what replacing the plan in
+ * Files would do (REPLACE_WARNING).
+ */
+export const HANDHELD_HINT = `${FROM_THE_PORTAL} Or pick the plan from the Plans Archive in the Files app (the OneDrive app’s files); `
+  + 'then File › Keep on This Device keeps it here for next time. '
   + `${HANDHELD_SAVE} ${REPLACE_WARNING}`;
 export const COMPUTER_HINT = 'Pick the plan from the Plans Archive folder in your OneDrive.';
 
@@ -74,6 +83,21 @@ export function isPhoneOrTablet(win = globalThis) {
   if (touch && /Macintosh/.test(ua)) return true;
   if (/Windows NT|CrOS/.test(ua)) return false;
   return touch && coarsePointer(win);
+}
+
+/**
+ * What to call this device in a sentence ("Saved on this iPad"): 'iPad' (an
+ * iPad, including one that calls itself a Mac), 'iPhone', 'phone' (another
+ * phone), 'tablet' (another tablet) or 'device' (a computer, or not known).
+ */
+export function deviceWord(win = globalThis) {
+  const nav = (win && win.navigator) || {};
+  const ua = String(nav.userAgent || '');
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && Number(nav.maxTouchPoints) > 0)) return 'iPad';
+  if (/iPhone|iPod/.test(ua)) return 'iPhone';
+  if (!isPhoneOrTablet(win)) return 'device';
+  if ((nav.userAgentData && nav.userAgentData.mobile === true) || /Mobile|Opera Mini|IEMobile|BlackBerry/i.test(ua)) return 'phone';
+  return 'tablet';
 }
 
 /**

@@ -124,6 +124,7 @@ const pageFiles = [
 ok('the page\'s own files are found (the layout boot, main.js, the stylesheet)',
   ['js/ui-mode-boot.js', 'js/main.js', 'css/app.css'].every(u => pageFiles.includes(u)));
 eq('every file index.html loads itself is in PROGRAM', pageFiles.filter(u => !program.has(u)), []);
+ok('the embedded profile is precached (inside the portal the app must open with no signal too)', program.has('js/core/embedded.js'));
 
 // ── the lists themselves ─────────────────────────────────────────────────
 for (const shell of ['./', 'index.html', 'css/app.css', 'js/main.js']) {

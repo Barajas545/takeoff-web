@@ -243,8 +243,11 @@ eq('a phone: the same plans, no Copy link, no "use Edge"', [phone.title, phone.c
 eq('… and where to pick the plan', phone.openHint, HANDHELD_HINT);
 ok('… the OneDrive app\'s files in the Files app, then Keep on This Device',
   /Files app/.test(HANDHELD_HINT) && /OneDrive app/.test(HANDHELD_HINT) && /File › Keep on This Device/.test(HANDHELD_HINT));
-ok('… the portal\'s 📐 menu, in Safari, for the people who see prices',
-  /📐/.test(HANDHELD_HINT) && /Safari/.test(HANDHELD_HINT) && /see prices/.test(HANDHELD_HINT));
+// On an iPhone or iPad the portal now opens this app inside itself (its own copy, in a frame), from its
+// home-screen icon too: nobody is sent to Safari for the 📐 menu any more.
+ok('… the DCR Portal\'s 📐 menu first, for the people who see prices, opening the tool inside the portal on an iPhone or iPad',
+  /^Plans come from the DCR Portal/.test(HANDHELD_HINT) && /📐/.test(HANDHELD_HINT) && /see prices/.test(HANDHELD_HINT)
+  && /on an iPhone or iPad the takeoff tool opens inside the portal/.test(HANDHELD_HINT) && !/Safari/.test(HANDHELD_HINT));
 ok('… and what Save really does there: a new file through the share sheet',
   /share sheet/.test(HANDHELD_HINT) && /Save to Files/.test(HANDHELD_HINT));
 

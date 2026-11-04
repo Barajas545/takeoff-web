@@ -17,15 +17,19 @@ import {
   libraryOwner, portalCopies, keptCopies, keepFile, keptFile, removeKept, removePortalCopy, sizeText,
   keepWriterFor, workerWriter, CANNOT_KEEP, sweepKept,
 } from './core/device-plans.js';
-import { openAfterAsking, isPhoneOrTablet } from './core/plans-link.js';
+import { openAfterAsking, isPhoneOrTablet, deviceWord } from './core/plans-link.js';
 import {
   deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
-  savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING,
+  savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
 } from './core/save-route.js';
 import {
-  PORTAL_ORIGINS, HANDOFF_WAIT_MS, RENEW_WAIT_MS, parsePortalHash, isPortalOrigin, readyMessage, renewMessage,
-  offlineMessage, openFromMessage, linkFromMessage,
+  HANDOFF_WAIT_MS, RENEW_WAIT_MS, SAVE_WAIT_MS, parsePortalHash, readyMessage, renewMessage,
+  offlineMessage, openFromMessage, linkFromMessage, portalPeer, fromPeer, peerTargets, newSaveReq, askPortalToKeep,
 } from './core/portal-handoff.js';
+import {
+  detectEmbedded, plansSourceFor, EMBEDDED_IDLE, EMBEDDED_NO_KEEP, EMBEDDED_NOTHING, NO_SAVE_BACK, TO_ONEDRIVE_HINT,
+  COPY_TO_FILES,
+} from './core/embedded.js';
 import { PlansArchive } from './ui/plans-archive.js';
 import { PLANS_SOURCE } from './site-config.js';
 import { PageStore } from './core/page-store.js';
@@ -88,6 +92,14 @@ const app = {
   // lock that keeps the portal from deleting it — null for any other file.
   // See openLibraryCopy().
   libraryCopy: null,
+  // The portal that handed the plan over (Portal 2, receiveFromPortal):
+  // { peer: {via: 'opener'|'frame', win, origin}, nonce, kind, name,
+  //   canSave, hold, epoch } — the window to talk to, its address (pinned to
+  // the one the plan came from), this tab's nonce, and whether it will take
+  // a save of the plan it handed over (canSave: the copy `hold`, while it is
+  // still the one open — js/core/save-route.js savesToPortal). Null when no
+  // portal handed anything over.
+  portal: null,
   // The open project lives in a Plans Archive folder on this computer:
   // { stamp, dir, folderName, path } — what the file was when it was opened,
   // so Save can tell when another computer saved it since. Null otherwise.
@@ -2389,6 +2401,27 @@ const canUseFsApi = 'showOpenFilePicker' in window
 
 /** A phone or a tablet: an iPad calls itself a Mac, so this is the touch test, not the user agent's word. */
 const handheld = isPhoneOrTablet(window);
+/** "this iPad", "this iPhone", … in a sentence (js/core/plans-link.js deviceWord). */
+const device = deviceWord(window);
+
+/**
+ * Inside the portal: its own copy of this app, in a frame over its page, on a
+ * phone or a tablet (js/core/embedded.js). Read here, before the boot below
+ * consumes the hand-over's address. The portal is the keeper of plans then:
+ * no Plans Archive, no Keep on This Device, no old-portal list, and Save
+ * hands a plan it said it would take back to it.
+ */
+const embedded = detectEmbedded(window);
+
+/**
+ * An app opened from the home-screen icon — inside the portal, the portal's
+ * (a frame reports its own display mode, not the home-screen app it is in).
+ * Words only, and the home-screen app's big-file dialog.
+ */
+function standaloneApp() {
+  if (isStandalone(window)) return true;
+  try { return embedded && isStandalone(window.parent); } catch { return false; }
+}
 
 /**
  * How many projects have been opened or started in this tab. A file picked in
@@ -2412,7 +2445,10 @@ let sweepingKept = false;
  * company's default in js/site-config.js — the line that is the switch.
  */
 function plansSource() {
-  return resolvePlansSource(app.settings.get('plans_source'), PLANS_SOURCE);
+  // Inside the portal, always the portal's way (js/core/embedded.js).
+  return plansSourceFor({
+    embedded, personal: app.settings.get('plans_source'), company: PLANS_SOURCE, resolve: resolvePlansSource,
+  });
 }
 
 // The Plans Archive: plan folders chosen on this device, remembered in
@@ -2422,6 +2458,7 @@ const plansArchive = new PlansArchive({
   store: plansStore,
   host: {
     mode: () => plansSource(),
+    embedded: () => embedded,
     status: text => setStatus(text),
     refreshStart: () => renderArchiveSection(),
     openTakeoff: entry => openArchiveTakeoff(entry),
@@ -2687,6 +2724,11 @@ async function saveProjectOnce({ saveAs = false } = {}) {
 
   let handle = app.fileHandle;
   const handleBefore = handle;
+  // Inside the portal, a plan it said it would take a save of goes back to
+  // it: composed as ever, then handed over, and saved only when the portal
+  // says it has kept it (js/core/save-route.js savesToPortal). Save As is a
+  // new file, as on any phone.
+  const toPortal = savesToPortal({ portal: app.portal, libraryCopy: app.libraryCopy, saveAs });
 
   // A plan in the Plans Archive is shared: OneDrive keeps the folder the same
   // on every computer, so the file may have been saved somewhere else since
@@ -2705,7 +2747,7 @@ async function saveProjectOnce({ saveAs = false } = {}) {
     return;
   }
 
-  if (saveAs || !handle) {
+  if (!toPortal && (saveAs || !handle)) {
     if (canUseFsApi) {
       // Save As starts in the archive project's own folder — the plan's, or
       // for a takeoff started from a PDF the project the PDF is in, even when
@@ -2777,6 +2819,13 @@ async function saveProjectOnce({ saveAs = false } = {}) {
     let why = '';
     let asked = false;
     let savedName = app.fileName || suggestedFileName();
+    let portalWhy = '';
+    let copied = false;
+    // The words of a home-screen app's "Download started" for a file over
+    // the cap, which offers the share sheet beside the download.
+    const bigWords = name => afterSave('download-started', {
+      name, why: 'too-big', standalone: true, touch: handheld, keptIn, dirty: dirtyAtSave, offerShare: true,
+    }).status;
     if (handle) {
       const w = await handle.createWritable();
       await w.write(blob);
@@ -2798,18 +2847,32 @@ async function saveProjectOnce({ saveAs = false } = {}) {
         await noteArchiveSave(handle, handle !== handleBefore);
         savedName = app.fileName || suggestedFileName();
       }
+    } else if (toPortal) {
+      // Handed to the portal under the opened plan's own name. It is saved
+      // only when the portal says 'kept'; anything else keeps the draft, says
+      // so, and offers a copy to Files instead (the share sheet or a
+      // download, as on any phone) — from a tap, so the share sheet can open.
+      savedName = app.portal.name;
+      ({ outcome, why, portalWhy } = await handToPortal(blob, savedName));
+      if (outcome !== 'kept') {
+        hideProgress();
+        const words = afterSave('not-kept', { why, portalWhy, keptIn, dirty: dirtyAtSave, device }).status;
+        const copyName = saveFileName({ openedName: app.fileName, projectName: app.project.metadata.project_name });
+        const copy = await offerCopyToFiles(blob, copyName, words, { bigWords: bigWords(copyName) });
+        if (copy) {
+          ({ outcome, why, asked = false } = copy);
+          savedName = copyName;
+          copied = true;
+        } else {
+          asked = true;   // the dialog has said it
+        }
+      }
     } else {
       // The file leaves as a new one, under the name it was opened by. Files
       // may offer to replace the plan of that name; the words say what that
       // does (REPLACE_WARNING) — nothing here can see whether it changed.
       savedName = saveFileName({ openedName: app.fileName, projectName: app.project.metadata.project_name });
-      ({ outcome, why, asked = false } = await deliverBlob(blob, savedName, {
-        // The words of a home-screen app's "Download started" for a file
-        // over the cap, which offers the share sheet beside the download.
-        bigWords: afterSave('download-started', {
-          name: savedName, why: 'too-big', standalone: true, touch: handheld, keptIn, dirty: dirtyAtSave, offerShare: true,
-        }).status,
-      }));
+      ({ outcome, why, asked = false } = await deliverBlob(blob, savedName, { bigWords: bigWords(savedName) }));
     }
     // The bar (or "Handing the file to the share sheet…") comes down before
     // anything more is said.
@@ -2822,8 +2885,8 @@ async function saveProjectOnce({ saveAs = false } = {}) {
       epochAtSave, epochNow: openEpoch, changesAtCompose, changesNow: app.project.changeCount,
     });
     const next = afterSave(outcome, {
-      name: savedName, why, standalone: isStandalone(window), touch: handheld, keptIn, dirty: dirtyAtSave,
-      offerShare: why === 'too-big' && asked, moved: moved === 'same' ? '' : moved,
+      name: savedName, why, standalone: standaloneApp(), touch: handheld, keptIn, dirty: dirtyAtSave,
+      offerShare: why === 'too-big' && asked, moved: moved === 'same' ? '' : moved, device, portalWhy,
     });
     if (moved !== 'replaced') {
       if (next.confirmed) {
@@ -2846,7 +2909,14 @@ async function saveProjectOnce({ saveAs = false } = {}) {
       if (moved === 'same') for (const k of draftKeysNow()) keys.add(k);
       for (const k of keys) await dropDraft(k);
     }
-    setStatus(next.status);
+    // A copy to Files after the portal did not keep the save is a file of
+    // its own: the portal's plan is as it was. And a plan opened over the
+    // internet on a phone or a tablet is told how its work does get to
+    // OneDrive (it is never handed back from here).
+    let words = next.status;
+    if (copied && next.confirmed) words += ' The plan in the portal is not changed.';
+    else if (!toPortal && handheld && moved === 'same' && portalLinkOpen()) words += ` ${TO_ONEDRIVE_HINT}`;
+    setStatus(words);
     // An unconfirmed download is said where it stays on screen — unless the
     // dialog that offered the share sheet beside it already said it.
     if (next.tell && !asked) await D.alertDialog('Download started', next.status);
@@ -3208,7 +3278,31 @@ function deliverBlob(blob, name, { bigWords = '' } = {}) {
     },
     download: () => startDownload(blob, name),
     touch: handheld,
-    standalone: isStandalone(window),
+    standalone: standaloneApp(),
+  });
+}
+
+/**
+ * The portal did not keep a save handed to it (or never answered): `words`
+ * say so, and that the work is still here. OK leaves it at that; "Save a
+ * copy to Files" makes a new file of the same composed project, the way any
+ * phone saves (deliverBlob) — called INSIDE its tap, so the share sheet can
+ * open. Resolves deliverBlob's ending, or null.
+ */
+function offerCopyToFiles(blob, name, words, { bigWords = '' } = {}) {
+  return D.showDialog(close => {
+    const body = D.el('div');
+    body.style.cssText = 'font-size:12.5px;line-height:1.6;white-space:pre-line';
+    body.textContent = `${words}\n\n${COPY_TO_FILES} makes a new file of it, ${name} — through the share sheet or a `
+      + `download, as on any phone. The plan in the portal is not changed by it.\n\n${REPLACE_WARNING}`;
+    return D.dlg({
+      title: 'Not saved to the portal',
+      body,
+      buttons: [
+        D.button('OK', '', () => close(null)),
+        D.button(COPY_TO_FILES, 'primary', () => close(deliverBlob(blob, name, { bigWords }))),
+      ],
+    });
   });
 }
 
@@ -4680,6 +4774,13 @@ buildToolButtons();
 buildScaleSelect();
 syncScaleSelect();
 wireMenus();
+// Inside the portal its Plans Library keeps the plans: this app's own doors
+// to a folder and to a copy of its own are not offered (js/core/embedded.js).
+if (embedded) {
+  for (const act of ['plans-archive', 'keep-on-device']) {
+    for (const b of document.querySelectorAll(`[data-act="${act}"]`)) b.hidden = true;
+  }
+}
 // A phone has 844px of height and the markup row costs 34 of them for tools
 // most jobs never use. It is one tap away under View ▸ Markup Toolbar.
 if (window.matchMedia('(max-width: 720px)').matches) $('markupBar').hidden = true;
@@ -4783,30 +4884,43 @@ function renewerFor(r) {
   };
 }
 
-// ── handed over by Portal 2 (another site) ────────────────────────────────
+// ── handed over by Portal 2 (another site, or the portal's own copy of this app) ──
 /** Said when a hand-over brought nothing: a reload of a used tab, a tab
- *  opened without its opener (an iPhone or iPad home-screen app opens other
- *  sites that way), or a portal page that went away before it answered. */
+ *  opened without its opener, or a portal page that went away before it
+ *  answered. On an iPhone or iPad the portal now opens this app inside
+ *  itself (its own copy, in a frame), so nobody is sent to Safari any more;
+ *  inside that frame the words are the portal's (EMBEDDED_NOTHING). */
 const NOTHING_FROM_PORTAL = 'Nothing came from the portal — open the plan again there: 📐 on the project, or its Plans Library. '
-  + 'On an iPhone or iPad that works only with the portal open in Safari: its home-screen icon cannot hand a plan over.';
+  + 'On an iPhone or iPad the portal opens the takeoff tool inside itself.';
+const nothingFromPortal = () => (embedded ? EMBEDDED_NOTHING : NOTHING_FROM_PORTAL);
 
 /** While a hand-over is waiting for its plan, a new version of this app must
  *  not reload the page under it (reloadForUpdateIfIdle). */
 let portalWaiting = false;
+/** The same while a save handed to the portal waits for its answer. */
+let portalSaving = false;
+/** Stops listening for the portal's news of the last kept save (its send to OneDrive). */
+let portalNewsStop = null;
 
 /**
  * A plan Portal 2 hands over: its Plans Library's copy on this device, or a
- * plan in the OneDrive Plans Archive over a download link. Portal 2 is not
- * this app's site, so the two windows talk (js/core/portal-handoff.js): this
- * tab tells its opener it is ready, and takes the plan only from that window,
- * from a portal address, with this tab's nonce. Resolves when it is open (or
+ * plan in the OneDrive Plans Archive over a download link. The two windows
+ * talk (js/core/portal-handoff.js): this page tells its PEER it is ready, and
+ * takes the plan only from that window, from its address, with this tab's
+ * nonce. The peer is the window that opened this tab (a computer: the portal
+ * on its own site, at a portal address), or the page of this page's own site
+ * it is framed in (a phone or a tablet: the portal's own copy of this app, in
+ * a frame over its page — js/core/embedded.js). Resolves when it is open (or
  * nothing came); every failure is shown here. Once this device keeps the app
  * for offline use, the portal is told so (tellPortalOffline).
+ *
+ * The peer, its address and the nonce stay on `app.portal`: a save handed
+ * back (canSave) and a fresh link both need them after this has returned.
  */
 async function receiveFromPortal(nonce) {
-  const opener = window.opener;
-  if (!opener) {
-    setStatus(NOTHING_FROM_PORTAL);
+  const peer = portalPeer(window);
+  if (!peer) {
+    setStatus(nothingFromPortal());
     return;
   }
   portalWaiting = true;
@@ -4815,7 +4929,7 @@ async function receiveFromPortal(nonce) {
     got = await new Promise(resolve => {
       const timer = setTimeout(() => finish(null), HANDOFF_WAIT_MS);
       function onMessage(ev) {
-        if (ev.source !== opener || !isPortalOrigin(ev.origin)) return;
+        if (!fromPeer(ev, peer)) return;
         const plan = openFromMessage(ev.data, nonce);
         if (plan) finish({ plan, origin: ev.origin });
       }
@@ -4825,57 +4939,121 @@ async function receiveFromPortal(nonce) {
         resolve(v);
       }
       window.addEventListener('message', onMessage);
-      // Said only to the portal's own address: any other opener hears nothing.
-      for (const origin of PORTAL_ORIGINS) {
-        try { opener.postMessage(readyMessage(nonce), origin); } catch { /* that window is gone */ }
+      // Said only to the peer's own address — the portal's (an opener), or
+      // this page's own (the frame): any other window hears nothing.
+      for (const origin of peerTargets(peer)) {
+        try { peer.win.postMessage(readyMessage(nonce), origin); } catch { /* that window is gone */ }
       }
     });
   } finally {
     portalWaiting = false;
   }
   if (!got) {
-    setStatus(NOTHING_FROM_PORTAL);
+    setStatus(nothingFromPortal());
     return;
   }
   const { plan, origin } = got;
-  tellPortalOffline(opener, origin, nonce);
+  // From here on the peer is the address the plan came from, and nothing else.
+  const pinned = { ...peer, origin };
+  tellPortalOffline(pinned, nonce);
   if (plan.kind === 'file') {
     // Wrapped only to carry the plan's name and the version's date; no bytes
     // are copied. The copy is the portal's: Save never writes into it (Save
-    // As or a download, as for any copy kept on this device), and the save
-    // check finds out if the portal has replaced it since (libraryCopyReadable).
+    // As or a download, as for any copy kept on this device — or, when the
+    // portal said it will take one, handed back to it), and the save check
+    // finds out if the portal has replaced it since (libraryCopyReadable).
     // No date from the portal: the copy's own, never "now" (a draft newer
     // than "now" would read as already saved, and be dropped).
     const file = new File([plan.file], plan.name, {
       type: 'application/octet-stream', lastModified: plan.lastModified || plan.file.lastModified || 0,
     });
-    // Nothing on this site can hold the portal's copy open (Web Locks are per
-    // site): the portal keeps a copy it handed over for a week. `portal` makes
-    // the save check send the person back to the portal. File › Keep on This
-    // Device refuses it: the copy carries prices and belongs to the person who
-    // saved it in the portal, which removes it when their Sees prices goes; a
-    // copy kept by this app belongs to the device, out of the portal's reach.
+    // Nothing on another site can hold the portal's copy open (Web Locks are
+    // per site): the portal keeps a copy it handed over for a week. `portal`
+    // makes the save check send the person back to the portal. File › Keep
+    // on This Device refuses it: the copy carries prices and belongs to the
+    // person who saved it in the portal, which removes it when their Sees
+    // prices goes; a copy kept by this app belongs to the device, out of the
+    // portal's reach.
     const hold = { name: plan.name, file, portal: true, number: plan.number, release() {} };
     const opened = await loadProjectFile(file, null, { library: hold });
     if (opened) {
+      app.portal = { peer: pinned, nonce, kind: 'file', name: plan.name, canSave: !!plan.canSave, hold, epoch: openEpoch };
       setStatus(plan.updateAvailable
         ? 'Opened the copy saved on this device — a newer version is in the Plans Archive; the portal downloads it while it is open.'
-        : 'Opened the copy saved on this device (the portal\'s Plans Library). '
-          + (canUseFsApi
-            ? 'Save goes to Save As.'
-            : handheld
-              ? `${HANDHELD_SAVE} The portal's copy is not changed.`
-              : 'Save downloads a new copy; the portal\'s copy is not changed.'));
+        : plan.canSave
+          ? `Opened ${plan.name}, saved on this ${device} by the portal. Save keeps your work on this ${device}, `
+            + 'and the portal sends it to OneDrive.'
+          : 'Opened the copy saved on this device (the portal\'s Plans Library). '
+            + (canUseFsApi
+              ? 'Save goes to Save As.'
+              : handheld
+                ? `${HANDHELD_SAVE} The portal's copy is not changed.`
+                : 'Save downloads a new copy; the portal\'s copy is not changed.'));
     }
     return;
   }
-  await loadProjectFile(new RemoteFile({
+  const opened = await loadProjectFile(new RemoteFile({
     url: plan.url,
     name: plan.name,
     size: plan.size,
     lastModified: plan.lastModified,
-    renew: portalRenewer(opener, origin, nonce),
+    renew: portalRenewer(pinned, nonce),
   }));
+  if (opened) {
+    app.portal = { peer: pinned, nonce, kind: 'link', name: plan.name, canSave: false, hold: null, epoch: openEpoch };
+    // A plan opened over the internet is never handed back: on a phone or a
+    // tablet, the way its work does reach OneDrive is said now.
+    if (handheld) setStatus(`Opened ${plan.name} from OneDrive, over the internet. ${NO_SAVE_BACK}`);
+  }
+}
+
+/** The plan the portal handed over by a link is still the one open (nothing else opened or started since). */
+function portalLinkOpen() {
+  return !!app.portal && app.portal.kind === 'link' && app.portal.epoch === openEpoch;
+}
+
+/**
+ * Hand the saved project to the portal (js/core/portal-handoff.js
+ * askPortalToKeep) and wait for its word. Resolves the ending, for afterSave:
+ * { outcome: 'kept' } — the portal has it in its own storage — or
+ * { outcome: 'not-kept', why, portalWhy }. The file goes as it was composed:
+ * its untouched sheets are slices of the portal's own copy, so nothing is
+ * read into memory here, and the message passes it by reference.
+ *
+ * While it waits the bar says so and no update may reload the page
+ * (portalSaving). After 'kept' the portal may say how its send to OneDrive
+ * goes; that is shown on the status line, and nothing waits for it.
+ */
+async function handToPortal(blob, name) {
+  const p = app.portal;
+  if (portalNewsStop) { portalNewsStop(); portalNewsStop = null; }
+  showProgress('Saving to the portal…', 0, 1, name);
+  portalSaving = true;
+  try {
+    const file = new File([blob], name, { type: 'application/octet-stream' });
+    const { ending, why, stop } = await askPortalToKeep({
+      peer: p.peer, nonce: p.nonce, req: newSaveReq(), name, size: file.size, file,
+    }, {
+      listen: fn => {
+        window.addEventListener('message', fn);
+        return () => window.removeEventListener('message', fn);
+      },
+      post: (win, msg, origin) => win.postMessage(msg, origin),
+      peerGone: () => !p.peer.win || !!p.peer.win.closed,
+      onNews: news => {
+        const words = portalNewsWords(news, { name, device });
+        if (words) setStatus(words);
+      },
+      waitMs: SAVE_WAIT_MS,
+    });
+    if (ending === 'kept') {
+      portalNewsStop = stop;
+      return { outcome: 'kept', why: '', portalWhy: '' };
+    }
+    return { outcome: 'not-kept', why: ending, portalWhy: why };
+  } finally {
+    portalSaving = false;
+  }
 }
 
 /**
@@ -4884,7 +5062,7 @@ async function receiveFromPortal(nonce) {
  * Library can say saved plans open with no signal. Asked for a few minutes:
  * a first visit installs the worker after the page has loaded.
  */
-async function tellPortalOffline(opener, origin, nonce) {
+async function tellPortalOffline(peer, nonce) {
   const until = Date.now() + 3 * 60 * 1000;
   while (Date.now() < until) {
     let ready = false;
@@ -4893,7 +5071,7 @@ async function tellPortalOffline(opener, origin, nonce) {
         && !!(await caches.match(new URL('js/core/takeoff-file.js', document.baseURI).href));
     } catch { ready = false; }
     if (ready) {
-      try { if (!opener.closed) opener.postMessage(offlineMessage(nonce), origin); } catch { /* that window is gone */ }
+      try { if (!peer.win.closed) peer.win.postMessage(offlineMessage(nonce), peer.origin); } catch { /* that window is gone */ }
       return;
     }
     await new Promise(r => setTimeout(r, 3000));
@@ -4901,7 +5079,7 @@ async function tellPortalOffline(opener, origin, nonce) {
 }
 
 /**
- * A fresh download link from the portal tab that handed the plan over, for
+ * A fresh download link from the portal page that handed the plan over, for
  * RemoteFile when the link in hand expires. '' when there is none:
  *   · the portal page never answered (its tab closed, or it moved on to
  *     another page): every later ask is '' at once, with one word on the
@@ -4910,7 +5088,7 @@ async function tellPortalOffline(opener, origin, nonce) {
  *     saved again in OneDrive since it was opened): said on the status line,
  *     and the next sheet asks again.
  */
-function portalRenewer(opener, origin, nonce) {
+function portalRenewer(peer, nonce) {
   let seq = 0;
   let dead = false;
   const giveUp = () => {
@@ -4921,11 +5099,11 @@ function portalRenewer(opener, origin, nonce) {
     return '';
   };
   return () => new Promise(resolve => {
-    if (dead || !opener || opener.closed) { resolve(giveUp()); return; }
+    if (dead || !peer.win || peer.win.closed) { resolve(giveUp()); return; }
     const req = `r${++seq}`;
     const timer = setTimeout(() => finish('', false), RENEW_WAIT_MS);
     function onMessage(ev) {
-      if (ev.source !== opener || ev.origin !== origin) return;
+      if (!fromPeer(ev, peer)) return;
       const url = linkFromMessage(ev.data, nonce, req);
       if (url !== null) finish(url, true);
     }
@@ -4939,7 +5117,7 @@ function portalRenewer(opener, origin, nonce) {
       resolve('');
     }
     window.addEventListener('message', onMessage);
-    try { opener.postMessage(renewMessage(nonce, req), origin); } catch { finish('', false); }
+    try { peer.win.postMessage(renewMessage(nonce, req), peer.origin); } catch { finish('', false); }
   });
 }
 
@@ -5091,6 +5269,9 @@ async function libraryCopyReadable(file) {
  * the last one this device saw (js/core/device-plans.js libraryOwner).
  */
 function libraryEntries() {
+  // Inside the portal the OLD portal's copies are not this site's to list
+  // (another site's names), and its own Plans Library is the list.
+  if (embedded) return [];
   try {
     return portalCopies(localStorage, libraryOwner(localStorage).owner);
   } catch {
@@ -5108,7 +5289,7 @@ function libraryEntries() {
  * list from being drawn.
  */
 function sweepKeptLeftovers() {
-  if (sweepingKept || typeof navigator.storage?.getDirectory !== 'function' || !navigator.locks) return;
+  if (embedded || sweepingKept || typeof navigator.storage?.getDirectory !== 'function' || !navigator.locks) return;
   sweepingKept = true;
   (async () => {
     try {
@@ -5122,6 +5303,7 @@ function sweepKeptLeftovers() {
 
 /** This device's kept copies (File › Keep on This Device); [] when none. */
 function keptEntries() {
+  if (embedded) return [];   // inside the portal its Plans Library keeps the plans, not this app
   try { return keptCopies(localStorage); } catch { return []; }
 }
 
@@ -5337,6 +5519,10 @@ function dropPortalRecords(file) {
  * and opening it again starts from it.
  */
 async function keepOnDevice() {
+  // Inside the portal its Plans Library keeps plans on this device — gated by
+  // prices, and removed when they go. A copy of this app's own would be out
+  // of its reach (js/core/embedded.js). The menu item is hidden there too.
+  if (embedded) { await D.alertDialog('Keep on This Device', EMBEDDED_NO_KEEP); return; }
   if (!app.fileName) { setStatus('Open a plan first, then keep it on this device.'); return; }
   if (app.libraryCopy) {
     setStatus(app.libraryCopy.portal
@@ -5439,11 +5625,14 @@ const PLANS_LINK = HANDOFF || PORTAL_HANDOFF ? null : parsePlansLink(location.ha
 // On an iPad (or a phone) what Save does is said plainly: a new file —
 // through the share sheet only up to its cap, a download above it
 // (HANDHELD_SAVE, built from the cap) — never a write into the plan itself.
-const IDLE_STATUS = canUseFsApi
-  ? 'Open a .takeoff project, or start from a PDF.'
-  : handheld
-    ? `Open a .takeoff project, or start from a PDF.  ·  ${HANDHELD_SAVE}`
-    : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.';
+// Inside the portal, where its plans come from (js/core/embedded.js).
+const IDLE_STATUS = embedded
+  ? EMBEDDED_IDLE
+  : canUseFsApi
+    ? 'Open a .takeoff project, or start from a PDF.'
+    : handheld
+      ? `Open a .takeoff project, or start from a PDF.  ·  ${HANDHELD_SAVE}`
+      : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.';
 if (PORTAL_HANDOFF) {
   // Consumed: a reload must not wait for a plan that already came.
   try { history.replaceState(null, '', location.pathname + location.search); } catch { /* cosmetic */ }
@@ -5507,7 +5696,7 @@ let updateReloading = false;
 function reloadForUpdateIfIdle() {
   if (!updateWaiting || updateReloading) return false;
   const idle = !$('emptyState').hidden && !app.project.dirty
-    && $('progress').hidden && !libraryOpening && !portalWaiting && !D.dialogsOpen();
+    && $('progress').hidden && !libraryOpening && !portalWaiting && !portalSaving && !D.dialogsOpen();
   if (!idle) return false;
   updateReloading = true;
   location.reload();
@@ -5539,6 +5728,9 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
         + 'loads when you close this project or reload the page.');
     }
   });
+  // Relative to this page, so its scope is this app's own folder — on GitHub
+  // Pages the project's path, inside the portal /takeoff/ (never the
+  // portal's root, whose own worker keeps out of takeoff/).
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(new URL('sw.js', document.baseURI))
       .catch(err => console.warn('offline support unavailable', err));

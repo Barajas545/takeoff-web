@@ -31,12 +31,13 @@
  * takeoff disappears with a cheerful message. So the rules here:
  *
  *   1. Only a CONFIRMED ending marks the project saved: a write through a
- *      handle, a share that resolved, or a download on a computer. Only the
- *      first two drop the draft — a computer's download is the save there,
- *      but the browser may have asked where to put it and been told no, so
- *      the draft stays behind it, and goes by itself when a newer file is
- *      opened (offerDraftRestore in main.js drops a draft older than the
- *      file it is offered for).
+ *      handle, a share that resolved, the portal saying it has kept a save
+ *      handed back to it ('kept', inside the portal: savesToPortal), or a
+ *      download on a computer. All but the last drop the draft — a
+ *      computer's download is the save there, but the browser may have
+ *      asked where to put it and been told no, so the draft stays behind
+ *      it, and goes by itself when a newer file is opened (offerDraftRestore
+ *      in main.js drops a draft older than the file it is offered for).
  *   2. A download on a phone or a tablet is "started", never "saved": the
  *      project stays unsaved, the draft stays, and the person is told where to
  *      look and what to do if nothing came. So is a download on ANY device
@@ -311,6 +312,14 @@ export const REPLACE_WARNING = 'If Files asks whether to replace a file of the s
  *   moved       savedStill's answer when it is not 'same': 'edited' (work
  *               was done while the file went out, so it is not all in the
  *               file) or 'replaced' (another project is open now)
+ *   device      'iPad', 'iPhone', … (js/core/plans-link.js deviceWord), for
+ *               a save handed back to the portal
+ *   portalWhy   the portal's own short words for a save it did not keep
+ *
+ * A save handed back to the portal (savesToPortal) ends 'kept' — the portal
+ * has the file in its own storage, which is a save — or 'not-kept', `why`
+ * one of 'refused', 'no-room', 'failed' (the portal's answers), 'timeout',
+ * 'gone' (its page closed) or 'not-sent'. Only 'kept' marks it saved.
  *
  * Besides the words: `markSaved`, `dropDraft` (the draft of the project that
  * was saved — for 'replaced', the caller drops only the drafts it had before
@@ -321,9 +330,14 @@ export const REPLACE_WARNING = 'If Files asks whether to replace a file of the s
 export function afterSave(outcome, {
   name = 'the project', why = '', standalone = false, cap = SHARE_CAP_BYTES,
   keptIn = '', dirty = true, touch = true, offerShare = false, moved = '',
+  device = 'device', portalWhy = '',
 } = {}) {
-  const confirmed = outcome === 'written' || outcome === 'shared' || outcome === 'downloaded';
+  // 'kept': the portal said it has the file in its own storage (a save
+  // handed back to it, savesToPortal) — a confirmed save like a write.
+  const confirmed = outcome === 'written' || outcome === 'shared' || outcome === 'downloaded' || outcome === 'kept';
+  const keptWords = `Saved on this ${device} — the portal sends it to OneDrive`;
   if (confirmed && (moved === 'edited' || moved === 'replaced')) {
+    const saved = outcome === 'kept' ? keptWords : `Saved ${name}`;
     return {
       markSaved: false,
       // The file holds what was composed, so that project's draft may go —
@@ -333,12 +347,37 @@ export function afterSave(outcome, {
       tell: false,
       confirmed,
       status: moved === 'edited'
-        ? `Saved ${name} — but changes made while it was being saved are not in it. They are still here, `
+        ? `${saved} — but changes made while it was being saved are not in it. They are still here, `
           + 'unsaved: use Save again to include them.'
-        : `Saved ${name} — the project that was open when you tapped Save. The one open now is not changed by it.`,
+        : `${saved} — the project that was open when you tapped Save. The one open now is not changed by it.`,
     };
   }
   switch (outcome) {
+    case 'kept':
+      return { markSaved: true, dropDraft: true, tell: false, confirmed, status: `${keptWords}.` };
+    case 'not-kept': {
+      // The portal did not take it (or never answered): nothing is saved,
+      // the draft stays, and the person is told plainly — in a dialog that
+      // also offers a copy to Files (main.js), since the status line clears.
+      const said = portalWhy ? `: ${portalWhy.replace(/[.\s]+$/, '')}` : '';
+      const reason = {
+        refused: `The portal did not take this save${said}.`,
+        'no-room': `This ${device} has no room for the portal to keep the save${said}. Free some space — the portal's `
+          + 'Plans Library can remove plans you no longer need — and Save again.',
+        failed: `The portal could not keep the save${said || ': it did not say why'}.`,
+        timeout: 'The portal did not answer within 2 minutes.',
+        gone: 'The portal page that opened this plan has closed.',
+      }[why] || 'The save could not be handed to the portal.';
+      const rest = !dirty
+        ? 'There were no unsaved changes, so nothing is lost.'
+        : keptIn
+          ? `Your changes are still here, and kept on this device: opening ${keptIn} again offers them back.`
+          : 'Your changes are still here, in this page only: keep it open.';
+      return {
+        markSaved: false, dropDraft: false, tell: true, confirmed,
+        status: `Not saved to the portal or OneDrive. ${reason} ${rest} Save again, or save a copy to Files.`,
+      };
+    }
     case 'written':
       return { markSaved: true, dropDraft: true, tell: false, confirmed, status: `Saved ${name}` };
     case 'downloaded':
@@ -389,6 +428,51 @@ export function afterSave(outcome, {
         markSaved: false, dropDraft: false, tell: false, confirmed,
         status: `Not saved — your changes are still here${keptIn ? ' and kept on this device' : ''}.`,
       };
+  }
+}
+
+/* ── a save handed back to the portal ───────────────────────────────────────
+
+   Inside the portal (js/core/embedded.js) a plan its Plans Library keeps on
+   this device can come with the portal's say-so to take a save of it
+   (canSave, js/core/portal-handoff.js). Save then composes the project as
+   ever — its untouched sheets are slices of the portal's own file, so
+   nothing is read — and hands the file to the portal, which keeps it in its
+   storage and sends it to OneDrive itself. */
+
+/**
+ * Whether this Save goes to the portal: it said it will take a save of THIS
+ * plan (`portal.canSave`), the project open is still that plan (the copy it
+ * handed over, `portal.hold`, is what the project reads its sheets from —
+ * `libraryCopy`), and this is not a Save As, which is a new file (the share
+ * sheet or a download, as on any phone).
+ */
+export function savesToPortal({ portal = null, libraryCopy = null, saveAs = false } = {}) {
+  return !saveAs && !!portal && portal.canSave === true && !!portal.hold && portal.hold === libraryCopy;
+}
+
+/**
+ * The status line for the portal's word about a kept save while it sends it
+ * to OneDrive (SAVE_NEWS, or a send that failed after 'kept') — '' for
+ * anything else. Words only: nothing waits for these.
+ */
+export function portalNewsWords(news, { name = 'the plan', device = 'device' } = {}) {
+  if (!news || typeof news !== 'object') return '';
+  switch (news.state) {
+    case 'sending':
+      return typeof news.pct === 'number'
+        ? `The portal is sending ${name} to OneDrive — ${news.pct}%. It is saved on this ${device}.`
+        : `The portal is sending ${name} to OneDrive. It is saved on this ${device}.`;
+    case 'sent':
+      return `The portal sent ${name} to OneDrive.`;
+    case 'copy':
+      return `Someone saved this plan in the office after this ${device} got it. Your work was saved as `
+        + `${news.name ? `“${news.name}”` : 'a separate file'} next to it — nothing was overwritten.`;
+    case 'failed':
+      return `The portal could not send ${name} to OneDrive yet${news.why ? `: ${news.why.replace(/[.\s]+$/, '')}` : ''}. `
+        + `It is saved on this ${device}, and the portal's Plans Library sends it again.`;
+    default:
+      return '';
   }
 }
 

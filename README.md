@@ -89,8 +89,9 @@ someone chooses otherwise for their own device in *Settings › Plan files*.
 
 On a phone or a tablet the browser cannot open a folder: use *Open a .takeoff
 project* and pick the file in the Files app (the OneDrive app's files) — or,
-for the people who see prices, open it from the portal's 📐 menu with the
-portal in Safari (its home-screen icon cannot hand a plan over). Save there
+for the people who see prices, open it from the portal's 📐 menu: on an iPhone
+or iPad the portal opens the takeoff tool inside itself (see *Inside the
+portal* below), from its home-screen icon too. Save there
 gives back a new file under the name it was opened by: through the share sheet
 (*Save to Files*) up to 150 MB, and as a download into *Files › Downloads*
 above that (an app opened from the home-screen icon, which may not download,
@@ -109,6 +110,26 @@ from another computer since it was opened on the device — nothing on an iPad
 can check that yet. A plan picked from OneDrive that is not on the device yet
 can take minutes to come down; it opens when it arrives, and if anything was
 done meanwhile the app asks first.
+
+**Inside the portal.** On a phone or a tablet the employee portal shows its own
+copy of this app (the same files at one reviewed commit, served from the
+portal's site) in a full-screen frame over its page, and hands it the plan its
+Plans Library keeps on the device. The app knows it is there when a page of
+its own site frames it with the portal's hand-over (`js/core/embedded.js`) — a
+frame from any other site, or a tab of its own, is never inside the portal.
+There the portal is the keeper of plans: no Plans Archive folder, no *Keep on
+This Device*, and the start screen says plans come from the 📐 menu. When the
+portal says it will take a save of the plan it handed over, *Save* composes
+the project as ever (its untouched sheets are slices of the portal's own copy,
+so nothing is read into memory) and hands it back to the portal; the project
+is marked saved only once the portal answers that it has the file in its own
+storage — the portal then sends it to OneDrive. If it refuses, has no room, or
+does not answer within two minutes, the work stays unsaved and kept on the
+device, the app says so, and offers *Save a copy to Files* instead. A plan
+opened over the internet is never handed back: to save one to OneDrive, open
+it from the 📐 menu after it is saved on the device. The page has no inline
+script (the portal holds its copy to a strict page policy): the layout is set
+before the first paint by `js/ui-mode-boot.js`.
 
 **Only the OneDrive Plans Archive.** A computer that synced the old SharePoint
 library also has a folder called *DCR - Floor Plans - Archive* there, and the

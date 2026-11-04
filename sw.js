@@ -49,6 +49,7 @@ const PROGRAM = [
   'js/core/canvas-limits.js',
   'js/core/counting.js',
   'js/core/drafts.js',
+  'js/core/embedded.js',
   'js/core/geom.js',
   'js/core/measure.js',
   'js/core/page-store.js',
