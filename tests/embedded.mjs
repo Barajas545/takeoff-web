@@ -180,6 +180,26 @@ ok('the host tells the archive', /embedded: \(\) => embedded,/.test(main));
 ok('the service worker registers relative to the page: its own scope (/takeoff/ inside the portal), never the site root',
   /navigator\.serviceWorker\.register\(new URL\('sw\.js', document\.baseURI\)\)/.test(main) && !/register\(\s*['"]\//.test(main));
 ok('the app shows no install prompt of its own (none to hide inside the portal)', !/beforeinstallprompt|prompt\(\)\s*;?\s*\/\/\s*install/i.test(main));
+// What the portal's frame relies on (Portal 2 js/plan-frame.js unsavedIn: Close asks first while the app has unsaved
+// changes). It reads window.TakeoffApp.app.project.dirty — so that must be the live flag of the project on screen.
+{
+  const js = [];
+  const walk = d => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      if (e.isDirectory()) walk(path.join(d, e.name));
+      else if (e.name.endsWith('.js')) js.push(readFileSync(path.join(d, e.name), 'utf8'));
+    }
+  };
+  walk(path.join(APP, 'js'));
+  ok('the portal\'s Close guard reads TakeoffApp.app.project.dirty: the live app is exposed, and its project is one object for good',
+    /\nwindow\.TakeoffApp = \{\s*app,/.test(main) && /\n  project: new Project\(\),/.test(main)
+    && js.every(src => !/\bapp\.project\s*=(?!=)/.test(src))
+    && /get dirty\(\) \{ return this\._dirty; \}/.test(read('js/core/project.js')));
+}
+ok('the old portal\'s Plans Library link is only in the list of plans on this device, which stays hidden inside the portal (both of its lists are empty there)',
+  (read('index.html').match(/dcr-portal\//g) || []).length === 1
+  && /<div class="es-lib" id="esLibrary" hidden>\s*<div class="es-lib-head"><span>Plans on this device<\/span><a class="es-lib-manage" href="\.\.\/dcr-portal\/plans-library\.html">/.test(read('index.html'))
+  && /box\.hidden = !kept\.length && !portal\.length;/.test(body(main, 'renderLibraryList')));
 
 // ── the page: no inline script (the portal's page policy: script-src 'self') ──
 const html = read('index.html');
