@@ -545,6 +545,50 @@ export function draftHomeFor(homes = [], pageCount = 0) {
   return h ? h.name : '';
 }
 
+/** How much later than its draft a file may be dated and still be the save that draft went into. */
+export const DRAFT_DATE_SLACK_MS = 1500;
+
+/**
+ * What becomes of a draft found for a file just opened, before anyone is
+ * asked (offerDraftRestore in main.js):
+ *
+ *   'drop'   the draft is older than the file, so it was saved into it: a
+ *            file this app wrote (in place, or a computer's download) is
+ *            dated by that save, which wrote its draft first
+ *   'offer'  ask — restoring is safe, and saying no drops it
+ *
+ *   savedAt       when the draft was written
+ *   fileModified  the file's date (0 or none: not known, nothing is judged)
+ *   byDate        false for a plan the portal handed over, inside it or in a
+ *                 tab, by a copy on the device or a link: its date is the
+ *                 portal's, never this app's save. Once the portal has sent a
+ *                 kept save to OneDrive it hands the same bytes over dated by
+ *                 OneDrive's upload — LATER than work done here after the save
+ *                 was kept, which would otherwise be dropped unasked. Nothing
+ *                 is lost by asking: a save the portal keeps drops the drafts
+ *                 it holds ('kept'), so what is left is work not in the file.
+ */
+export function draftFate({ savedAt, fileModified, byDate = true } = {}) {
+  const file = Number(fileModified);
+  if (byDate && file > 0 && Number(savedAt) <= file + DRAFT_DATE_SLACK_MS) return 'drop';
+  return 'offer';
+}
+
+/**
+ * The plan a separate copy the portal made of a save was made from —
+ * "<stem> - iPad YYYY-MM-DD HHMM.takeoff", or with " (2)" and on, as the
+ * portal's OneDrive broker names it (a plan changed in the office after the
+ * device got it: the owner's Q3) → "<stem>.takeoff" — or '' for any other
+ * name. The copy holds exactly the bytes that were kept, so it has the size
+ * the plan had when it was saved here: work done after that save was drafted
+ * under the plan's name and that size before anyone knew the save would
+ * become a copy, and opening the copy finds it there.
+ */
+export function planOfPortalCopy(name) {
+  const m = /^(.+) - iPad \d{4}-\d{2}-\d{2} \d{4}(?: \(\d{1,2}\))?\.takeoff$/i.exec(typeof name === 'string' ? name : '');
+  return m ? `${m[1]}.takeoff` : '';
+}
+
 /**
  * The name the saved file is offered under, on a browser that hands the
  * project over as a new file.

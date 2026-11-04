@@ -21,6 +21,7 @@ import { openAfterAsking, isPhoneOrTablet, deviceWord } from './core/plans-link.
 import {
   deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
   savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
+  draftFate, planOfPortalCopy,
 } from './core/save-route.js';
 import {
   HANDOFF_WAIT_MS, RENEW_WAIT_MS, SAVE_WAIT_MS, parsePortalHash, readyMessage, renewMessage,
@@ -2551,7 +2552,7 @@ async function openProjectFile({ beforeOpen = null } = {}) {
  * inside one of this device's plan folders is treated the same, so Save
  * guards it the same way whichever door it came in by.
  */
-async function loadProjectFile(file, handle = null, { library = null, archive = null } = {}) {
+async function loadProjectFile(file, handle = null, { library = null, archive = null, fromPortal = false } = {}) {
   openEpoch += 1;
   showProgress('Opening project…', 0, 1, file.name);
   try {
@@ -2622,7 +2623,9 @@ async function loadProjectFile(file, handle = null, { library = null, archive = 
     if (!library) noteRecent(file);
     if (handle && !archive) await adoptIfInArchive(handle, file);
     syncTitle();
-    await offerDraftRestore(file);
+    // Inside the portal, or a plan it handed over: its date is the portal's,
+    // and a draft is never dropped by it (offerDraftRestore).
+    await offerDraftRestore(file, { portal: embedded || fromPortal });
     const mb = (file.size / 1048576).toFixed(file.size > 1e9 ? 0 : 1);
     setStatus(
       `Opened ${file.name} — ${opened.pageCount} sheet${opened.pageCount === 1 ? '' : 's'}, ${mb} MB` +
@@ -2853,7 +2856,7 @@ async function saveProjectOnce({ saveAs = false } = {}) {
       // so, and offers a copy to Files instead (the share sheet or a
       // download, as on any phone) — from a tap, so the share sheet can open.
       savedName = app.portal.name;
-      ({ outcome, why, portalWhy } = await handToPortal(blob, savedName));
+      ({ outcome, why, portalWhy } = await handToPortal(blob, savedName, { pages: pagesAtCompose, epoch: epochAtSave }));
       if (outcome !== 'kept') {
         hideProgress();
         const words = afterSave('not-kept', { why, portalWhy, keptIn, dirty: dirtyAtSave, device }).status;
@@ -3172,13 +3175,34 @@ async function saveDraftNow() {
   }
 }
 
-async function offerDraftRestore(file) {
-  const key = draftKey(file.name, file.size);
-  const draft = await getDraft(key);
-  if (!draft || !draft.payload) return;
+/**
+ * Offer back the draft of the file just opened, if there is one.
+ *
+ * `portal`: the plan came from the portal (or this page is inside it). Its
+ * date is then the portal's, never this app's save — after the portal sends
+ * a kept save to OneDrive it hands the same bytes over dated by OneDrive's
+ * upload, later than work done here after the save was kept — so a draft is
+ * never dropped by the date, only offered (draftFate). And a separate copy
+ * the portal made of a save (the plan changed in the office meanwhile) also
+ * finds the work drafted under the plan it was saved from: the same bytes,
+ * so the same size (planOfPortalCopy).
+ */
+async function offerDraftRestore(file, { portal = false } = {}) {
+  const own = draftKey(file.name, file.size);
+  const keys = [own];
+  const plan = portal ? planOfPortalCopy(file.name) : '';
+  if (plan) keys.push(draftKey(plan, file.size));
+  let key = '';
+  let draft = null;
+  for (const k of keys) {
+    const d = await getDraft(k);
+    if (d && d.payload) { key = k; draft = d; break; }
+  }
+  if (!draft) return;
 
-  // A draft older than the file has already been saved into it.
-  if (file.lastModified && draft.savedAt <= file.lastModified + 1500) {
+  // A draft older than the file has already been saved into it — when the
+  // file's date is this app's own save (draftFate).
+  if (draftFate({ savedAt: draft.savedAt, fileModified: file.lastModified, byDate: !portal }) === 'drop') {
     await dropDraft(key);
     return;
   }
@@ -3220,6 +3244,9 @@ async function offerDraftRestore(file) {
   thumbs.refresh(app.currentPage);
   requestDraw();
   setStatus('Unsaved work restored. Save it into the file to keep it.');
+  // Found under the plan a copy was made from: kept under this file's own
+  // keys from now on — written there first, then taken from the plan's.
+  if (key !== own && await saveDraftNow()) await dropDraft(key);
 }
 
 // Hidden, not unloading: this is the event a discarded tab actually gets.
@@ -4975,7 +5002,7 @@ async function receiveFromPortal(nonce) {
     // prices goes; a copy kept by this app belongs to the device, out of the
     // portal's reach.
     const hold = { name: plan.name, file, portal: true, number: plan.number, release() {} };
-    const opened = await loadProjectFile(file, null, { library: hold });
+    const opened = await loadProjectFile(file, null, { library: hold, fromPortal: true });
     if (opened) {
       app.portal = { peer: pinned, nonce, kind: 'file', name: plan.name, canSave: !!plan.canSave, hold, epoch: openEpoch };
       setStatus(plan.updateAvailable
@@ -4998,7 +5025,7 @@ async function receiveFromPortal(nonce) {
     size: plan.size,
     lastModified: plan.lastModified,
     renew: portalRenewer(pinned, nonce),
-  }));
+  }), null, { fromPortal: true });
   if (opened) {
     app.portal = { peer: pinned, nonce, kind: 'link', name: plan.name, canSave: false, hold: null, epoch: openEpoch };
     // A plan opened over the internet is never handed back: on a phone or a
@@ -5022,9 +5049,13 @@ function portalLinkOpen() {
  *
  * While it waits the bar says so and no update may reload the page
  * (portalSaving). After 'kept' the portal may say how its send to OneDrive
- * goes; that is shown on the status line, and nothing waits for it.
+ * goes; that is shown on the status line, and nothing waits for it — except
+ * a 'copy' (the plan changed in the office meanwhile, and the save was filed
+ * as a separate file): the work done from then on is drafted for that copy
+ * too (followPortalCopy). `pages` and `epoch`: the sheet count composed and
+ * the project the save is for (openEpoch when Save was tapped).
  */
-async function handToPortal(blob, name) {
+async function handToPortal(blob, name, { pages = 0, epoch = openEpoch } = {}) {
   const p = app.portal;
   if (portalNewsStop) { portalNewsStop(); portalNewsStop = null; }
   showProgress('Saving to the portal…', 0, 1, name);
@@ -5043,6 +5074,7 @@ async function handToPortal(blob, name) {
       onNews: news => {
         const words = portalNewsWords(news, { name, device });
         if (words) setStatus(words);
+        if (news.state === 'copy' && news.name) followPortalCopy({ name: news.name, size: file.size, pages, epoch });
       },
       waitMs: SAVE_WAIT_MS,
     });
@@ -5054,6 +5086,20 @@ async function handToPortal(blob, name) {
   } finally {
     portalSaving = false;
   }
+}
+
+/**
+ * The portal filed a kept save as a separate copy, `name` (the plan changed
+ * in the office after this device got it): the plan's own name now opens the
+ * office's version, and only the copy holds this save. So the copy becomes a
+ * home of the project's drafts — the file it was opened from stays one — and
+ * work not saved yet is drafted there at once: reopening the copy offers it
+ * back. Nothing changes when another project is open by now.
+ */
+function followPortalCopy({ name, size, pages, epoch }) {
+  if (epoch !== openEpoch) return;
+  app.draftHomes = nextDraftHomes(app.draftHomes, { name, size, pages });
+  void saveDraftNow();
 }
 
 /**

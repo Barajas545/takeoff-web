@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import {
   SHARE_CAP_BYTES, SHEET_MIN_MS, downloadUrlKeepMs, saveRoute, shareErrorKind, deliverFile, afterSave,
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
-  HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
+  HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords, draftFate, DRAFT_DATE_SLACK_MS, planOfPortalCopy,
 } from '../js/core/save-route.js';
 import { Project } from '../js/core/project.js';
 import { HANDHELD_HINT } from '../js/core/plans-link.js';
@@ -275,6 +275,51 @@ eq('restorable from the file it was opened from, sheets as they were', draftHome
 eq('… not once sheets were added (import-more): the draft would be refused', draftHomeFor([P0], 14), '');
 eq('… not for a takeoff started from a PDF (no file at all)', draftHomeFor([], 12), '');
 eq('… from the file last saved, when that is the one with these sheets', draftHomeFor([P0, { name: 'P2.takeoff', size: 9, pages: 14 }], 14), 'P2.takeoff');
+
+// ── a draft and the date of the file it is found for (review fix) ────────
+// The portal hands a plan over dated by the portal: after its send of a kept save, by OneDrive's upload. So work
+// done after the save was kept, drafted when the page was hidden, is OLDER than the file the portal then hands over
+// — and the desktop rule ("older than the file: already saved into it") dropped it unasked.
+{
+  const at = hhmm => Date.UTC(2026, 10, 4, Number(hhmm.slice(0, 2)), Number(hhmm.slice(3)));
+  const kept = at('10:00');          // Save: the portal answers 'kept'; the drafts are dropped
+  const drafted = at('10:05');       // measuring on, the page hidden: a draft under plan|S1
+  const adopted = at('11:02');       // the portal's send ends on the next visit; the plan is adopted, dated by OneDrive
+  ok('(the case: the draft is newer than the save, older than the date the plan comes back with)', kept < drafted && drafted < adopted);
+  eq('a plan the portal hands over: a draft newer than "kept" but older than the adopted file\'s date is OFFERED',
+    draftFate({ savedAt: drafted, fileModified: adopted, byDate: false }), 'offer');
+  eq('… any draft of it, however old: the portal\'s date says nothing about this app\'s saves',
+    [draftFate({ savedAt: at('09:00'), fileModified: adopted, byDate: false }), draftFate({ savedAt: drafted, fileModified: 0, byDate: false })],
+    ['offer', 'offer']);
+  eq('a file this app saved (a computer\'s, or one picked in Files): older than the file is saved into it, as ever',
+    [draftFate({ savedAt: drafted, fileModified: adopted }), draftFate({ savedAt: adopted + DRAFT_DATE_SLACK_MS, fileModified: adopted }),
+      draftFate({ savedAt: adopted + DRAFT_DATE_SLACK_MS + 1, fileModified: adopted })],
+    ['drop', 'drop', 'offer']);
+  eq('… no date, or no draft time: nothing is judged by it', [draftFate({ savedAt: drafted, fileModified: 0 }), draftFate({ savedAt: drafted }),
+    draftFate({ fileModified: adopted }), draftFate()], ['offer', 'offer', 'offer', 'offer']);
+  eq('the slack is the 1.5 s it always was', DRAFT_DATE_SLACK_MS, 1500);
+}
+// A kept save the portal files as a separate copy (the plan changed in the office meanwhile): the copy holds the kept
+// bytes, so the work after the save — drafted under the plan's name at the kept size — must be found from the copy.
+{
+  const S0 = { name: 'A000T1 - Made up plan.takeoff', size: 1000, pages: 3 };
+  const S1 = { name: S0.name, size: 1400, pages: 3 };
+  const COPY = { name: 'A000T1 - Made up plan - iPad 2026-11-04 1415.takeoff', size: 1400, pages: 3 };
+  const afterKept = nextDraftHomes([S0], S1);
+  eq('after kept: the plan as opened and as kept', afterKept, [S0, S1]);
+  eq('the portal\'s "copy" news while the frame is open: the copy becomes a home (followPortalCopy), the opened file stays one',
+    nextDraftHomes(afterKept, COPY), [S0, COPY]);
+  eq('… and a draft written now is offered back from the copy (its sheets as they are)', draftHomeFor(nextDraftHomes(afterKept, COPY), 3), S0.name);
+  eq('the copy\'s plan, by the portal\'s naming: "<stem> - iPad YYYY-MM-DD HHMM.takeoff" (and " (2)" on) → "<stem>.takeoff"', [
+    planOfPortalCopy(COPY.name),
+    planOfPortalCopy('A000T1 - Made up plan - iPad 2026-11-04 1415 (2).takeoff'),
+    planOfPortalCopy('A000T1 - Made up plan - iPad 2026-11-04 1415 (9).TAKEOFF'),
+    planOfPortalCopy('A000T1 - Made up plan - iPad 2026-11-04 1415 - iPad 2026-11-05 0910.takeoff'),
+  ], [S0.name, S0.name, S0.name, 'A000T1 - Made up plan - iPad 2026-11-04 1415.takeoff']);
+  eq('… any other name is no copy', [planOfPortalCopy(S0.name), planOfPortalCopy('Plan - iPad.takeoff'),
+    planOfPortalCopy('Plan - iPad 2026-11-04.takeoff'), planOfPortalCopy(' - iPad 2026-11-04 1415.takeoff'),
+    planOfPortalCopy('Plan - iPad 2026-11-04 1415.pdf'), planOfPortalCopy(null), planOfPortalCopy(42)], ['', '', '', '', '', '', '']);
+}
 
 // ── the file's name ──────────────────────────────────────────────────────
 eq('an opened plan keeps its own name',
@@ -546,7 +591,7 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
   const branch = save.slice(save.indexOf('} else if (toPortal) {'), save.indexOf('// The file leaves as a new one'));
   ok('… composed like any save (the draft first, then writeProject), then handed to the portal under the opened plan\'s name',
     save.indexOf('} else if (toPortal) {') > save.indexOf('await writeProject(') && /savedName = app\.portal\.name;/.test(branch)
-    && /await handToPortal\(blob, savedName\)/.test(branch));
+    && /await handToPortal\(blob, savedName[,)]/.test(branch));
   ok('… anything but kept: the bar down, the words said, and a copy to Files offered',
     /if \(outcome !== 'kept'\) \{\s*hideProgress\(\);[\s\S]*afterSave\('not-kept'[\s\S]*await offerCopyToFiles\(blob, copyName, words/.test(branch));
   ok('… a copy, if taken, is judged as any phone\'s save; none taken, the dialog has said it', /\(\{ outcome, why, asked = false \} = copy\)/.test(branch)
@@ -573,6 +618,28 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
   ok('main.js never reaches for window.opener itself, and never posts to "*"', !/window\.opener/.test(main) && !/postMessage\([^)]*['"]\*['"]/.test(main));
   ok('a plan over the internet on a phone is told how its work reaches OneDrive', /portalLinkOpen\(\)\) words \+= ` \$\{TO_ONEDRIVE_HINT\}`/.test(save)
     && /Opened \$\{plan\.name\} from OneDrive, over the internet\. \$\{NO_SAVE_BACK\}/.test(recv));
+  // Review fix: a draft of a plan the portal handed over is never dropped by the file's date.
+  const restore = body('offerDraftRestore');
+  ok('offerDraftRestore judges a draft by draftFate, by the date only when the plan is not the portal\'s',
+    /draftFate\(\{ savedAt: draft\.savedAt, fileModified: file\.lastModified, byDate: !portal \}\) === 'drop'/.test(restore)
+    && !/draft\.savedAt <= file\.lastModified/.test(main));
+  ok('… told so by loadProjectFile: inside the portal, or a plan it handed over',
+    /async function loadProjectFile\(file, handle = null, \{ library = null, archive = null, fromPortal = false \} = \{\}\)/.test(main)
+    && /await offerDraftRestore\(file, \{ portal: embedded \|\| fromPortal \}\);/.test(body('loadProjectFile')));
+  ok('… and the hand-over says it for both kinds: a copy on the device and a link',
+    /loadProjectFile\(file, null, \{ library: hold, fromPortal: true \}\)/.test(recv) && /\}\), null, \{ fromPortal: true \}\);/.test(recv));
+  ok('… a copy the portal made also finds the draft under its plan\'s name, then keeps it under its own',
+    /const plan = portal \? planOfPortalCopy\(file\.name\) : '';\s*if \(plan\) keys\.push\(draftKey\(plan, file\.size\)\);/.test(restore)
+    && /if \(key !== own && await saveDraftNow\(\)\) await dropDraft\(key\);/.test(restore)
+    && /if \(!ok\) \{ await dropDraft\(key\); return; \}/.test(restore));
+  // Review fix: the portal's "copy" news makes the copy a home of the drafts.
+  ok('the save tells handToPortal the sheets composed and the project it is for',
+    /await handToPortal\(blob, savedName, \{ pages: pagesAtCompose, epoch: epochAtSave \}\)/.test(branch));
+  ok('… whose "copy" news (with its name) makes the copy a home of the drafts',
+    /if \(news\.state === 'copy' && news\.name\) followPortalCopy\(\{ name: news\.name, size: file\.size, pages, epoch \}\);/.test(hand));
+  const follow = body('followPortalCopy');
+  ok('… only while that project is still the one open, and the work so far drafted there at once',
+    /if \(epoch !== openEpoch\) return;\s*app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size, pages \}\);\s*void saveDraftNow\(\);/.test(follow));
 }
 // Found in the browser: the start screen draws its lists (and sweeps) while main.js is still being evaluated,
 // so a module-level `let` the sweep reads must come before that first top-level call, or the module throws.
