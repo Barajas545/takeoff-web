@@ -36,10 +36,14 @@
  *        {type: 'ptt-save', v, nonce, req, name, size, file}
  *      and waits for `{type: 'ptt-save-state', v, nonce, req, state, why?}`:
  *      'kept' (the portal has the bytes in its own storage — only then is the
- *      project saved), 'refused', 'no-room' or 'failed'. Sending to OneDrive is
- *      the portal's job after that; it may say how it goes ('sending' with a
- *      `pct`, 'sent', 'copy' with the copy's `name`), and nothing here waits
- *      for those.
+ *      project saved), 'refused', 'no-room' or 'failed'. While it keeps them it
+ *      may say so — `{..., state: 'keeping', pct?}` — and each such word (any
+ *      word about this save that is not an answer) starts the wait again: a
+ *      big plan takes more than the wait to copy on an iPad. Sending to
+ *      OneDrive is the portal's job after that; it may say how it goes
+ *      ('sending' with a `pct`, 'sent', 'copy' with the copy's `name`), and
+ *      nothing here waits for those. A 'kept' that comes after the wait has
+ *      ended is still heard (the caller decides whether it is a save then).
  *
  * Two windows can be the portal (the PEER, portalPeer):
  *
@@ -65,10 +69,14 @@ export const HANDOFF_WAIT_MS = 120 * 1000;
 export const RENEW_WAIT_MS = 90 * 1000;
 
 /** How long Save waits for the portal to say it has the file before it keeps the work as a draft and says so (the
- *  portal spools the file into its own storage first: a gigabyte plan takes a while on an iPad). */
+ *  portal spools the file into its own storage first: a gigabyte plan takes a while on an iPad). Any word of the
+ *  portal's about the save that is not its answer starts this wait again, for the whole of it. */
 export const SAVE_WAIT_MS = 120 * 1000;
 /** The answers that end a save's wait: only 'kept' is a save. */
 export const SAVE_ENDINGS = Object.freeze(['kept', 'refused', 'no-room', 'failed']);
+/** What the portal may say while it keeps the file, before its answer — `pct` how far, 0-100, when it knows. Optional
+ *  (a portal that never says it is waited for as ever); each one starts the wait again. */
+export const SAVE_PROGRESS = Object.freeze(['keeping']);
 /** What the portal may say afterwards, while it sends the kept file to OneDrive (never waited for). */
 export const SAVE_NEWS = Object.freeze(['sending', 'sent', 'copy']);
 
@@ -254,9 +262,9 @@ function plainWords(s) {
  * anything else (another save's, another tab's, another shape):
  *
  *   { state, final, why }          state one of SAVE_ENDINGS (final: ends the
- *                                  wait) or SAVE_NEWS; why the portal's short
- *                                  words, '' when none
- *   + pct  for 'sending': 0-100, or null when it gave no number
+ *                                  wait), SAVE_PROGRESS or SAVE_NEWS; why the
+ *                                  portal's short words, '' when none
+ *   + pct  for 'keeping' and 'sending': 0-100, or null when it gave no number
  *   + name for 'copy': the copy's file name ('' when it is not one)
  */
 export function saveStateFromMessage(d, nonce, req) {
@@ -264,9 +272,9 @@ export function saveStateFromMessage(d, nonce, req) {
   if (!NONCE_RE.test(String(nonce || '')) || d.nonce !== nonce) return null;
   if (typeof req !== 'string' || !REQ_RE.test(req) || d.req !== req) return null;
   const final = SAVE_ENDINGS.includes(d.state);
-  if (!final && !SAVE_NEWS.includes(d.state)) return null;
+  if (!final && !SAVE_PROGRESS.includes(d.state) && !SAVE_NEWS.includes(d.state)) return null;
   const out = { state: d.state, final, why: plainWords(d.why) };
-  if (d.state === 'sending') {
+  if (d.state === 'keeping' || d.state === 'sending') {
     out.pct = typeof d.pct === 'number' && Number.isFinite(d.pct) ? Math.max(0, Math.min(100, Math.round(d.pct))) : null;
   }
   if (d.state === 'copy') out.name = typeof d.name === 'string' && NAME_RE.test(d.name) ? d.name : '';
@@ -283,11 +291,21 @@ export function saveStateFromMessage(d, nonce, req) {
  *           listen(fn) → unlisten     fn gets every message event
  *           post(win, msg, origin)    postMessage; throws when the window is gone
  *           peerGone() → bool         the portal's window has closed
- *           onNews(news)              a later word about this save (SAVE_NEWS,
- *                                     or a 'failed' after 'kept'), never waited for
+ *           onNews(news)              a word about this save that is not its
+ *                                     answer: while waiting, 'keeping' (pct)
+ *                                     or any of SAVE_NEWS; after 'kept' (in
+ *                                     time or late), SAVE_NEWS or a 'failed'.
+ *                                     Never waited for
  *           doc                       the document, for whether the page is in
  *                                     front (default: the page's own; null: never hidden)
  *           waitMs, pollMs, origins, setTimeout/clearTimeout/setInterval/clearInterval
+ *
+ * Any word of the portal's about this save that is not its answer — 'keeping'
+ * while it copies the file into its own storage (with how far, when it
+ * knows), or any of SAVE_NEWS — starts the wait again from now, for the whole
+ * window: the portal is at it, and a 2 GB plan takes longer than the window
+ * to copy on an iPad. A portal that says nothing before its answer is waited
+ * for exactly as before.
  *
  * Time the page spends hidden is not counted (as workerWriter's watchdog,
  * js/core/device-plans.js). Switching apps while the portal spools a big plan
@@ -299,7 +317,7 @@ export function saveStateFromMessage(d, nonce, req) {
  * was posted (or since the wait last started again), starts again from now,
  * for the whole window.
  *
- * Resolves { ending, why, stop }:
+ * Resolves { ending, why, stop, late }:
  *   ending  'kept' — the portal has the bytes in its own storage: the ONE
  *                    answer that makes this a save
  *           'refused' | 'no-room' | 'failed' — the portal's answer
@@ -307,8 +325,18 @@ export function saveStateFromMessage(d, nonce, req) {
  *           'gone'     — the portal's window closed first
  *           'not-sent' — the save could not be handed over at all
  *   why     the portal's short words ('' when none)
+ *   late    after a 'timeout', a Promise of the portal's answer if it still
+ *           comes — { state, why }, state one of SAVE_ENDINGS — or null once
+ *           stop() is called; null at once for any other ending. A late
+ *           'kept' says the portal HAS the file as it was composed: whether
+ *           the project is saved then is the caller's to judge (nothing done
+ *           since: js/core/save-route.js savedStill), and only for the latest
+ *           save it handed over — it calls stop() before it posts the next.
+ *           After a late 'kept' the news of the send is heard as after one in
+ *           time.
  *   stop()  stops listening. After 'kept' the listener stays for the news of
- *           the send, until 'sent', 'copy' or 'failed', or until this.
+ *           the send, until 'sent', 'copy' or 'failed'; after 'timeout', for
+ *           a late answer (and then as after 'kept'); until this either way.
  */
 export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env = {}) {
   // Called through wrappers, never as T.setTimeout(...) of the browser's own:
@@ -320,6 +348,7 @@ export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env
     clearInterval: env.clearInterval || (id => globalThis.clearInterval(id)),
   };
   const noop = () => {};
+  const none = Promise.resolve(null);
   const gone = () => { try { return !!(env.peerGone && env.peerGone()); } catch { return true; } };
   const doc = 'doc' in env ? env.doc : (typeof document !== 'undefined' ? document : null);
   const hiddenNow = () => { try { return !!doc && doc.visibilityState === 'hidden'; } catch { return false; } };
@@ -328,14 +357,19 @@ export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env
   // only once the plan has come; before that it could be any portal address).
   const targets = peer && peer.origin ? peerTargets(peer, env.origins) : [];
   if (!msg || targets.length !== 1 || typeof env.listen !== 'function' || typeof env.post !== 'function') {
-    return Promise.resolve({ ending: 'not-sent', why: '', stop: noop });
+    return Promise.resolve({ ending: 'not-sent', why: '', stop: noop, late: none });
   }
-  if (gone()) return Promise.resolve({ ending: 'gone', why: '', stop: noop });
+  if (gone()) return Promise.resolve({ ending: 'gone', why: '', stop: noop, late: none });
   return new Promise(resolve => {
-    let settled = false;
+    // 'waiting' for the answer; then 'news' (kept, in time or late: the
+    // send's news is heard), 'late' (timed out: a late answer is still
+    // heard) or 'over'.
+    let phase = 'waiting';
     let unlisten = noop;
     let timer = 0;
     let poll = 0;
+    let answerLate = noop;
+    const late = new Promise(r => { answerLate = v => { answerLate = noop; r(v); }; });
     let wasHidden = hiddenNow();          // hidden at any moment since the wait (last) started
     const onVisibility = () => { if (hiddenNow()) wasHidden = true; };
     let unwatch = noop;
@@ -351,44 +385,61 @@ export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env
       try { w(); } catch { /* gone with the page */ }
     };
     const stop = () => {
+      phase = 'over';
       const u = unlisten;
       unlisten = noop;
       T.clearTimeout(timer);
       T.clearInterval(poll);
       quiet();
       try { u(); } catch { /* already gone */ }
+      answerLate(null);
     };
     const end = (ending, why = '') => {
-      if (settled) return;
-      settled = true;
+      if (phase !== 'waiting') return;
       T.clearTimeout(timer);
       T.clearInterval(poll);
       quiet();
-      if (ending !== 'kept') stop();
-      resolve({ ending, why, stop });
+      if (ending === 'kept') phase = 'news';
+      else if (ending === 'timeout') phase = 'late';
+      else stop();
+      if (ending !== 'timeout') answerLate(null);    // a late answer is a timed-out save's only
+      resolve({ ending, why, stop, late });
     };
     const waitMs = Number(env.waitMs) > 0 ? Number(env.waitMs) : SAVE_WAIT_MS;
+    // The whole window, from now (and the page's time away counted from now).
+    const arm = () => {
+      T.clearTimeout(timer);
+      wasHidden = hiddenNow();
+      timer = T.setTimeout(due, waitMs);
+    };
     const due = () => {
-      if (settled) return;
-      if (hiddenNow() || wasHidden) {
-        // Put away meanwhile: the portal was too. Wait again, from now.
-        wasHidden = hiddenNow();
-        timer = T.setTimeout(due, waitMs);
-        return;
-      }
+      if (phase !== 'waiting') return;
+      // Put away meanwhile: the portal was too. Wait again, from now.
+      if (hiddenNow() || wasHidden) { arm(); return; }
       end('timeout');
     };
+    const tell = s => { try { if (env.onNews) env.onNews(s); } catch { /* words only */ } };
     const heard = ev => {
       if (!fromPeer(ev, peer, env.origins)) return;
       const s = saveStateFromMessage(ev && ev.data, nonce, req);
       if (!s) return;
-      if (!settled) {
+      if (phase === 'waiting') {
         if (s.final) { end(s.state, s.why); return; }
-      } else if (!(SAVE_NEWS.includes(s.state) || s.state === 'failed')) {
-        return;   // a second answer to a save already answered: nothing new
+        arm();                            // the portal is at it: the whole wait again
+        tell(s);
+        return;
       }
-      try { if (env.onNews) env.onNews(s); } catch { /* words only */ }
-      if (settled && (s.state === 'sent' || s.state === 'copy' || s.state === 'failed')) stop();
+      if (phase === 'late') {
+        if (!s.final) return;             // still at it: only its answer is news now
+        answerLate({ state: s.state, why: s.why });
+        if (s.state === 'kept') phase = 'news'; else stop();
+        return;
+      }
+      if (phase !== 'news') return;
+      // A second answer to a save already answered, or 'keeping' after it: nothing new.
+      if (!(SAVE_NEWS.includes(s.state) || s.state === 'failed')) return;
+      tell(s);
+      if (s.state === 'sent' || s.state === 'copy' || s.state === 'failed') stop();
     };
     try { unlisten = env.listen(heard) || noop; } catch { end('not-sent'); return; }
     timer = T.setTimeout(due, waitMs);

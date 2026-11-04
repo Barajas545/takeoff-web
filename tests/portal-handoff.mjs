@@ -15,7 +15,7 @@
 import {
   PORTAL_ORIGINS, HANDOFF_VERSION, HANDOFF_WAIT_MS, parsePortalHash, isPortalOrigin, readyMessage, renewMessage, offlineMessage,
   linkOk, openFromMessage, linkFromMessage,
-  SAVE_WAIT_MS, SAVE_ENDINGS, SAVE_NEWS, framedBySameSite, portalPeer, fromPeer, peerTargets, newSaveReq, saveMessage,
+  SAVE_WAIT_MS, SAVE_ENDINGS, SAVE_PROGRESS, SAVE_NEWS, framedBySameSite, portalPeer, fromPeer, peerTargets, newSaveReq, saveMessage,
   saveStateFromMessage, askPortalToKeep,
 } from '../js/core/portal-handoff.js';
 import { parsePlansLink } from '../js/core/plans-folder.js';
@@ -175,6 +175,7 @@ const topTab = (origin, opener = null) => { const w = page(origin, { opener }); 
 // ── a save handed back: ptt-save ─────────────────────────────────────────
 eq('Save waits 120 s for the portal\'s answer (C2)', SAVE_WAIT_MS, 120 * 1000);
 eq('the answers that end the wait', [...SAVE_ENDINGS], ['kept', 'refused', 'no-room', 'failed']);
+eq('what the portal may say while it keeps the file (each word starts the wait again)', [...SAVE_PROGRESS], ['keeping']);
 eq('the news after it', [...SAVE_NEWS], ['sending', 'sent', 'copy']);
 {
   const reqs = new Set();
@@ -232,6 +233,16 @@ const SAVE = { nonce: NONCE, req: 's1Ab_-9xyz', name: 'A000T1 Made up plan.takeo
   eq('… no number: none', [saveStateFromMessage(st({ state: 'sending' }), NONCE, SAVE.req).pct,
     saveStateFromMessage(st({ state: 'sending', pct: '45' }), NONCE, SAVE.req).pct,
     saveStateFromMessage(st({ state: 'sending', pct: NaN }), NONCE, SAVE.req).pct], [null, null, null]);
+  // The portal's word while it copies the file into its own storage (C2 v1, optional): not an answer.
+  eq('keeping, with how far', saveStateFromMessage(st({ state: 'keeping', pct: 44.6 }), NONCE, SAVE.req), { state: 'keeping', final: false, why: '', pct: 45 });
+  eq('… clamped', [saveStateFromMessage(st({ state: 'keeping', pct: 101 }), NONCE, SAVE.req).pct,
+    saveStateFromMessage(st({ state: 'keeping', pct: -1 }), NONCE, SAVE.req).pct], [100, 0]);
+  eq('… no number: none (it is a word all the same)', [saveStateFromMessage(st({ state: 'keeping' }), NONCE, SAVE.req),
+    saveStateFromMessage(st({ state: 'keeping', pct: '45' }), NONCE, SAVE.req).pct,
+    saveStateFromMessage(st({ state: 'keeping', pct: Infinity }), NONCE, SAVE.req).pct], [{ state: 'keeping', final: false, why: '', pct: null }, null, null]);
+  eq('… for another save, another tab, another version: nothing', [saveStateFromMessage(st({ state: 'keeping', req: 's2' }), NONCE, SAVE.req),
+    saveStateFromMessage(st({ state: 'keeping', nonce: 'Another_tab_nonce_123' }), NONCE, SAVE.req),
+    saveStateFromMessage(st({ state: 'keeping', v: 2 }), NONCE, SAVE.req)], [null, null, null]);
   eq('sent', saveStateFromMessage(st({ state: 'sent' }), NONCE, SAVE.req), { state: 'sent', final: false, why: '' });
   eq('copy, with the copy\'s name', saveStateFromMessage(st({ state: 'copy', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' }), NONCE, SAVE.req),
     { state: 'copy', final: false, why: '', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' });
@@ -357,9 +368,11 @@ for (const [state, why] of [['refused', 'Not a plan the portal handed over.'], [
   w.c.advance(1);
   const r = await p;
   eq('no answer in 120 s: timeout', r.ending, 'timeout');
-  eq('… nothing left listening or ticking', [w.handlers.size, w.c.pending()], [0, 0]);
+  eq('… nothing left ticking; one listener stays, for a late answer', [w.handlers.size, w.c.pending()], [1, 0]);
   w.say('kept');
-  eq('… so a "kept" after it is not taken for a save', w.news.length, 0);
+  eq('… so a "kept" after it is not the wait\'s answer, nor news: it is the late answer', [w.news.length, await r.late],
+    [0, { state: 'kept', why: '' }]);
+  r.stop();
 }
 {
   const w = world();
@@ -457,7 +470,9 @@ function fakeDoc(state = 'visible') {
   w.c.advance(20 * 1000);
   const r = await p;
   eq('… and a whole window in front with no answer is a timeout all the same', r.ending, 'timeout');
-  eq('… nothing left listening, ticking or watching', [w.handlers.size, w.c.pending(), doc.listeners()], [0, 0, 0]);
+  eq('… nothing left ticking or watching (the late answer\'s listener aside)', [w.handlers.size, w.c.pending(), doc.listeners()], [1, 0, 0]);
+  r.stop();
+  eq('… and stop() takes that too', w.handlers.size, 0);
 }
 {
   const w = world();
@@ -488,6 +503,161 @@ function fakeDoc(state = 'visible') {
   w.say('kept', {}, { origin: 'https://evil.test' });
   w.say('kept');
   eq('… and only its answer from there counts', (await p).ending, 'kept');
+}
+
+// ── the portal's heartbeat: "keeping" (and any word before its answer) starts the wait again ──
+// On an iPad, copying a 2 GB File into the portal's own storage can take longer than the 2 minutes: a save the portal
+// was about to keep was reported as not saved. A portal that says it is at it is waited for; one that says nothing
+// is waited for as ever (the tests above).
+{
+  const w = world();
+  const p = watch(keep(w));
+  w.c.advance(100 * 1000);
+  w.say('keeping', { pct: 45 });
+  w.c.advance(SAVE_WAIT_MS - 1);
+  await tick();
+  eq('"keeping" at 100 s: still waiting 120 s after it (220 s in all)', settledAs, null);
+  eq('… and its how-far is passed on, for the bar', w.news.map(n => [n.state, n.pct]), [['keeping', 45]]);
+  w.c.advance(1);
+  const r = await p;
+  eq('… then a whole window with no word: a timeout, 120 s after the last word', r.ending, 'timeout');
+  r.stop();
+}
+{
+  // ten minutes of a slow copy, a word every 30 s, then the answer
+  const w = world();
+  const p = watch(keep(w));
+  for (let i = 1; i <= 20; i++) { w.c.advance(30 * 1000); w.say('keeping', { pct: i * 5 }); }
+  await tick();
+  eq('a word every 30 s for 10 minutes: still waiting', settledAs, null);
+  w.c.advance(SAVE_WAIT_MS - 1000);
+  await tick();
+  eq('… and still, just under 120 s after the last one', settledAs, null);
+  w.say('kept');
+  const r = await p;
+  eq('… and its "kept" is a save, as ever', [r.ending, w.news.length, w.news[19].pct], ['kept', 20, 100]);
+  eq('… nothing ticking after it', w.c.pending(), 0);
+  w.say('keeping', { pct: 100 });
+  eq('… a "keeping" after the answer is not news', w.news.length, 20);
+  r.stop();
+}
+{
+  const w = world();
+  const p = watch(keep(w));
+  w.c.advance(110 * 1000);
+  w.say('keeping');
+  w.c.advance(110 * 1000);
+  await tick();
+  eq('"keeping" with no number starts the wait again too', [settledAs, w.news.map(n => [n.state, n.pct])], [null, [['keeping', null]]]);
+  w.say('failed', { why: 'OPFS write failed' });
+  eq('… and an answer after it ends the wait', (await p).ending, 'failed');
+}
+for (const state of ['sending', 'sent', 'copy']) {
+  // C2 lets any word that is not an answer come; before the answer each one is a word that the portal is at it
+  const w = world();
+  const p = watch(keep(w));
+  w.c.advance(100 * 1000);
+  w.say(state, state === 'copy' ? { name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' } : {});
+  w.c.advance(100 * 1000);
+  await tick();
+  eq(`"${state}" before the answer starts the wait again too`, settledAs, null);
+  w.say('kept');
+  eq(`… and only "kept" after it is a save`, (await p).ending, 'kept');
+}
+{
+  const w = world();
+  const p = watch(keep(w));
+  w.c.advance(100 * 1000);
+  w.say('keeping', { pct: 10 }, { source: {} });                       // another window
+  w.say('keeping', { pct: 10 }, { origin: 'https://evil.test' });      // another address
+  w.say('keeping', { pct: 10 }, { req: 's-older' });                   // another save (an earlier, timed-out one)
+  w.say('keeping', { pct: 10 }, { nonce: 'Another_tab_nonce_123' });   // another tab
+  w.say('spooling', { pct: 10 });                                      // a word there is not
+  w.c.advance(20 * 1000);
+  const r = await p;
+  eq('a word from anyone else, about another save, or a word there is not: the wait is not started again', [r.ending, w.news.length], ['timeout', 0]);
+  r.stop();
+}
+{
+  // hidden since the post, then the portal's word while in front: the window from that word, in front all of it
+  const w = world();
+  const doc = fakeDoc();
+  const p = watch(askPortalToKeep({ peer: PEER, ...SAVE }, { ...w.env, doc }));
+  doc.set('hidden');
+  w.c.advance(30 * 1000);
+  doc.set('visible');
+  w.say('keeping', { pct: 20 });
+  w.c.advance(SAVE_WAIT_MS);
+  const r = await p;
+  eq('a word after the page was hidden starts the wait from it; a whole window in front after it is a timeout', r.ending, 'timeout');
+  r.stop();
+}
+
+// ── a late answer: the wait ran out, then the portal answered ────────────
+{
+  const w = world();
+  const p = keep(w);
+  w.c.advance(SAVE_WAIT_MS);
+  const r = await p;
+  let lateWord = 'none yet';
+  r.late.then(v => { lateWord = v; });
+  w.say('keeping', { pct: 99 });
+  await tick();
+  eq('timed out: a "keeping" after it is neither news nor the late answer', [r.ending, w.news.length, lateWord], ['timeout', 0, 'none yet']);
+  w.say('kept', {}, { req: 's-older' });
+  w.say('kept', {}, { source: {} });
+  await tick();
+  eq('… nor another save\'s "kept", nor another window\'s', lateWord, 'none yet');
+  w.say('kept');
+  await tick();
+  eq('… the portal\'s own late "kept" is the late answer', lateWord, { state: 'kept', why: '' });
+  ok('… and the news of the send is heard after it', w.handlers.size === 1);
+  w.say('kept');
+  w.say('sending', { pct: 30 });
+  w.say('copy', { name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' });
+  eq('… as after a "kept" in time: news only, until the send is over', [w.news.map(n => n.state), w.handlers.size], [['sending', 'copy'], 0]);
+}
+for (const [state, why] of [['refused', 'Not a plan the portal handed over.'], ['no-room', ''], ['failed', 'The copy did not check out.']]) {
+  const w = world();
+  const p = keep(w);
+  w.c.advance(SAVE_WAIT_MS);
+  const r = await p;
+  w.say(state, why ? { why } : {});
+  eq(`timed out, then "${state}": the late answer, its words — and nothing listens any more`, [await r.late, w.handlers.size],
+    [{ state, why }, 0]);
+  w.say('kept');
+  eq('… a "kept" after that changes nothing', w.news.length, 0);
+}
+{
+  const w = world();
+  const p = keep(w);
+  w.c.advance(SAVE_WAIT_MS);
+  const r = await p;
+  r.stop();
+  eq('timed out, then stop() (the next save is handed over): the late answer is none', [await r.late, w.handlers.size], [null, 0]);
+  w.say('kept');
+  eq('… so this save\'s "kept" is never heard after it', w.news.length, 0);
+}
+{
+  const endings = [];
+  for (const answer of ['kept', 'refused']) {
+    const w = world();
+    const p = keep(w);
+    w.say(answer);
+    const r = await p;
+    endings.push([r.ending, await r.late]);
+    r.stop();
+  }
+  const g = world();
+  const gp = keep(g);
+  g.close();
+  g.c.advance(2000);
+  const gr = await gp;
+  endings.push([gr.ending, await gr.late]);
+  const n = await keep(world(), { size: 1 });
+  endings.push([n.ending, await n.late]);
+  eq('only a timeout has a late answer: none for kept, an answer, gone or not sent', endings,
+    [['kept', null], ['refused', null], ['gone', null], ['not-sent', null]]);
 }
 
 console.log(fails

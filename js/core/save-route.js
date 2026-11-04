@@ -454,7 +454,8 @@ export function savesToPortal({ portal = null, libraryCopy = null, saveAs = fals
 /**
  * The status line for the portal's word about a kept save while it sends it
  * to OneDrive (SAVE_NEWS, or a send that failed after 'kept') — '' for
- * anything else. Words only: nothing waits for these.
+ * anything else ('keeping', while the portal keeps the file, goes on the bar:
+ * main.js handToPortal). Words only: nothing waits for these.
  */
 export function portalNewsWords(news, { name = 'the plan', device = 'device' } = {}) {
   if (!news || typeof news !== 'object') return '';
@@ -474,6 +475,45 @@ export function portalNewsWords(news, { name = 'the plan', device = 'device' } =
     default:
       return '';
   }
+}
+
+/**
+ * What a LATE 'kept' does (main.js settleLateKept): the portal kept a save it
+ * did not answer within the wait (js/core/portal-handoff.js askPortalToKeep,
+ * 'timeout' then `late`). The person was told it was not saved, and the
+ * project and its drafts were left as they were. The file the portal kept
+ * holds the project as it was composed, so, by savedStill's answer now:
+ *
+ *   'same'      nothing was done since: it is saved now, and its drafts go,
+ *               as for a 'kept' in time
+ *   'edited'    work done since is not in it: still unsaved, the drafts stay
+ *               — and the kept file becomes one of their homes (reopened
+ *               from the portal, it offers that work back)
+ *   'replaced'  another project is open now: nothing changes, nothing is
+ *               said, and nothing more is heard of that save
+ *
+ * Only for the latest save handed to the portal: main.js stops listening for
+ * an earlier one's answer before it hands the next one over.
+ *
+ * → { markSaved, dropDraft, home, listen, status }
+ *     home    the kept file is a home of the drafts (nextDraftHomes)
+ *     listen  the news of its send is still heard
+ */
+export function afterLateKept({ moved = '', device = 'device' } = {}) {
+  if (moved === 'same') {
+    return {
+      markSaved: true, dropDraft: true, home: true, listen: true,
+      status: `The portal kept the save after all: saved on this ${device} — the portal sends it to OneDrive.`,
+    };
+  }
+  if (moved === 'edited') {
+    return {
+      markSaved: false, dropDraft: false, home: true, listen: true,
+      status: `The portal kept the save after all, on this ${device}, and sends it to OneDrive — but changes made `
+        + 'since you tapped Save are not in it. They are still here, unsaved: use Save again to include them.',
+    };
+  }
+  return { markSaved: false, dropDraft: false, home: false, listen: false, status: '' };
 }
 
 /**

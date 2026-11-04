@@ -29,6 +29,7 @@ import {
   SHARE_CAP_BYTES, SHEET_MIN_MS, downloadUrlKeepMs, saveRoute, shareErrorKind, deliverFile, afterSave,
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
   HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords, draftFate, DRAFT_DATE_SLACK_MS, planOfPortalCopy,
+  afterLateKept,
 } from '../js/core/save-route.js';
 import { Project } from '../js/core/project.js';
 import { HANDHELD_HINT } from '../js/core/plans-link.js';
@@ -505,6 +506,88 @@ async function portalSave({ answer = 'kept', why = '', editWhileWaiting = false,
   eq('end to end — kept, but another project opened meanwhile: the saved one\'s draft goes, the open one is not marked', [o.drafts, o.dirty], [0, true]);
 }
 
+// A LATE "kept": no answer within the 2 minutes (told "not saved", the draft kept), then the portal's "kept" — saved
+// then only if nothing was done since the file was composed, and only for the latest save handed over.
+eq('afterLateKept — nothing done since: saved now, the drafts go, the kept file a home, its news still heard',
+  afterLateKept({ moved: 'same', device: 'iPad' }),
+  { markSaved: true, dropDraft: true, home: true, listen: true,
+    status: 'The portal kept the save after all: saved on this iPad — the portal sends it to OneDrive.' });
+{
+  const e = afterLateKept({ moved: 'edited', device: 'iPad' });
+  eq('afterLateKept — work done since: still unsaved, the drafts stay, the kept file a home of them', [e.markSaved, e.dropDraft, e.home, e.listen],
+    [false, false, true, true]);
+  ok('… and it says the later work is not in it, and to save again', /changes made since you tapped Save are not in it/.test(e.status) && /use Save again/.test(e.status));
+}
+eq('afterLateKept — another project open now (or anything else): nothing at all, nothing more heard',
+  [afterLateKept({ moved: 'replaced' }), afterLateKept({})],
+  [{ markSaved: false, dropDraft: false, home: false, listen: false, status: '' }, { markSaved: false, dropDraft: false, home: false, listen: false, status: '' }]);
+async function lateSave({ late = 'kept', editAfter = false, openAnother = false, nextSave = false } = {}) {
+  const project = new Project();
+  project.markDirty();
+  const drafts = new Set([`${PLAN_NAME}|4000`]);
+  let epoch = 1;
+  const epochAtSave = epoch;
+  const changesAtCompose = project.changeCount;
+  const file = new Blob([new Uint8Array(4321)]);
+  const c = fakeClock();
+  const win = { closed: false };
+  const handlers = new Set();
+  const peer = { via: 'frame', win, origin: 'https://portal.dcrframing.com' };
+  const say = (state, req = 's123') => {
+    for (const h of [...handlers]) h({ source: win, origin: peer.origin, data: { type: 'ptt-save-state', v: 1, nonce: NONCE, req, state } });
+  };
+  const waiting = askPortalToKeep({ peer, nonce: NONCE, req: 's123', name: PLAN_NAME, size: file.size, file }, {
+    ...c, waitMs: SAVE_WAIT_MS, pollMs: 2000, doc: null,
+    listen: fn => { handlers.add(fn); return () => handlers.delete(fn); },
+    post: () => {},
+    peerGone: () => win.closed,
+  });
+  c.advance(SAVE_WAIT_MS);
+  const r = await waiting;
+  const first = afterSave('not-kept', { why: r.ending, keptIn: PLAN_NAME, dirty: true, device: 'iPad' });
+  if (editAfter) project.markDirty();                    // carried on after "not saved"
+  if (openAnother) epoch += 1;
+  if (nextSave) r.stop();                                // handToPortal: the next save is handed over first
+  say(late);
+  const word = await Promise.race([r.late, new Promise(res => setImmediate(() => res('nothing')))]);
+  let homes = [{ name: PLAN_NAME, size: 4000, pages: 3 }];
+  let status = first.status;
+  if (word && word.state === 'kept') {
+    const moved = savedStill({ epochAtSave, epochNow: epoch, changesAtCompose, changesNow: project.changeCount });
+    const next = afterLateKept({ moved, device: 'iPad' });
+    if (!next.listen) r.stop();
+    if (next.home) homes = nextDraftHomes(homes, { name: PLAN_NAME, size: file.size, pages: 3 });
+    if (next.markSaved) project.markSaved();
+    if (next.dropDraft) drafts.clear();
+    if (next.status) status = next.status;
+  }
+  return { ending: r.ending, firstSaved: first.markSaved, word, dirty: project.dirty, drafts: drafts.size, homes: homes.map(h => h.size),
+    status, listening: handlers.size };
+}
+{
+  const s = await lateSave();
+  eq('late kept, nothing done since: the wait had timed out ("not saved"), then saved, the draft gone, the kept file a home',
+    [s.ending, s.firstSaved, s.word, s.dirty, s.drafts, s.homes], ['timeout', false, { state: 'kept', why: '' }, false, 0, [4000, 4321]]);
+  ok('… said on the status line', /^The portal kept the save after all: saved on this iPad/.test(s.status));
+  eq('… and the news of its send still heard', s.listening, 1);
+  const e = await lateSave({ editAfter: true });
+  eq('late kept after more work: still unsaved, the draft kept — and kept under the kept file too', [e.dirty, e.drafts, e.homes, e.listening],
+    [true, 1, [4000, 4321], 1]);
+  ok('… said so', /not in it/.test(e.status));
+  const o = await lateSave({ openAnother: true });
+  eq('late kept with another project open: nothing changes, nothing is said, nothing more heard', [o.drafts, o.homes, o.listening, /^Not saved/.test(o.status)],
+    [1, [4000], 0, true]);
+  const n = await lateSave({ nextSave: true });
+  eq('late kept for an OLDER save (the next one already handed over): never heard, nothing marked', [n.word, n.dirty, n.drafts, n.listening],
+    [null, true, 1, 0]);
+  const f = await lateSave({ late: 'refused' });
+  eq('a late refusal: nothing new — unsaved, the draft kept, nothing listening', [f.word && f.word.state, f.dirty, f.drafts, f.listening],
+    ['refused', true, 1, 0]);
+  const k = await lateSave({ late: 'keeping' });
+  eq('a "keeping" after the wait ran out is no answer: nothing changes, still listening for one', [k.word, k.dirty, k.drafts, k.listening],
+    ['nothing', true, 1, 1]);
+}
+
 // A file-kind plan is composed without reading a sheet: every untouched sheet
 // (and revision sheet) is a slice of the portal's own File, passed through.
 {
@@ -598,10 +681,21 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
     && /asked = true;/.test(branch));
   const hand = body('handToPortal');
   ok('handToPortal waits for askPortalToKeep, 120 s, with "Saving to the portal…" up and the update reload held',
-    /showProgress\('Saving to the portal…'/.test(hand) && /portalSaving = true;[\s\S]*await askPortalToKeep\([\s\S]*waitMs: SAVE_WAIT_MS[\s\S]*finally \{\s*portalSaving = false;/.test(hand));
+    /showPortalSaving\(name\);\s*portalSaving = true;/.test(hand) && /portalSaving = true;[\s\S]*await askPortalToKeep\([\s\S]*waitMs: SAVE_WAIT_MS[\s\S]*finally \{\s*portalSaving = false;/.test(hand)
+    && /showProgress\(known \? `Saving to the portal… \$\{pct\}%` : 'Saving to the portal…', 0, 1, name\);/.test(body('showPortalSaving')));
   ok('… a fresh req for every save, the peer and nonce kept on app.portal', /req: newSaveReq\(\)/.test(hand) && /peer: p\.peer, nonce: p\.nonce/.test(hand));
   ok('… the news of the send only on the status line', /onNews: news => \{[\s\S]*portalNewsWords\(news[\s\S]*setStatus\(words\)/.test(hand));
-  ok('… and only kept is a save', /if \(ending === 'kept'\) \{[\s\S]*return \{ outcome: 'kept'/.test(hand) && /return \{ outcome: 'not-kept', why: ending, portalWhy: why \}/.test(hand));
+  ok('… and only kept is a save', /if \(ending === 'kept'\) \{[\s\S]*return \{ outcome: 'kept', why: '', portalWhy: '', late: null \}/.test(hand)
+    && /if \(ending !== 'timeout'\) return \{ outcome: 'not-kept', why: ending, portalWhy: why, late: null \};/.test(hand)
+    && /return \{ outcome: 'not-kept', why: ending, portalWhy: why, late: \{ answer: late, stop, after, name, size: file\.size \} \};/.test(hand));
+  // The heartbeat (C2 v1, optional): "keeping" with how far goes on the bar, and on the bar only.
+  ok('… the portal\'s "keeping" shows how far on the bar while it waits, and is never a status line',
+    /if \(news\.state === 'keeping'\) \{\s*if \(portalSaving\) showPortalSaving\(name, news\.pct\);\s*return;\s*\}/.test(hand)
+    && hand.indexOf("news.state === 'keeping'") < hand.indexOf('portalNewsWords(news'));
+  // A late 'kept': heard until the next save is handed over, judged when all else is said.
+  ok('… a timed-out save is still heard — until the next save is handed over, which stops it first',
+    /if \(ending !== 'timeout'\)[\s\S]*portalNewsStop = stop;\s*return \{ outcome: 'not-kept'/.test(hand)
+    && /^function handToPortal[^\n]*\n\s*const p = app\.portal;\s*if \(portalNewsStop\) \{ portalNewsStop\(\); portalNewsStop = null; \}/.test(hand));
   const offer = body('offerCopyToFiles');
   ok('"Save a copy to Files" starts the phone\'s save INSIDE its tap (the share sheet needs it)',
     /D\.button\(COPY_TO_FILES, 'primary', \(\) => close\(deliverBlob\(blob, name, \{ bigWords \}\)\)\)/.test(offer));
@@ -638,7 +732,23 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
   ok('the save tells handToPortal the sheets composed and the project it is for',
     /await handToPortal\(blob, savedName, \{ pages: pagesAtCompose, epoch: epochAtSave \}\)/.test(branch));
   ok('… whose "copy" news (with its name) makes the copy a home of the drafts',
-    /if \(news\.state === 'copy' && news\.name\) followPortalCopy\(\{ name: news\.name, size: file\.size, pages, epoch \}\);/.test(hand));
+    /if \(news\.state === 'copy' && news\.name\) \{\s*after\.copy = true;\s*followPortalCopy\(\{ name: news\.name, size: file\.size, pages, epoch \}\);/.test(hand));
+  ok('saveProjectOnce takes the late answer from handToPortal, and judges it only after everything else is said, never awaited',
+    /\(\{ outcome, why, portalWhy, late \} = await handToPortal\(blob, savedName/.test(branch)
+    && /if \(late\) \{\s*void late\.answer\.then\(word => settleLateKept\(word, \{\s*\.\.\.late, pages: pagesAtCompose, epochAtSave, changesAtCompose, draftBefore,\s*\}\)\)/.test(save)
+    && save.indexOf('if (late) {') > save.indexOf('if (next.tell && !asked) await D.alertDialog(')
+    && !/await late\.answer/.test(save));
+  const lateBody = body('settleLateKept');
+  ok('… settleLateKept: only a late "kept", judged by savedStill and afterLateKept for the project as composed',
+    /if \(!word \|\| word\.state !== 'kept'\) return;/.test(lateBody)
+    && /savedStill\(\{ epochAtSave, epochNow: openEpoch, changesAtCompose, changesNow: app\.project\.changeCount \}\)/.test(lateBody)
+    && /const next = afterLateKept\(\{ moved, device \}\);/.test(lateBody));
+  ok('… marks saved and drops drafts only when afterLateKept says so; stops hearing when it says to',
+    /if \(!next\.listen\) stop\(\);/.test(lateBody)
+    && (lateBody.match(/app\.project\.markSaved\(\)/g) || []).length === 1 && /if \(next\.markSaved\) \{\s*app\.project\.markSaved\(\);/.test(lateBody)
+    && (lateBody.match(/dropDraft\(/g) || []).length === 1 && /if \(next\.dropDraft\) \{[\s\S]*new Set\(draftBefore\)[\s\S]*draftKeysNow\(\)[\s\S]*dropDraft\(k\)/.test(lateBody));
+  ok('… the kept file a home of the drafts, unless the save was filed as a copy (that copy is the home already)',
+    /if \(next\.home && !after\.copy\) app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size, pages \}\);/.test(lateBody));
   const follow = body('followPortalCopy');
   ok('… only while that project is still the one open, and the work so far drafted there at once',
     /if \(epoch !== openEpoch\) return;\s*app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size, pages \}\);\s*void saveDraftNow\(\);/.test(follow));

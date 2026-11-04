@@ -21,7 +21,7 @@ import { openAfterAsking, isPhoneOrTablet, deviceWord, PORTAL_SAFARI_IF_ASKED } 
 import {
   deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
   savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
-  draftFate, planOfPortalCopy,
+  draftFate, planOfPortalCopy, afterLateKept,
 } from './core/save-route.js';
 import {
   HANDOFF_WAIT_MS, RENEW_WAIT_MS, SAVE_WAIT_MS, parsePortalHash, readyMessage, renewMessage,
@@ -2825,6 +2825,8 @@ async function saveProjectOnce({ saveAs = false } = {}) {
     let savedName = app.fileName || suggestedFileName();
     let portalWhy = '';
     let copied = false;
+    // A save the portal did not answer in time: its late answer, if it comes (handToPortal).
+    let late = null;
     // The words of a home-screen app's "Download started" for a file over
     // the cap, which offers the share sheet beside the download.
     const bigWords = name => afterSave('download-started', {
@@ -2857,7 +2859,7 @@ async function saveProjectOnce({ saveAs = false } = {}) {
       // so, and offers a copy to Files instead (the share sheet or a
       // download, as on any phone) — from a tap, so the share sheet can open.
       savedName = app.portal.name;
-      ({ outcome, why, portalWhy } = await handToPortal(blob, savedName, { pages: pagesAtCompose, epoch: epochAtSave }));
+      ({ outcome, why, portalWhy, late } = await handToPortal(blob, savedName, { pages: pagesAtCompose, epoch: epochAtSave }));
       if (outcome !== 'kept') {
         hideProgress();
         const words = afterSave('not-kept', { why, portalWhy, keptIn, dirty: dirtyAtSave, device }).status;
@@ -2924,6 +2926,15 @@ async function saveProjectOnce({ saveAs = false } = {}) {
     // An unconfirmed download is said where it stays on screen — unless the
     // dialog that offered the share sheet beside it already said it.
     if (next.tell && !asked) await D.alertDialog('Download started', next.status);
+    // The portal may still keep a save it did not answer in time. Its late
+    // answer is judged once all of this has been said (it may have come
+    // while the dialog was open), by the project as it was composed — and
+    // never awaited: the next Save must not wait for it.
+    if (late) {
+      void late.answer.then(word => settleLateKept(word, {
+        ...late, pages: pagesAtCompose, epochAtSave, changesAtCompose, draftBefore,
+      })).catch(() => { /* words and drafts only */ });
+    }
   } catch (err) {
     await D.alertDialog('Could not save', err.message);
   } finally {
@@ -5053,26 +5064,37 @@ function portalLinkOpen() {
  * Hand the saved project to the portal (js/core/portal-handoff.js
  * askPortalToKeep) and wait for its word. Resolves the ending, for afterSave:
  * { outcome: 'kept' } — the portal has it in its own storage — or
- * { outcome: 'not-kept', why, portalWhy }. The file goes as it was composed:
- * its untouched sheets are slices of the portal's own copy, so nothing is
- * read into memory here, and the message passes it by reference.
+ * { outcome: 'not-kept', why, portalWhy, late }. The file goes as it was
+ * composed: its untouched sheets are slices of the portal's own copy, so
+ * nothing is read into memory here, and the message passes it by reference.
  *
  * While it waits the bar says so and no update may reload the page
- * (portalSaving). After 'kept' the portal may say how its send to OneDrive
- * goes; that is shown on the status line, and nothing waits for it — except
- * a 'copy' (the plan changed in the office meanwhile, and the save was filed
- * as a separate file): the work done from then on is drafted for that copy
- * too (followPortalCopy). `pages` and `epoch`: the sheet count composed and
- * the project the save is for (openEpoch when Save was tapped).
+ * (portalSaving). The portal may say it is at it — 'keeping', with how far
+ * (it copies a big plan into its storage first) — and each word starts the
+ * wait again; how far goes on the bar ("Saving to the portal… 45%").
+ * After 'kept' the portal may say how its send to OneDrive goes; that is
+ * shown on the status line, and nothing waits for it — except a 'copy' (the
+ * plan changed in the office meanwhile, and the save was filed as a separate
+ * file): the work done from then on is drafted for that copy too
+ * (followPortalCopy). `pages` and `epoch`: the sheet count composed and the
+ * project the save is for (openEpoch when Save was tapped).
+ *
+ * No answer in time ('timeout'): the portal may still keep it, so its late
+ * answer is heard — until the next save is handed over (portalNewsStop) —
+ * and `late` carries it, for the caller to judge (settleLateKept):
+ * { answer: Promise of {state, why} | null, stop, after, name, size }.
  */
 async function handToPortal(blob, name, { pages = 0, epoch = openEpoch } = {}) {
   const p = app.portal;
   if (portalNewsStop) { portalNewsStop(); portalNewsStop = null; }
-  showProgress('Saving to the portal…', 0, 1, name);
+  showPortalSaving(name);
   portalSaving = true;
+  // What the portal said of this save besides its answer, for a late 'kept':
+  // a copy it was filed as (followed already), and its last words.
+  const after = { copy: false, said: '' };
   try {
     const file = new File([blob], name, { type: 'application/octet-stream' });
-    const { ending, why, stop } = await askPortalToKeep({
+    const { ending, why, stop, late } = await askPortalToKeep({
       peer: p.peer, nonce: p.nonce, req: newSaveReq(), name, size: file.size, file,
     }, {
       listen: fn => {
@@ -5082,20 +5104,72 @@ async function handToPortal(blob, name, { pages = 0, epoch = openEpoch } = {}) {
       post: (win, msg, origin) => win.postMessage(msg, origin),
       peerGone: () => !p.peer.win || !!p.peer.win.closed,
       onNews: news => {
+        if (news.state === 'keeping') {
+          if (portalSaving) showPortalSaving(name, news.pct);
+          return;
+        }
         const words = portalNewsWords(news, { name, device });
-        if (words) setStatus(words);
-        if (news.state === 'copy' && news.name) followPortalCopy({ name: news.name, size: file.size, pages, epoch });
+        if (words) {
+          setStatus(words);
+          after.said = words;
+        }
+        if (news.state === 'copy' && news.name) {
+          after.copy = true;
+          followPortalCopy({ name: news.name, size: file.size, pages, epoch });
+        }
       },
       waitMs: SAVE_WAIT_MS,
     });
     if (ending === 'kept') {
       portalNewsStop = stop;
-      return { outcome: 'kept', why: '', portalWhy: '' };
+      return { outcome: 'kept', why: '', portalWhy: '', late: null };
     }
-    return { outcome: 'not-kept', why: ending, portalWhy: why };
+    if (ending !== 'timeout') return { outcome: 'not-kept', why: ending, portalWhy: why, late: null };
+    portalNewsStop = stop;
+    return { outcome: 'not-kept', why: ending, portalWhy: why, late: { answer: late, stop, after, name, size: file.size } };
   } finally {
     portalSaving = false;
   }
+}
+
+/** "Saving to the portal…" on the bar, with how far the portal has kept the file when it says (0-100). */
+function showPortalSaving(name, pct = null) {
+  const known = typeof pct === 'number' && Number.isFinite(pct);
+  showProgress(known ? `Saving to the portal… ${pct}%` : 'Saving to the portal…', 0, 1, name);
+  if (known) $('progressFill').style.width = `${Math.max(0, Math.min(100, pct))}%`;
+}
+
+/**
+ * The portal's answer to a save it did not answer in time, when it comes
+ * (handToPortal's `late`: by then the person was told it was not saved, and
+ * the project and its drafts were left as they were). A late 'kept' says the
+ * portal has the file as it was composed: by what was done since
+ * (js/core/save-route.js savedStill, afterLateKept) the project is saved now
+ * and its drafts go, as for a 'kept' in time — or, with work done since, it
+ * stays unsaved with its drafts, and the kept file becomes one of their
+ * homes, so reopening it from the portal offers that work back (unless the
+ * save was filed as a copy, which followPortalCopy has made the home
+ * already). Another project open by now: nothing changes, and nothing more
+ * is heard of it. A late refusal is nothing new: it was never marked saved.
+ */
+async function settleLateKept(word, { stop, after, name, size, pages, epochAtSave, changesAtCompose, draftBefore }) {
+  if (!word || word.state !== 'kept') return;
+  const moved = savedStill({ epochAtSave, epochNow: openEpoch, changesAtCompose, changesNow: app.project.changeCount });
+  const next = afterLateKept({ moved, device });
+  if (!next.listen) stop();
+  if (next.home && !after.copy) app.draftHomes = nextDraftHomes(app.draftHomes, { name, size, pages });
+  if (next.markSaved) {
+    app.project.markSaved();
+    syncTitle();
+  }
+  if (next.dropDraft) {
+    // The drafts the save was for, and the open project's now (nothing was
+    // done since, so the portal's file holds all of it).
+    const keys = new Set(draftBefore);
+    for (const k of draftKeysNow()) keys.add(k);
+    for (const k of keys) await dropDraft(k);
+  }
+  if (next.status) setStatus(after.said ? `${next.status} ${after.said}` : next.status);
 }
 
 /**
