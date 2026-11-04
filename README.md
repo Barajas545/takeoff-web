@@ -93,11 +93,22 @@ for the people who see prices, open it from the portal's 📐 menu with the
 portal in Safari (its home-screen icon cannot hand a plan over). Save there
 gives back a new file under the name it was opened by: through the share sheet
 (*Save to Files*) up to 150 MB, and as a download into *Files › Downloads*
-above that. Only a share the person finished marks the project saved. A
-download on a phone or a tablet cannot be confirmed, so the project stays
-marked unsaved and its draft is kept until a save is confirmed — the work is
-never thrown away on a guess. A plan picked from OneDrive that is not on the
-device yet can take minutes to come down; it opens when it arrives.
+above that (an app opened from the home-screen icon, which may not download,
+is offered the share sheet beside it). Only a share the person finished marks
+the project saved, and only if nothing was done while the file went out. A
+download on a phone or a tablet cannot be confirmed — nor one anywhere that
+follows a share sheet that could not read the file — so the project stays
+marked unsaved and its draft is kept until a save is confirmed. A draft comes
+back when a file it belongs to is opened again: the plan it was opened from,
+or the file it was last saved into, with the same sheets. A takeoff started
+from a PDF has no such file until its first confirmed save, nor has one whose
+sheets were added since; until then its work is in the open page only, and
+the app says so rather than calling it kept. If Files offers to replace the
+plan of the same name, replacing it writes over anything saved into that plan
+from another computer since it was opened on the device — nothing on an iPad
+can check that yet. A plan picked from OneDrive that is not on the device yet
+can take minutes to come down; it opens when it arrives, and if anything was
+done meanwhile the app asks first.
 
 **Only the OneDrive Plans Archive.** A computer that synced the old SharePoint
 library also has a folder called *DCR - Floor Plans - Archive* there, and the

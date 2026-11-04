@@ -30,15 +30,29 @@
  * ending where nothing at all had happened. On a phone that is how an hour of
  * takeoff disappears with a cheerful message. So the rules here:
  *
- *   1. Only a CONFIRMED ending marks the project saved and drops the draft:
- *      a write through a handle, a share that resolved, or a download on a
- *      computer.
+ *   1. Only a CONFIRMED ending marks the project saved: a write through a
+ *      handle, a share that resolved, or a download on a computer. Only the
+ *      first two drop the draft — a computer's download is the save there,
+ *      but the browser may have asked where to put it and been told no, so
+ *      the draft stays behind it, and goes by itself when a newer file is
+ *      opened (offerDraftRestore in main.js drops a draft older than the
+ *      file it is offered for).
  *   2. A download on a phone or a tablet is "started", never "saved": the
  *      project stays unsaved, the draft stays, and the person is told where to
- *      look and what to do if nothing came.
+ *      look and what to do if nothing came. So is a download on ANY device
+ *      that follows a share sheet that could not read the file: the download
+ *      reads the same bytes, and when those are gone (a plan OneDrive
+ *      replaced on disk after it was opened) it fails too, with nothing said.
  *   3. When it is not clear whether the person said no or the browser failed,
- *      the answer that keeps the work wins — and the work is kept either way,
- *      because a draft is written before the save begins.
+ *      the answer that keeps the work wins. A draft is written before the
+ *      save begins — but a draft can only be offered back when a file it
+ *      belongs to is opened again (one with the same name, size and sheet
+ *      count), so the words say the work is "kept" only when that is so
+ *      (draftHomeFor), and otherwise that it is in this open page alone.
+ *   4. Only the project that was saved, as it was when it was composed, is
+ *      marked saved: anything done while the file was on its way out (the
+ *      share sheet reads a big file for seconds before it opens) or another
+ *      project opened meanwhile leaves the open one unsaved (savedStill).
  *
  * Everything here is pure — no DOM, no navigator — so tests/save-route.mjs
  * drives every ending with made-up browsers. main.js supplies the real share,
@@ -90,10 +104,18 @@ export function downloadUrlKeepMs({ touch = false } = {}) {
  *                                        run out (the save took longer than
  *                                        the browser lets a tap count): say
  *                                        "Your file is ready" and share from
- *                                        a fresh tap on its Save button
+ *                                        a fresh tap on its Save button —
+ *                                        on a phone or a tablet only
  *   { how: 'download', why }             'no-share' (the browser cannot
  *                                        share a file: Chrome or Firefox on a
- *                                        computer) or 'too-big' (over the cap)
+ *                                        computer), 'too-big' (over the cap)
+ *                                        or 'no-activation' on a computer
+ *
+ * A computer whose tap has run out downloads, as it always did. Safari on a
+ * Mac has a share menu, but no "Save to Files" in it — Mail, AirDrop,
+ * Messages — so a "Your file is ready, choose Save to Files" dialog there
+ * would send the person looking for a button that does not exist, and the
+ * download is the save on a computer anyway.
  *
  * plus `confirms`: whether a download, if it comes to one, is a finished save
  * (a computer) or only a started one (a phone or a tablet). `standalone` (an
@@ -115,7 +137,7 @@ export function saveRoute({
   const base = { confirms: !touch, standalone: !!standalone };
   if (!canShare) return { ...base, how: 'download', why: 'no-share' };
   if (!(Number(size) <= cap)) return { ...base, how: 'download', why: 'too-big' };
-  if (activation === false) return { ...base, how: 'ask', why: 'no-activation' };
+  if (activation === false) return { ...base, how: touch ? 'ask' : 'download', why: 'no-activation' };
   return { ...base, how: 'share', why: 'ok' };
 }
 
@@ -151,67 +173,122 @@ export function shareErrorKind(err, { elapsedMs = 0 } = {}) {
  *
  *   outcome  'shared'            share() resolved: the person put it somewhere
  *            'downloaded'        a download on a computer: the save, as ever
- *            'download-started'  a download on a phone or a tablet: unconfirmed
+ *            'download-started'  a download on a phone or a tablet, or one
+ *                                that follows a failed share: unconfirmed
  *            'cancelled'         the person closed the sheet or the dialog
  *   why      for a download: 'no-share', 'too-big', 'share-failed' (the sheet
  *            could not take the file), 'no-activation' (it refused even a
- *            fresh tap), 'chosen' (Download instead, in the dialog)
+ *            fresh tap, or a computer's tap ran out), 'chosen' (Download
+ *            instead, in the dialog)
+ *   asked    true when a dialog of deliverFile's own has already said what
+ *            happened (the home-screen app's "Download started"), so the
+ *            caller need not say it again
  *
  * `env` is the browser, so the tests can be every browser:
  *
  *   canShare()   bool — can this file go to the share sheet at all
  *   activation() bool | null — is the tap that started this still live
  *   share()      Promise — navigator.share with the file, called right now
- *   ask()        Promise of null (Cancel) | 'download' | { share, at }:
- *                the "Your file is ready" dialog, whose Save button calls
- *                share() INSIDE its own tap and hands back that promise and
- *                when it was started
+ *   ask({kind})  Promise of null (Cancel / OK) | 'download' | { share, at }:
+ *                kind 'ready' is "Your file is ready", whose Save button
+ *                calls share() INSIDE its own tap and hands back that promise
+ *                and when it was started; kind 'big' is a home-screen app's
+ *                "Download started" for a file over the cap, which offers the
+ *                share sheet the same way (and no download: one has started)
  *   download()   start the <a download>
  *   now()        ms
  *   touch, standalone, cap   as for saveRoute
  */
 export async function deliverFile({ size = 0 } = {}, env = {}) {
   const now = env.now || (() => Date.now());
+  const touch = !!env.touch;
+  const canShare = !!env.canShare?.();
   const route = saveRoute({
-    size, cap: env.cap ?? SHARE_CAP_BYTES, canShare: !!env.canShare?.(),
+    size, cap: env.cap ?? SHARE_CAP_BYTES, canShare,
     activation: env.activation ? env.activation() : null,
-    touch: !!env.touch, standalone: !!env.standalone,
+    touch, standalone: !!env.standalone,
   });
-  const download = why => {
+  // A download is the save on a computer (route.confirms) — but not one that
+  // follows a share sheet that could not read the file: it reads the same
+  // bytes, and if those are gone it fails as well, silently. That one is only
+  // started, on every device, and the work is not let go behind it.
+  const download = (why, { afterReadFailure = false } = {}) => {
     env.download();
-    return { outcome: route.confirms ? 'downloaded' : 'download-started', why };
+    return { outcome: route.confirms && !afterReadFailure ? 'downloaded' : 'download-started', why };
   };
-  if (route.how === 'download') return download(route.why);
+  // share() (or the promise a dialog's tap started), as one of 'ok' or a
+  // shareErrorKind. A share() that throws at once is a refusal like any other.
+  const settle = async (start, at) => {
+    try {
+      await start();
+      return 'ok';
+    } catch (err) {
+      return shareErrorKind(err, { elapsedMs: now() - (Number(at) || 0) });
+    }
+  };
+
+  if (route.how === 'download') {
+    const started = download(route.why);
+    // An app opened from the home-screen icon, with a file over the cap: the
+    // download is the safe way out, but such an app may not download at all,
+    // and Save again would only start the same download. So the share sheet
+    // is offered beside it — the person's own choice, told that a file this
+    // size may close the app (the work was put in the draft store first).
+    if (route.why === 'too-big' && route.standalone && touch && canShare) {
+      const answer = await env.ask({ kind: 'big' });
+      if (answer && typeof answer === 'object') {
+        if (await settle(() => answer.share, answer.at) === 'ok') return { outcome: 'shared', why: 'ok', asked: true };
+      }
+      return { ...started, asked: true };
+    }
+    return started;
+  }
 
   if (route.how === 'share') {
-    const at = now();
-    try {
-      await env.share();
-      return { outcome: 'shared', why: 'ok' };
-    } catch (err) {
-      const kind = shareErrorKind(err, { elapsedMs: now() - at });
-      if (kind === 'cancelled') return { outcome: 'cancelled', why: 'sheet' };
-      if (kind === 'failed') return download('share-failed');
-      // 'no-activation': the tap ran out after all — ask for a fresh one.
-    }
+    const got = await settle(() => env.share(), now());
+    if (got === 'ok') return { outcome: 'shared', why: 'ok' };
+    if (got === 'cancelled') return { outcome: 'cancelled', why: 'sheet' };
+    if (got === 'failed') return download('share-failed', { afterReadFailure: true });
+    // 'no-activation': the tap ran out after all. A computer downloads, as it
+    // always did (no "Save to Files" on a Mac to send anyone to); a phone or
+    // a tablet asks for a fresh tap.
+    if (!touch) return download('no-activation');
   }
 
-  const answer = await env.ask();
+  const answer = await env.ask({ kind: 'ready' });
   if (!answer) return { outcome: 'cancelled', why: 'dialog' };
   if (answer === 'download') return download('chosen');
-  try {
-    await answer.share;
-    return { outcome: 'shared', why: 'ok' };
-  } catch (err) {
-    const kind = shareErrorKind(err, { elapsedMs: now() - (Number(answer.at) || 0) });
-    if (kind === 'cancelled') return { outcome: 'cancelled', why: 'sheet' };
-    // A fresh tap refused, or the file could not be read: the download is
-    // the only way left, and it is offered rather than nothing.
-    return download(kind === 'no-activation' ? 'no-activation' : 'share-failed');
-  }
+  const got = await settle(() => answer.share, answer.at);
+  if (got === 'ok') return { outcome: 'shared', why: 'ok' };
+  if (got === 'cancelled') return { outcome: 'cancelled', why: 'sheet' };
+  // A fresh tap refused, or the file could not be read: the download is the
+  // only way left, and it is offered rather than nothing.
+  return got === 'no-activation'
+    ? download('no-activation')
+    : download('share-failed', { afterReadFailure: true });
 }
 
 const MB = n => `${Math.round(Number(n) / 1048576)} MB`;
+
+/**
+ * What Save does on a phone or a tablet, in words — built from the cap, so
+ * the words and the route cannot drift apart. Most real plan sets are well
+ * over the cap, and those never see a share sheet; an Android phone (whose
+ * Chrome will not share a .takeoff) never does.
+ */
+export const HANDHELD_SAVE = `Save gives you a new file: through the share sheet up to ${MB(SHARE_CAP_BYTES)} `
+  + '(choose Save to Files), and above that, or where the browser cannot share a file, as a download into '
+  + 'Downloads (Files › Downloads on an iPad).';
+
+/**
+ * Said wherever Save to Files is suggested. The file keeps the name it was
+ * opened by (saveFileName), so Files may offer to replace the plan itself —
+ * and nothing on an iPad can tell whether that plan was saved from another
+ * computer after it was opened here. Desktop Chrome checks (checkArchiveWrite
+ * in main.js); this cannot, so the person is told what replacing does.
+ */
+export const REPLACE_WARNING = 'If Files asks whether to replace a file of the same name, replacing it writes '
+  + 'over anything saved into that file elsewhere since you opened it here.';
 
 /**
  * After the file has gone (or not): whether the project is now saved, whether
@@ -222,50 +299,188 @@ const MB = n => `${Math.round(Number(n) / 1048576)} MB`;
  * after a few seconds, and "your download is not confirmed — look in
  * Downloads" is not something to miss while looking for the file.
  *
- *   outcome  'written' (through a file handle) or one of deliverFile's
- *   name     the file's name, as the person will see it in Files
+ *   outcome     'written' (through a file handle) or one of deliverFile's
+ *   name        the file's name, as the person will see it in Files
+ *   keptIn      the name of a file whose reopening offers this work back
+ *               from its draft (draftHomeFor), or '' when there is none —
+ *               then the words never say the work is kept on this device
+ *   dirty       there were unsaved changes when Save was tapped
+ *   touch       a phone or a tablet (where a download lands, in words)
+ *   offerShare  a home-screen app over the cap, offered the share sheet
+ *               beside its download (deliverFile's 'big' dialog)
+ *   moved       savedStill's answer when it is not 'same': 'edited' (work
+ *               was done while the file went out, so it is not all in the
+ *               file) or 'replaced' (another project is open now)
+ *
+ * Besides the words: `markSaved`, `dropDraft` (the draft of the project that
+ * was saved — for 'replaced', the caller drops only the drafts it had before
+ * the save, never the open project's), `tell`, and `confirmed` (a file now
+ * exists that holds the project as it was composed: the caller records it as
+ * one the draft may be offered back from).
  */
-export function afterSave(outcome, { name = 'the project', why = '', standalone = false, cap = SHARE_CAP_BYTES } = {}) {
+export function afterSave(outcome, {
+  name = 'the project', why = '', standalone = false, cap = SHARE_CAP_BYTES,
+  keptIn = '', dirty = true, touch = true, offerShare = false, moved = '',
+} = {}) {
+  const confirmed = outcome === 'written' || outcome === 'shared' || outcome === 'downloaded';
+  if (confirmed && (moved === 'edited' || moved === 'replaced')) {
+    return {
+      markSaved: false,
+      // The file holds what was composed, so that project's draft may go —
+      // but never a draft of work done since (edited), and for a computer's
+      // download not at all (rule 1).
+      dropDraft: moved === 'replaced' && outcome !== 'downloaded',
+      tell: false,
+      confirmed,
+      status: moved === 'edited'
+        ? `Saved ${name} — but changes made while it was being saved are not in it. They are still here, `
+          + 'unsaved: use Save again to include them.'
+        : `Saved ${name} — the project that was open when you tapped Save. The one open now is not changed by it.`,
+    };
+  }
   switch (outcome) {
     case 'written':
+      return { markSaved: true, dropDraft: true, tell: false, confirmed, status: `Saved ${name}` };
     case 'downloaded':
-      return { markSaved: true, dropDraft: true, tell: false, status: `Saved ${name}` };
+      // The save on a computer, as ever — but the draft stays (rule 1).
+      return { markSaved: true, dropDraft: false, tell: false, confirmed, status: `Saved ${name}` };
     case 'shared':
-      return { markSaved: true, dropDraft: true, tell: false, status: `Saved ${name} — it went where you chose in the share sheet.` };
+      return { markSaved: true, dropDraft: true, tell: false, confirmed, status: `Saved ${name} — it went where you chose in the share sheet.` };
     case 'download-started': {
+      const where = touch ? 'Files › Downloads' : 'your Downloads folder';
       const reason = why === 'too-big'
         ? `${name} is over ${MB(cap)}, too big for the share sheet, so it is downloading instead. `
         : why === 'share-failed' || why === 'no-activation'
           ? `The share sheet could not take ${name}, so it is downloading instead. `
           : `Downloading ${name}. `;
+      let rest;
+      if (!dirty) {
+        rest = 'A download cannot be confirmed here, but there were no unsaved changes, so nothing is lost if no file appears.';
+      } else if (keptIn) {
+        rest = 'A download cannot be confirmed here, so the project still shows unsaved changes, and your work stays '
+          + `kept on this device: opening ${keptIn} again offers it back.`;
+      } else {
+        // A takeoff started from a PDF (no file yet), or one whose sheets
+        // were added or removed since it was opened: no draft of it can ever
+        // be offered back, so the open page is the only place it is.
+        rest = 'A download cannot be confirmed here, so the project still shows unsaved changes. This project '
+          + 'cannot be brought back from this device if the page closes (it was started from a PDF, or its sheets '
+          + `have changed since it was opened), so keep this page open until the file is in ${where}.`;
+      }
+      const after = offerShare
+        ? ' An app opened from the home-screen icon may not download at all: if no file appears, try the share '
+          + 'sheet instead (Save again offers it). It reads the whole file into memory, so on a plan this size the '
+          + 'app may close.'
+        : ' If no file appears'
+          + (standalone ? ' (an app opened from the home-screen icon may not download)' : '')
+          + ', your work is still here: use Save again.';
       return {
         markSaved: false,
         dropDraft: false,
         tell: true,
-        status: `${reason}Look for it in Files › Downloads. A download cannot be confirmed here, so the project `
-          + 'still shows unsaved changes and your work stays kept on this device. If no file appears'
-          + (standalone ? ' (an app opened from the home-screen icon may not download)' : '')
-          + ', your work is still here: use Save again.',
+        confirmed,
+        status: `${reason}Look for it in ${where}. ${rest}${after}`,
       };
     }
     case 'cancelled':
-      return { markSaved: false, dropDraft: false, tell: false, status: 'Save cancelled — nothing was saved. Your changes are still here.' };
+      return { markSaved: false, dropDraft: false, tell: false, confirmed, status: 'Save cancelled — nothing was saved. Your changes are still here.' };
     default:
-      return { markSaved: false, dropDraft: false, tell: false, status: 'Not saved — your changes are still here and kept on this device.' };
+      return {
+        markSaved: false, dropDraft: false, tell: false, confirmed,
+        status: `Not saved — your changes are still here${keptIn ? ' and kept on this device' : ''}.`,
+      };
   }
+}
+
+/**
+ * Whether the save that just finished is still about the project on screen:
+ *
+ *   'same'      nothing was done since the file was composed
+ *   'edited'    something was (the share sheet spends seconds reading a big
+ *               file before it opens, with the page live; a keyboard undo
+ *               works under the progress bar) — the file does not hold it
+ *   'replaced'  another project was opened or started meanwhile (a file
+ *               picked earlier arrived, a dialog left open over the save)
+ *
+ *   epochAtSave / epochNow        main.js openEpoch, when Save was tapped and now
+ *   changesAtCompose / changesNow Project.changeCount when the file was
+ *                                 composed and now; not numbers: not known,
+ *                                 which counts as 'edited' (never a guess
+ *                                 that marks the project saved)
+ */
+export function savedStill({ epochAtSave = 0, epochNow = 0, changesAtCompose, changesNow } = {}) {
+  if (epochAtSave !== epochNow) return 'replaced';
+  if (typeof changesAtCompose !== 'number' || typeof changesNow !== 'number' || changesAtCompose !== changesNow) {
+    return 'edited';
+  }
+  return 'same';
+}
+
+/* ── where a draft can come back from ───────────────────────────────────────
+
+   A draft (js/core/drafts.js) is keyed by a file's name and size, and it is
+   offered back only when a file of that name and size is opened again — and
+   only if that file has as many sheets as the draft was measured against
+   (offerDraftRestore in main.js: measurements are keyed by sheet index). So
+   a project's "homes" are the files it may be reopened from:
+   { name, size, pages }. The file it was opened from, and the last file it
+   was saved into — after Save to Files › Replace on an iPad the plan IS that
+   file, at a new size, and a draft written under the old size alone would
+   never be offered when it is reopened. */
+
+/**
+ * The homes after a save that left a file holding the project:
+ *
+ *   homes     before the save
+ *   saved     { name, size, pages } of the file just written
+ *   replaces  true when the project now IS that file and nothing else (a
+ *             write through a handle: in place, or Save As to a new file the
+ *             project carries on in); false for a share or a download, whose
+ *             new file may sit anywhere, or beside the one it was opened from
+ *
+ * Kept: the one it was opened from (the first), and the newest saved one.
+ */
+export function nextDraftHomes(homes = [], saved = null, { replaces = false } = {}) {
+  const ok = h => h && typeof h.name === 'string' && h.name && Number(h.size) > 0;
+  const key = h => `${h.name}|${Number(h.size)}`;
+  const list = replaces ? [] : (Array.isArray(homes) ? homes.filter(ok).slice(0, 1) : []);
+  if (ok(saved)) list.push({ name: saved.name, size: Number(saved.size), pages: Number(saved.pages) || 0 });
+  const seen = new Set();
+  return list.filter(h => (seen.has(key(h)) ? false : (seen.add(key(h)), true)));
+}
+
+/**
+ * The name of a home whose reopening would offer a draft written now back —
+ * one with as many sheets as the project has now — or '' when there is none:
+ * a project started from a PDF (no file yet), or one whose sheets were added
+ * or removed since it was opened or last saved.
+ */
+export function draftHomeFor(homes = [], pageCount = 0) {
+  const n = Number(pageCount) || 0;
+  const h = (Array.isArray(homes) ? homes : []).find(x => x && x.name && Number(x.size) > 0 && Number(x.pages) === n);
+  return h ? h.name : '';
 }
 
 /**
  * The name the saved file is offered under, on a browser that hands the
  * project over as a new file.
  *
- * The file that was opened keeps its own name: a plan picked in the Files app
- * and saved back through the share sheet's "Save to Files" then lands beside
- * — and can replace — the plan it came from, instead of making a second
+ * The file that was opened keeps its own name, instead of making a second
  * takeoff named after the project in the job's folder, where every takeoff
  * file is one of its plans. An old .pdfcache comes back as .takeoff. A new
  * project, started from a PDF or from nothing, has no file yet and is named
  * after the project, as it always was.
+ *
+ * Saved through "Save to Files" into the folder it came from, the file then
+ * meets the plan of the same name, and Files asks whether to replace it.
+ * Nothing on an iPad can tell whether that plan was saved from another
+ * computer after it was opened here (desktop Chrome checks: checkArchiveWrite
+ * in main.js), so the app never suggests replacing it, and says what
+ * replacing does wherever Save to Files is suggested (REPLACE_WARNING). A
+ * name of its own for every iPad save ("… - iPad <date>") would rule the
+ * overwrite out, but would add a plan to the job's folder with each save:
+ * that is the owner's choice (SYNTHESIS Q1/Q3, with the save-back), not
+ * made here.
  */
 export function saveFileName({ openedName = '', projectName = '', ext = '.takeoff' } = {}) {
   const clean = s => s.replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '_');
@@ -300,19 +515,26 @@ export function isStandalone(win = globalThis) {
 /**
  * 'open', 'ask' (confirm discarding the open project first) or 'ignore'.
  *
- *   epochAtPick / epochNow  a count of projects opened or started; different
- *                           means something else was opened meanwhile, and a
- *                           late file must not replace it
- *   dirtyAtPick             the project had unsaved changes when the pick
- *                           began (and the person already said to discard them)
- *   dirtyNow                it has unsaved changes now
- *   slow                    the wait ran long enough to be told so — time in
- *                           which more work may have been done
+ *   epochAtPick / epochNow      a count of projects opened or started;
+ *                               different means something else was opened
+ *                               meanwhile, and a late file must not replace it
+ *   changesAtPick / changesNow  Project.changeCount when the pick began and
+ *                               now: different means work was done while the
+ *                               file was on its way. Not numbers: not known,
+ *                               and unsaved work is then asked about
+ *   dirtyNow                    the project has unsaved changes now
+ *
+ * The question is "was anything done since the pick", not "how long was the
+ * wait": a "Discard and open" answered before the pick covered the changes
+ * there were then, and nothing done after it — however soon the file came,
+ * and whether or not the page ever heard the picker close (an iPad may give
+ * the window no focus event when it does).
  */
-export function lateArrival({ epochAtPick = 0, epochNow = 0, dirtyAtPick = false, dirtyNow = false, slow = false } = {}) {
+export function lateArrival({ epochAtPick = 0, epochNow = 0, changesAtPick, changesNow, dirtyNow = false } = {}) {
   if (epochAtPick !== epochNow) return 'ignore';
-  if (dirtyNow && (slow || !dirtyAtPick)) return 'ask';
-  return 'open';
+  if (!dirtyNow) return 'open';
+  const known = typeof changesAtPick === 'number' && typeof changesNow === 'number';
+  return known && changesAtPick === changesNow ? 'open' : 'ask';
 }
 
 /** Said while a picked file is still on its way (pickFileFallback in main.js). */

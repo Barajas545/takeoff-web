@@ -29,11 +29,13 @@ import {
 import {
   INVALID_LINK, isPhoneOrTablet, canOpenArchiveFolder, linkPanelModel, copyText,
 } from '../core/plans-link.js';
+import { HANDHELD_SAVE, REPLACE_WARNING } from '../core/save-route.js';
 
 // What a browser that does not open the folder is told: a computer, where to
 // get one that does; a phone or a tablet — which never opens it — every way
-// it does get a plan, and what its Save really does (a new file through the
-// share sheet, never the plan in OneDrive). Only what exists is promised:
+// it does get a plan, and what its Save really does (HANDHELD_SAVE: a new
+// file, through the share sheet only up to its cap, a download above it, and
+// what replacing the plan in Files would do). Only what exists is promised:
 // the portal's 📐 menu opens plans for the people who see prices, and only
 // with the portal in Safari (its home-screen icon cannot hand a plan over).
 const UNSUPPORTED_COMPUTER =
@@ -46,8 +48,8 @@ const UNSUPPORTED_HANDHELD =
   + 'Safari (not from its home-screen icon) and use 📐 on the project to open '
   + 'a plan. Or use “Open a .takeoff project” and pick the plan in the Files '
   + 'app (OneDrive) — then File › Keep on This Device keeps it here, to open '
-  + 'with no internet from the list below. Save gives you a new file through '
-  + 'the share sheet: choose Save to Files.';
+  + 'with no internet from the list below. '
+  + `${HANDHELD_SAVE} ${REPLACE_WARNING}`;
 const unsupportedText = win => (isPhoneOrTablet(win) ? UNSUPPORTED_HANDHELD : UNSUPPORTED_COMPUTER);
 
 // The twin: a computer that synced the old SharePoint library has a folder of

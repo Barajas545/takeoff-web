@@ -20,6 +20,7 @@ import {
 import { openAfterAsking, isPhoneOrTablet } from './core/plans-link.js';
 import {
   deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
+  savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING,
 } from './core/save-route.js';
 import {
   PORTAL_ORIGINS, HANDOFF_WAIT_MS, RENEW_WAIT_MS, parsePortalHash, isPortalOrigin, readyMessage, renewMessage,
@@ -77,6 +78,12 @@ const app = {
   currentPage: 0,
   fileHandle: null,
   fileName: '',
+  // The files a draft of this project can be offered back from, when one of
+  // them is opened again: the one it was opened from, and the last one it
+  // was saved into — { name, size, pages } (js/core/save-route.js
+  // nextDraftHomes). Empty for a takeoff started from a PDF until its first
+  // confirmed save.
+  draftHomes: [],
   // The Plans Library copy the open project reads its sheets from, and the
   // lock that keeps the portal from deleting it — null for any other file.
   // See openLibraryCopy().
@@ -2454,8 +2461,9 @@ async function openProjectFile({ beforeOpen = null } = {}) {
     if (!(await confirmDiscard())) return;
   }
   const epoch = openEpoch;
-  const dirtyAtPick = app.project.dirty;
-  let slow = false;
+  // What is on screen now, as one number: anything done from here on (while a
+  // big file is still coming down to an iPad) moves it on.
+  const changesAtPick = app.project.changeCount;
   let file, handle = null;
   if (canUseFsApi) {
     try {
@@ -2472,17 +2480,22 @@ async function openProjectFile({ beforeOpen = null } = {}) {
     }
   } else {
     file = await pickFileFallback(`${FILE_EXTENSION},${LEGACY_EXTENSION}`, false, {
-      onSlow: () => { slow = true; setStatus(STILL_COMING); },
+      onSlow: () => setStatus(STILL_COMING),
     });
     if (!file) return;
     const next = lateArrival({
-      epochAtPick: epoch, epochNow: openEpoch, dirtyAtPick, dirtyNow: app.project.dirty, slow,
+      epochAtPick: epoch, epochNow: openEpoch,
+      changesAtPick, changesNow: app.project.changeCount, dirtyNow: app.project.dirty,
     });
     if (next === 'ignore') {
       setStatus(`${file.name} arrived after something else was opened, so it was not opened. Open it again if you want it.`);
       return;
     }
     if (next === 'ask' && !(await confirmDiscard())) return;
+    // The unsaved work goes into the draft store before it is replaced, as a
+    // hidden page's would: the "Discard" it was given may have been answered
+    // minutes ago, in a hurry, and reopening the plan then still offers it.
+    if (app.project.dirty) await saveDraftNow();
   }
   if (beforeOpen) beforeOpen();
   await loadProjectFile(file, handle);
@@ -2530,6 +2543,7 @@ async function loadProjectFile(file, handle = null, { library = null, archive = 
     app.libraryCopy = library;
     app.fileName = file.name;
     app.fileSize = file.size;
+    app.draftHomes = nextDraftHomes([], { name: file.name, size: file.size, pages: opened.pageCount });
     // The bytes as opened, for File > Keep on This Device: a File from the
     // Plans Archive folder or a file picker (a portal link's remote file is
     // not one, and a copy already on this device needs no second copy).
@@ -2594,7 +2608,34 @@ function countItems() {
   return n;
 }
 
-async function saveProject({ saveAs = false } = {}) {
+/**
+ * One save at a time. A second tap on Save while one is still on its way —
+ * composing, writing the draft, waiting for the share sheet — would compose
+ * the whole project a second time (a portal link's plan is pulled into
+ * memory sheet by sheet to do it: the very peak that kills an iPad tab), and
+ * its share() would be refused as "already in progress" and fall back to a
+ * download with a dialog of its own. It is told instead.
+ *
+ * The flag is set and saveProjectOnce started in the same tick as the tap,
+ * so a Save As picker still opens inside it.
+ */
+let saving = false;
+
+async function saveProject(opts = {}) {
+  if (saving) { setStatus('Still saving — wait for that one to finish.'); return; }
+  saving = true;
+  try {
+    await saveProjectOnce(opts);
+  } finally {
+    saving = false;
+  }
+}
+
+async function saveProjectOnce({ saveAs = false } = {}) {
+  // Which project this save is for: a file picked earlier can arrive and be
+  // opened while the save is still on its way (savedStill).
+  const epochAtSave = openEpoch;
+
   // A project can be nothing but standalone items — hardware, glue, a labor
   // line — and refusing to save that loses real work with no message.
   if (!app.pages.pageCount && ![...app.project.allItems()].length) {
@@ -2705,13 +2746,27 @@ async function saveProject({ saveAs = false } = {}) {
   // reloads the tab; until now the last draft was from whenever the page was
   // last hidden. It is the metadata only (measurements, markup, the project's
   // fields — never a sheet), the same write a hidden page makes. It goes when
-  // the save is confirmed (afterSave), and stays when it is not. Its key is
+  // the save is confirmed (afterSave), and stays when it is not. Its keys are
   // taken now: a Save As renames the project, and the draft written here
   // must go with a confirmed save all the same.
-  const draftBefore = currentDraftKey();
-  await saveDraftNow();
+  //
+  // The bar goes up first, so the page shows a save is under way while the
+  // draft store is written; and the draft gets a few seconds, not for ever —
+  // a stalled store must not hang Save with nothing to show for it.
   showProgress('Saving…', 0, app.pages.pageCount);
+  const draftBefore = draftKeysNow();
+  const homesBefore = app.draftHomes;
+  const dirtyAtSave = app.project.dirty;
+  const drafted = await Promise.race([saveDraftNow(), new Promise(r => setTimeout(() => r(false), 4000))]);
+  // A file the draft written just now can come back from, for the words
+  // (afterSave keptIn) — '' when there is none, and then they never say the
+  // work is kept on this device.
+  const keptIn = drafted ? draftHomeFor(homesBefore, app.pages.pageCount) : '';
   try {
+    // What the file will hold, as one number (Project.changeCount): anything
+    // done from here on is not in it, and leaves the project unsaved.
+    const changesAtCompose = app.project.changeCount;
+    const pagesAtCompose = app.pages.pageCount;
     const blob = await writeProject({
       metadata: app.project.buildSaveMetadata(),
       pageSources: app.pages.saveSources(),
@@ -2720,47 +2775,81 @@ async function saveProject({ saveAs = false } = {}) {
     });
     let outcome = 'written';
     let why = '';
+    let asked = false;
     let savedName = app.fileName || suggestedFileName();
     if (handle) {
       const w = await handle.createWritable();
       await w.write(blob);
       await w.close();
-      app.fileHandle = handle;
-      app.fileName = handle.name;
-      // Every untouched sheet is a Blob slice of the file we just overwrote.
-      // Chrome keeps those slices valid, but Firefox and Safari can invalidate
-      // them, and a sheet would then fail to decode with the project still
-      // open. Re-acquire the handle's File and re-point the page index at it.
-      await reacquireAfterSave(handle);
-      // What the file is now, so the next Save can tell our own write from
-      // somebody else's; and a takeoff saved into the archive is one of its
-      // plans from here on.
-      await noteArchiveSave(handle, handle !== handleBefore);
-      savedName = app.fileName || suggestedFileName();
+      savedName = handle.name;
+      // Another project opened while this one was being written is left
+      // alone: the file is written, and that is all.
+      if (openEpoch === epochAtSave) {
+        app.fileHandle = handle;
+        app.fileName = handle.name;
+        // Every untouched sheet is a Blob slice of the file we just overwrote.
+        // Chrome keeps those slices valid, but Firefox and Safari can invalidate
+        // them, and a sheet would then fail to decode with the project still
+        // open. Re-acquire the handle's File and re-point the page index at it.
+        await reacquireAfterSave(handle);
+        // What the file is now, so the next Save can tell our own write from
+        // somebody else's; and a takeoff saved into the archive is one of its
+        // plans from here on.
+        await noteArchiveSave(handle, handle !== handleBefore);
+        savedName = app.fileName || suggestedFileName();
+      }
     } else {
-      // The file leaves as a new one: under the name it was opened by, so
-      // Save to Files can put it back beside (or over) the plan it came from.
+      // The file leaves as a new one, under the name it was opened by. Files
+      // may offer to replace the plan of that name; the words say what that
+      // does (REPLACE_WARNING) — nothing here can see whether it changed.
       savedName = saveFileName({ openedName: app.fileName, projectName: app.project.metadata.project_name });
-      // The bar comes down first: a "Your file is ready" dialog may follow.
-      hideProgress();
-      ({ outcome, why } = await deliverBlob(blob, savedName));
+      ({ outcome, why, asked = false } = await deliverBlob(blob, savedName, {
+        // The words of a home-screen app's "Download started" for a file
+        // over the cap, which offers the share sheet beside the download.
+        bigWords: afterSave('download-started', {
+          name: savedName, why: 'too-big', standalone: true, touch: handheld, keptIn, dirty: dirtyAtSave, offerShare: true,
+        }).status,
+      }));
     }
+    // The bar (or "Handing the file to the share sheet…") comes down before
+    // anything more is said.
+    hideProgress();
     // Saved, and the draft dropped, ONLY when the save is known to have
-    // happened. A download on an iPad is not known to have: the project
-    // stays unsaved and the draft written above stays (js/core/save-route.js).
-    const next = afterSave(outcome, { name: savedName, why, standalone: isStandalone(window) });
-    if (next.markSaved) {
-      app.project.markSaved();
-      syncTitle();
+    // happened — and only for the project as it was composed: work done
+    // while the file went out, or another project opened meanwhile, is not
+    // in it (js/core/save-route.js savedStill).
+    const moved = savedStill({
+      epochAtSave, epochNow: openEpoch, changesAtCompose, changesNow: app.project.changeCount,
+    });
+    const next = afterSave(outcome, {
+      name: savedName, why, standalone: isStandalone(window), touch: handheld, keptIn, dirty: dirtyAtSave,
+      offerShare: why === 'too-big' && asked, moved: moved === 'same' ? '' : moved,
+    });
+    if (moved !== 'replaced') {
+      if (next.confirmed) {
+        // The file just written is one the project may be reopened from: a
+        // draft written from now on is offered back from it too (after Save
+        // to Files › Replace on an iPad the plan IS that file, at a new size).
+        app.draftHomes = nextDraftHomes(app.draftHomes, { name: savedName, size: blob.size, pages: pagesAtCompose },
+          { replaces: outcome === 'written' });
+        if (outcome === 'written') app.fileSize = blob.size;
+      }
+      if (next.markSaved) {
+        app.project.markSaved();
+        syncTitle();
+      }
     }
     if (next.dropDraft) {
-      const key = currentDraftKey();
-      await dropDraft(key);
-      if (draftBefore !== key) await dropDraft(draftBefore);
+      // The drafts of the project that was saved — their keys taken before
+      // the save — and, when it is still the one open, any under its keys now.
+      const keys = new Set(draftBefore);
+      if (moved === 'same') for (const k of draftKeysNow()) keys.add(k);
+      for (const k of keys) await dropDraft(k);
     }
     setStatus(next.status);
-    // An unconfirmed download is said where it stays on screen.
-    if (next.tell) await D.alertDialog('Download started', next.status);
+    // An unconfirmed download is said where it stays on screen — unless the
+    // dialog that offered the share sheet beside it already said it.
+    if (next.tell && !asked) await D.alertDialog('Download started', next.status);
   } catch (err) {
     await D.alertDialog('Could not save', err.message);
   } finally {
@@ -2891,7 +2980,7 @@ async function projectSourcesReadable() {
 async function keepChangesAsDraft(now) {
   const work = app.project.buildSaveMetadata();
   const info = { pageCount: app.pages.pageCount, name: app.fileName || '' };
-  await putDraft(currentDraftKey(), work, info);
+  for (const key of draftKeysNow()) await putDraft(key, work, info);
   if (now) await putDraft(draftKey(app.fileName, now.size), work, info);
   await D.alertDialog('Changed since you opened it', now
     ? `${app.fileName} was replaced in the folder after you opened it — saved on `
@@ -2982,19 +3071,35 @@ async function adoptIfInArchive(handle, file) {
    back when the same file is opened again.
    ══════════════════════════════════════════════════════════════════════ */
 
-function currentDraftKey() {
-  return draftKey(app.fileName || suggestedFileName(), app.fileSize || 0);
+/**
+ * The keys this project's draft is written under: one for every file whose
+ * reopening may offer it back (app.draftHomes — the file it was opened from,
+ * and the last one it was saved into). A takeoff with no file yet keeps the
+ * one key it always had, named after the project; nothing ever opens a file
+ * of size 0, so that one is never offered back, and the words for an
+ * unconfirmed save do not say it is (afterSave keptIn).
+ */
+function draftKeysNow() {
+  const homes = app.draftHomes || [];
+  return homes.length
+    ? homes.map(h => draftKey(h.name, h.size))
+    : [draftKey(app.fileName || suggestedFileName(), app.fileSize || 0)];
 }
 
+/** Write the draft now, under every key it may be found by. Resolves whether one was written. */
 async function saveDraftNow() {
   try {
-    if (!app.project.dirty) return;
-    if (!app.pages.pageCount && ![...app.project.allItems()].length) return;
-    await putDraft(currentDraftKey(), app.project.buildSaveMetadata(), {
-      pageCount: app.pages.pageCount,
-      name: app.fileName || '',
-    });
-  } catch { /* a draft that cannot be written must not break the app */ }
+    if (!app.project.dirty) return false;
+    if (!app.pages.pageCount && ![...app.project.allItems()].length) return false;
+    const work = app.project.buildSaveMetadata();
+    const info = { pageCount: app.pages.pageCount, name: app.fileName || '' };
+    // All at once, not one after another: a page being hidden may have only
+    // moments left, and the last-saved file's key matters as much as the first.
+    const wrote = await Promise.all(draftKeysNow().map(key => putDraft(key, work, info)));
+    return wrote.some(Boolean);
+  } catch {
+    return false;   // a draft that cannot be written must not break the app
+  }
 }
 
 async function offerDraftRestore(file) {
@@ -3080,16 +3185,27 @@ function suggestedFileName() {
  * take the file — and is still the whole story on a desktop, where a
  * download is the save.
  */
-function deliverBlob(blob, name) {
+function deliverBlob(blob, name, { bigWords = '' } = {}) {
   const file = new File([blob], name, { type: 'application/octet-stream' });
-  const share = () => navigator.share({ files: [file], title: name });
+  // The bar stays up while the share sheet reads the file — seconds, for a
+  // big one, before anything shows — so nothing is measured in that time
+  // that the save would then call saved (the change count would catch it,
+  // but it is better not to start). It comes down for a dialog of this app's
+  // own, and when the save is over (saveProject).
+  const share = () => {
+    showProgress('Handing the file to the share sheet…', 0, 1, name);
+    return navigator.share({ files: [file], title: name });
+  };
   return deliverFile({ size: blob.size }, {
     canShare: () => {
       try { return typeof navigator.share === 'function' && !!navigator.canShare?.({ files: [file] }); } catch { return false; }
     },
     activation: () => (navigator.userActivation ? !!navigator.userActivation.isActive : null),
     share,
-    ask: () => askFileReady(name, blob.size, share),
+    ask: ({ kind = 'ready' } = {}) => {
+      hideProgress();
+      return askFileReady(name, blob.size, share, { kind, words: bigWords });
+    },
     download: () => startDownload(blob, name),
     touch: handheld,
     standalone: isStandalone(window),
@@ -3102,28 +3218,46 @@ function deliverBlob(blob, name) {
  * dialog's Save button is that tap — share() is called INSIDE its click, not
  * after the dialog has closed, and its promise is handed back with when it
  * started. Resolves that, 'download' (Download instead), or null (Cancel).
+ *
+ * kind 'big' is the other dialog with a share button: an app opened from the
+ * home-screen icon, whose file is over the share cap and has been sent to a
+ * download that such an app may not make at all. It says so (`words`, from
+ * afterSave) and offers the share sheet beside it — "Try the share sheet",
+ * the same tap-inside-the-click — or OK (null).
  */
-function askFileReady(name, size, share) {
+function askFileReady(name, size, share, { kind = 'ready', words = '' } = {}) {
   return D.showDialog(close => {
     const body = D.el('div');
     body.style.cssText = 'font-size:12.5px;line-height:1.6;white-space:pre-line';
-    body.textContent = `${name} (${sizeText(size)}) is ready.\n\n`
-      + 'Tap Save, then choose “Save to Files” in the list that opens — the Files app '
-      + 'can put it in OneDrive, beside the plan it came from.';
-    const save = D.button('Save', 'primary', () => {
+    body.textContent = kind === 'big'
+      ? `${words}\n\n${REPLACE_WARNING}`
+      : `${name} (${sizeText(size)}) is ready.\n\n`
+        + 'Tap Save, then choose “Save to Files” in the list that opens — the Files app can put it in OneDrive.'
+        + `\n\n${REPLACE_WARNING}`;
+    const shareNow = () => {
       let started;
       try { started = share(); } catch (err) { started = Promise.reject(err); }
       // Settled here, so a rejection waiting for deliverFile is never "unhandled".
       started.catch(() => {});
       close({ share: started, at: Date.now() });
-    });
+    };
+    if (kind === 'big') {
+      return D.dlg({
+        title: 'Download started',
+        body,
+        buttons: [
+          D.button('Try the share sheet', '', shareNow),
+          D.button('OK', 'primary', () => close(null)),
+        ],
+      });
+    }
     return D.dlg({
       title: 'Your file is ready',
       body,
       buttons: [
         D.button('Cancel', '', () => close(null)),
         D.button('Download instead', '', () => close('download')),
-        save,
+        D.button('Save', 'primary', shareNow),
       ],
     });
   });
@@ -3216,6 +3350,7 @@ function pickFileFallback(accept, multiple = false, { onSlow = null } = {}) {
       if (settled) return;
       settled = true;
       if (currentPick === me) currentPick = null;
+      if (me.stop) me.stop();
       i.remove();
       resolve(value);
     };
@@ -3227,9 +3362,16 @@ function pickFileFallback(accept, multiple = false, { onSlow = null } = {}) {
     });
     // Chrome 113+, Firefox 91+ and Safari 16.4+ (iPadOS too) fire this on dismiss.
     i.addEventListener('cancel', () => done(multiple ? [] : null));
-    // The window has its focus back and still no file: on an iPad that is a
-    // file being copied in, not a cancel (see above). Say so, keep waiting.
-    window.addEventListener('focus', () => {
+    // The window has its focus back — or the page is being touched again,
+    // which an iPad may be without ever giving the window a focus event —
+    // and still no file: on an iPad that is a file being copied in, not a
+    // cancel (see above). Say so, keep waiting. (Only the words hang on this:
+    // whether a late file may replace the project is decided by what was done
+    // meanwhile, lateArrival.)
+    let back = false;
+    const onBack = () => {
+      if (back || settled) return;
+      back = true;
       const deadline = Date.now() + 8000;
       const tick = () => {
         if (settled) return;
@@ -3241,7 +3383,13 @@ function pickFileFallback(accept, multiple = false, { onSlow = null } = {}) {
         setTimeout(tick, 250);
       };
       setTimeout(tick, 400);
-    }, { once: true });
+    };
+    window.addEventListener('focus', onBack, { once: true });
+    document.addEventListener('pointerdown', onBack, { capture: true, once: true });
+    me.stop = () => {
+      window.removeEventListener('focus', onBack);
+      document.removeEventListener('pointerdown', onBack, true);
+    };
 
     i.click();
   });
@@ -3584,6 +3732,9 @@ function newProject() {
   app.currentPage = 0;
   app.fileHandle = null;
   app.fileName = '';
+  app.fileSize = 0;
+  // No file to offer a draft back from until its first confirmed save.
+  app.draftHomes = [];
   app.sourceFile = null;
   app.archive = null;
   app.saveStartIn = null;
@@ -4713,7 +4864,7 @@ async function receiveFromPortal(nonce) {
           + (canUseFsApi
             ? 'Save goes to Save As.'
             : handheld
-              ? 'Save gives you a new file through the share sheet (Save to Files); the portal\'s copy is not changed.'
+              ? `${HANDHELD_SAVE} The portal's copy is not changed.`
               : 'Save downloads a new copy; the portal\'s copy is not changed.'));
     }
     return;
@@ -5285,13 +5436,13 @@ const HANDOFF = PORTAL_HANDOFF ? null : /(?:^|[#&])open=([^&]+)/.exec(location.h
 // Plans Archive or one job's plans in it. A project number is no credential,
 // so unlike a handoff it may travel in the address.
 const PLANS_LINK = HANDOFF || PORTAL_HANDOFF ? null : parsePlansLink(location.hash || '');
-// On an iPad (or a phone) what Save does is said plainly: a new file, through
-// the share sheet, never the plan in OneDrive itself.
+// On an iPad (or a phone) what Save does is said plainly: a new file —
+// through the share sheet only up to its cap, a download above it
+// (HANDHELD_SAVE, built from the cap) — never a write into the plan itself.
 const IDLE_STATUS = canUseFsApi
   ? 'Open a .takeoff project, or start from a PDF.'
   : handheld
-    ? 'Open a .takeoff project, or start from a PDF.  ·  Save gives you a new file through the share sheet — '
-      + 'choose Save to Files; it cannot write back into the plan you opened.'
+    ? `Open a .takeoff project, or start from a PDF.  ·  ${HANDHELD_SAVE}`
     : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.';
 if (PORTAL_HANDOFF) {
   // Consumed: a reload must not wait for a plan that already came.

@@ -18,6 +18,7 @@
  */
 
 import { canPickFolders, parseProjectCode, projectCodeOf } from './plans-folder.js';
+import { HANDHELD_SAVE, REPLACE_WARNING } from './save-route.js';
 
 /** Said when a link's number is not a project number (the wording the app has always used). */
 export const INVALID_LINK = 'That link did not name a project number — showing the whole Plans Archive.';
@@ -27,12 +28,14 @@ export const INVALID_LINK = 'That link did not name a project number — showing
  * more: the file is picked in the Files app (where the OneDrive app's files
  * are), Keep on This Device keeps it, the portal's 📐 menu opens plans for the
  * people who see prices — in Safari only, since its home-screen icon cannot
- * hand a plan over — and Save is a new file through the share sheet.
+ * hand a plan over — and what Save really does there (HANDHELD_SAVE: the
+ * share sheet only up to its cap, a download above it), with what replacing
+ * the plan in Files would do (REPLACE_WARNING).
  */
 export const HANDHELD_HINT = 'Pick the plan from the Plans Archive in the Files app (the OneDrive app’s files). '
   + 'Then File › Keep on This Device keeps it here for next time. If you see prices in the portal, '
   + '📐 on the project opens its plans too — with the portal in Safari, not from its home-screen icon. '
-  + 'Save gives you a new file through the share sheet: choose Save to Files.';
+  + `${HANDHELD_SAVE} ${REPLACE_WARNING}`;
 export const COMPUTER_HINT = 'Pick the plan from the Plans Archive folder in your OneDrive.';
 
 // ── which device ──────────────────────────────────────────────────────────
