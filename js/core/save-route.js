@@ -625,8 +625,82 @@ export function draftFate({ savedAt, fileModified, byDate = true } = {}) {
  * become a copy, and opening the copy finds it there.
  */
 export function planOfPortalCopy(name) {
-  const m = /^(.+) - iPad \d{4}-\d{2}-\d{2} \d{4}(?: \(\d{1,2}\))?\.takeoff$/i.exec(typeof name === 'string' ? name : '');
+  const m = PORTAL_COPY_RE.exec(typeof name === 'string' ? name : '');
   return m ? `${m[1]}.takeoff` : '';
+}
+
+// "<stem> - iPad YYYY-MM-DD HHMM[ (n)].takeoff": the broker's copy of a save (handler.ts copyName).
+const PORTAL_COPY_RE = /^(.+) - iPad \d{4}-\d{2}-\d{2} \d{4}(?: \(\d{1,2}\))?\.takeoff$/i;
+
+/**
+ * The fewest characters the broker ever gives a copy's whole name: it makes
+ * the name fit min(200, 326 − its project folder's name − 1) characters
+ * (handler.ts MAX_TAKEOFF_PATH), and a OneDrive folder's name is at most 255.
+ * So a copy whose plan's name was CUT is at least this long — less only the
+ * spaces and dots dropped from the end of the cut.
+ */
+export const COPY_ROOM_MIN = 326 - 255 - 1;
+
+/**
+ * Whether `copy` is a name the portal's OneDrive broker gives a copy of the
+ * plan `plan` (handler.ts copyName, 2026-11-04): "<stem> - iPad <stamp>[ (n)]
+ * .takeoff", <stem> the plan's name without its .takeoff (in any case), in
+ * NFC, cut by characters so that the whole name fits (200 characters, fewer
+ * in a project folder with a long name: a folder this app never sees), the
+ * end of what is left stripped of spaces and dots (an uncut name's end too),
+ * and "Plan" when nothing is left:
+ *
+ *   'whole'  the copy carries the plan's whole name (its end tidied, its
+ *            .takeoff in any case, NFC or not)
+ *   'cut'    the copy's <stem> is the beginning of the plan's, and the copy
+ *            is as long as a cut one is (COPY_ROOM_MIN)
+ *   ''       neither — and never for a sibling (another copy of the same plan)
+ */
+export function portalCopyKind(copy, plan) {
+  const name = typeof copy === 'string' ? copy.normalize('NFC') : '';
+  const m = PORTAL_COPY_RE.exec(name);
+  if (!m || typeof plan !== 'string' || !/\.takeoff$/i.test(plan)) return '';
+  const kept = m[1];
+  const full = plan.normalize('NFC');
+  const sibling = PORTAL_COPY_RE.exec(full);
+  if (sibling && sibling[1] === kept) return '';
+  const stem = full.replace(/\.takeoff$/i, '');
+  const tidy = stem.replace(/[\s.]+$/u, '');
+  if (tidy === kept || (kept === 'Plan' && !tidy)) return 'whole';
+  if (/[\s.]$/u.test(kept) || !stem.startsWith(kept)) return '';
+  // The cut came at `kept`, or inside the spaces and dots right after it (dropped).
+  const dropped = /^[\s.]*/u.exec(stem.slice(kept.length))[0];
+  return Array.from(name).length + Array.from(dropped).length >= COPY_ROOM_MIN ? 'cut' : '';
+}
+
+/**
+ * The draft a separate copy the portal made of a save can come back from,
+ * when planOfPortalCopy cannot give its plan's name back — the broker cut a
+ * long name to fit or tidied its end, or the plan's .takeoff was in capitals
+ * — found among the drafts' `keys` (js/core/drafts.js draftKey,
+ * "<name>|<size>"; no draft is read here): the key of a plan the copy is of
+ * (portalCopyKind), at the copy's own size (the copy is exactly the bytes
+ * that were kept, so work done after that save was drafted under the plan's
+ * name at that size). A plan whose whole name the copy carries comes first;
+ * one whose name it only begins (cut), next. '' when there is none, or more
+ * than one could be: a wrong match would need a plan of that beginning AND
+ * of exactly those bytes' size, and two of them give none, never a guess.
+ */
+export function portalCopyDraftKey(copy, size, keys) {
+  const n = Number(size);
+  if (typeof copy !== 'string' || !PORTAL_COPY_RE.test(copy.normalize('NFC'))) return '';
+  if (!Number.isSafeInteger(n) || n <= 0 || !Array.isArray(keys)) return '';
+  const tail = `|${n}`;
+  const found = { whole: [], cut: [] };
+  for (const k of keys) {
+    if (typeof k !== 'string' || !k.endsWith(tail)) continue;
+    const plan = k.slice(0, -tail.length);
+    if (plan === copy) continue;                    // its own: looked up first anyway
+    const kind = portalCopyKind(copy, plan);
+    if (kind) found[kind].push(k);
+  }
+  const best = found.whole.length ? found.whole : found.cut;
+  return best.length === 1 ? best[0] : '';
 }
 
 /**

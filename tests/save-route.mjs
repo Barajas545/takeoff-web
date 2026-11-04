@@ -29,8 +29,9 @@ import {
   SHARE_CAP_BYTES, SHEET_MIN_MS, downloadUrlKeepMs, saveRoute, shareErrorKind, deliverFile, afterSave,
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
   HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords, draftFate, DRAFT_DATE_SLACK_MS, planOfPortalCopy,
-  afterLateKept,
+  afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN,
 } from '../js/core/save-route.js';
+import { draftKey } from '../js/core/drafts.js';
 import { Project } from '../js/core/project.js';
 import { HANDHELD_HINT } from '../js/core/plans-link.js';
 import { askPortalToKeep, SAVE_WAIT_MS } from '../js/core/portal-handoff.js';
@@ -320,6 +321,97 @@ eq('… from the file last saved, when that is the one with these sheets', draft
   eq('… any other name is no copy', [planOfPortalCopy(S0.name), planOfPortalCopy('Plan - iPad.takeoff'),
     planOfPortalCopy('Plan - iPad 2026-11-04.takeoff'), planOfPortalCopy(' - iPad 2026-11-04 1415.takeoff'),
     planOfPortalCopy('Plan - iPad 2026-11-04 1415.pdf'), planOfPortalCopy(null), planOfPortalCopy(42)], ['', '', '', '', '', '', '']);
+}
+
+// The broker CUTS a long plan name so the copy's name fits (handler.ts copyName: 200 characters, fewer in a project
+// folder with a long name), and tidies an end of spaces and dots: planOfPortalCopy cannot give such a plan's name back,
+// so a copy opened after the frame closed found no draft. The broker's rule, redone here (2026-11-04):
+function brokerCopy(planName, stamp, n = 1, room = 200) {
+  const stem = planName.normalize('NFC').replace(/\.takeoff$/i, '');
+  const tail = ` - iPad ${stamp}${n > 1 ? ` (${n})` : ''}.takeoff`;
+  const fits = Math.min(room, 200) - Array.from(tail).length;
+  const cut = Array.from(stem).slice(0, fits).join('').replace(/[\s.]+$/u, '');
+  return `${cut || 'Plan'}${tail}`;
+}
+{
+  const STAMP = '2026-11-04 1415';
+  const LONG = `A000T1 - ${'Made up plan of a long made-up job, '.repeat(6)}full set.takeoff`;      // 226 characters
+  const cutCopy = brokerCopy(LONG, STAMP);
+  eq('the broker\'s cut: the stem is cut, never the " - iPad <time>" part, to 200 characters (less the space it dropped)',
+    [Array.from(cutCopy).length <= 200, cutCopy.endsWith(` - iPad ${STAMP}.takeoff`), LONG.startsWith(cutCopy.slice(0, -31))], [true, true, true]);
+  eq('… so the copy\'s name no longer gives its plan\'s back', planOfPortalCopy(cutCopy) === LONG, false);
+  const roomy = brokerCopy(LONG, STAMP, 3, COPY_ROOM_MIN);
+  eq('the fewest characters a copy gets: 326 - 255 - 1 (a OneDrive folder of the longest name)', [COPY_ROOM_MIN, Array.from(roomy).length], [70, 70]);
+  const kinds = [
+    ['a whole name', brokerCopy('A000T1 - Made up plan.takeoff', STAMP), 'A000T1 - Made up plan.takeoff', 'whole'],
+    ['… in capitals', brokerCopy('Main Level.TAKEOFF', STAMP, 9), 'Main Level.TAKEOFF', 'whole'],
+    ['… its end\'s dots and spaces dropped', brokerCopy('Plan v2. .takeoff', STAMP), 'Plan v2. .takeoff', 'whole'],
+    ['… a name of dots only ("Plan")', brokerCopy('. ..takeoff', STAMP), '. ..takeoff', 'whole'],
+    ['… NFD in the drafts, NFC in the copy', brokerCopy('Cafe\u0301 level.takeoff', STAMP), 'Cafe\u0301 level.takeoff', 'whole'],
+    ['cut to 200', cutCopy, LONG, 'cut'],
+    ['cut in a long folder\'s room', roomy, LONG, 'cut'],
+    ['cut where spaces were dropped', brokerCopy(`${'x'.repeat(100)}     ${'y'.repeat(100)}.takeoff`, STAMP, 1, 130),
+      `${'x'.repeat(100)}     ${'y'.repeat(100)}.takeoff`, 'cut'],
+    ['a copy of a copy, by its whole name', brokerCopy(brokerCopy('L1.takeoff', STAMP), '2026-11-05 0910'), brokerCopy('L1.takeoff', STAMP), 'whole'],
+    ['not: a short copy is never a cut one ("L1" does not begin "L1 Revised" here)', brokerCopy('L1.takeoff', STAMP), 'L1 Revised.takeoff', ''],
+    ['not: a sibling copy of the same plan', brokerCopy('L1.takeoff', STAMP), brokerCopy('L1.takeoff', STAMP, 2), ''],
+    ['not: a sibling of a cut one', cutCopy, brokerCopy(LONG, '2026-11-03 0900'), ''],
+    ['not: another plan', brokerCopy('A000T1 - Made up plan.takeoff', STAMP), 'A000T2 - Made up plan.takeoff', ''],
+    ['not: a plan that is no takeoff', cutCopy, LONG.replace(/\.takeoff$/, '.pdf'), ''],
+    ['not: a name that is no copy', 'A000T1 - Made up plan.takeoff', 'A000T1 - Made up plan.takeoff', ''],
+    ['not: nothing', null, LONG, ''],
+  ];
+  for (const [why, copy, plan, want] of kinds) eq(`portalCopyKind — ${why}`, portalCopyKind(copy, plan), want);
+  eq('… and a copy\'s own stem never ends in a space or a dot, so one that does is no cut', portalCopyKind(`${'z'.repeat(80)}. - iPad ${STAMP}.takeoff`, `${'z'.repeat(80)}. more.takeoff`), '');
+
+  const N = 43853;
+  const K = (name, size = N) => draftKey(name, size);
+  eq('the draft of a cut copy\'s plan, at the copy\'s size', portalCopyDraftKey(cutCopy, N, [K('A000T2 other.takeoff'), K(LONG, 43340), K(LONG)]), K(LONG));
+  eq('… in a long folder\'s room too', portalCopyDraftKey(roomy, N, [K(LONG)]), K(LONG));
+  eq('… a plan in capitals, a tidied end, NFD', [
+    portalCopyDraftKey(brokerCopy('Main Level.TAKEOFF', STAMP), N, [K('Main Level.TAKEOFF')]),
+    portalCopyDraftKey(brokerCopy('Plan v2. .takeoff', STAMP), N, [K('Plan v2. .takeoff')]),
+    portalCopyDraftKey(brokerCopy('Cafe\u0301 level.takeoff', STAMP), N, [K('Cafe\u0301 level.takeoff')]),
+  ], [K('Main Level.TAKEOFF'), K('Plan v2. .takeoff'), K('Cafe\u0301 level.takeoff')]);
+  eq('… the plan\'s whole name before one it only begins', portalCopyDraftKey(brokerCopy('L1.takeoff', STAMP), N, [K('L1 Revised.takeoff'), K('L1.takeoff')]), K('L1.takeoff'));
+  {
+    // a long name the broker did not cut (it fits), beside a longer plan it begins: the whole one, not the "cut" one
+    const P = `A000T1 - ${'made up level '.repeat(6)}plan.takeoff`;
+    const Q = P.replace(/\.takeoff$/, ' rev B.takeoff');
+    const copy = brokerCopy(P, STAMP);
+    eq('… also when the copy is long enough to have been cut', [Array.from(copy).length >= COPY_ROOM_MIN, portalCopyKind(copy, Q),
+      portalCopyDraftKey(copy, N, [K(Q), K(P)]), portalCopyDraftKey(copy, N, [K(Q)])], [true, 'cut', K(P), K(Q)]);
+  }
+  eq('… none at another size (not those bytes)', portalCopyDraftKey(cutCopy, N, [K(LONG, N + 1), K(LONG, 1)]), '');
+  eq('… two plans it could be: none, never a guess', portalCopyDraftKey(cutCopy, N, [K(LONG), K(`${LONG.slice(0, -8)} rev B.takeoff`)]), '');
+  eq('… its own key and a sibling\'s are not its plan\'s', portalCopyDraftKey(cutCopy, N, [K(cutCopy), K(brokerCopy(LONG, STAMP, 2))]), '');
+  eq('… nothing to go on: none', [portalCopyDraftKey(cutCopy, 0, [K(LONG)]), portalCopyDraftKey(cutCopy, N, null), portalCopyDraftKey(LONG, N, [K(LONG)]),
+    portalCopyDraftKey(cutCopy, N, [42, null, `${LONG}`])], ['', '', '', '']);
+  eq('… the keys are draftKey\'s own ("<name>|<size>")', draftKey(LONG, N), `${LONG}|${N}`);
+}
+
+// listDraftKeys reads the keys only — never a draft (a draft can be megabytes of takeoff).
+{
+  const drafts = await import(new URL('../js/core/drafts.js?no-store', import.meta.url));
+  eq('no IndexedDB at all: no keys, and no throw', await drafts.listDraftKeys(), []);
+  const calls = [];
+  const store = {
+    getAllKeys() { calls.push('getAllKeys'); return { result: ['A000T1 - Made up plan.takeoff|43853', 7, 'B.takeoff|1'] }; },
+    getAll() { calls.push('getAll'); return { result: [] }; },
+    get() { calls.push('get'); return { result: null }; },
+  };
+  const db = {
+    objectStoreNames: { contains: () => true },
+    transaction() { const tr = { objectStore: () => store }; setTimeout(() => tr.oncomplete && tr.oncomplete()); return tr; },
+  };
+  const had = globalThis.indexedDB;
+  globalThis.indexedDB = { open() { const r = { result: db }; setTimeout(() => r.onsuccess && r.onsuccess()); return r; } };
+  try {
+    const fresh = await import(new URL('../js/core/drafts.js?made-up-store', import.meta.url));
+    eq('the keys, strings only, out of getAllKeys alone', [await fresh.listDraftKeys(), calls], [['A000T1 - Made up plan.takeoff|43853', 'B.takeoff|1'], ['getAllKeys']]);
+  } finally {
+    if (had === undefined) delete globalThis.indexedDB; else globalThis.indexedDB = had;
+  }
 }
 
 // ── the file's name ──────────────────────────────────────────────────────
@@ -749,6 +841,9 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
     && (lateBody.match(/dropDraft\(/g) || []).length === 1 && /if \(next\.dropDraft\) \{[\s\S]*new Set\(draftBefore\)[\s\S]*draftKeysNow\(\)[\s\S]*dropDraft\(k\)/.test(lateBody));
   ok('… the kept file a home of the drafts, unless the save was filed as a copy (that copy is the home already)',
     /if \(next\.home && !after\.copy\) app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size, pages \}\);/.test(lateBody));
+  ok('a copy whose name the broker cut finds its plan\'s draft among the drafts\' keys (names only)',
+    /if \(!draft && plan\) \{\s*const k = portalCopyDraftKey\(file\.name, file\.size, await listDraftKeys\(\)\);\s*const d = k \? await getDraft\(k\) : null;\s*if \(d && d\.payload\) \{ key = k; draft = d; \}/.test(restore)
+    && restore.indexOf('portalCopyDraftKey(') > restore.indexOf('for (const k of keys)') && restore.indexOf('portalCopyDraftKey(') < restore.indexOf('if (!draft) return;'));
   const follow = body('followPortalCopy');
   ok('… only while that project is still the one open, and the work so far drafted there at once',
     /if \(epoch !== openEpoch\) return;\s*app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size, pages \}\);\s*void saveDraftNow\(\);/.test(follow));

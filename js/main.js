@@ -4,7 +4,7 @@ import {
   openProject, writeProject, readProjectSummary, FILE_EXTENSION, LEGACY_EXTENSION,
   STANDALONE_PAGE,
 } from './core/takeoff-file.js';
-import { draftKey, putDraft, getDraft, dropDraft } from './core/drafts.js';
+import { draftKey, putDraft, getDraft, dropDraft, listDraftKeys } from './core/drafts.js';
 import { CalloutPreview } from './ui/callout-preview.js';
 import { resolveUiMode } from './ui/settings.js';
 import { RemoteFile } from './core/remote-file.js';
@@ -21,7 +21,7 @@ import { openAfterAsking, isPhoneOrTablet, deviceWord, PORTAL_SAFARI_IF_ASKED } 
 import {
   deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
   savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
-  draftFate, planOfPortalCopy, afterLateKept,
+  draftFate, planOfPortalCopy, portalCopyDraftKey, afterLateKept,
 } from './core/save-route.js';
 import {
   HANDOFF_WAIT_MS, RENEW_WAIT_MS, SAVE_WAIT_MS, parsePortalHash, readyMessage, renewMessage,
@@ -3197,7 +3197,9 @@ async function saveDraftNow() {
  * never dropped by the date, only offered (draftFate). And a separate copy
  * the portal made of a save (the plan changed in the office meanwhile) also
  * finds the work drafted under the plan it was saved from: the same bytes,
- * so the same size (planOfPortalCopy).
+ * so the same size (planOfPortalCopy — or, when the broker cut the plan's
+ * name to fit, the one draft of a plan the copy's name begins, at that size:
+ * portalCopyDraftKey).
  */
 async function offerDraftRestore(file, { portal = false } = {}) {
   const own = draftKey(file.name, file.size);
@@ -3209,6 +3211,14 @@ async function offerDraftRestore(file, { portal = false } = {}) {
   for (const k of keys) {
     const d = await getDraft(k);
     if (d && d.payload) { key = k; draft = d; break; }
+  }
+  // A copy whose name does not give its plan's back: the broker cut a long
+  // name to fit (or tidied its end). Its plan is looked for among the
+  // drafts' keys — the names, no draft read (portalCopyDraftKey).
+  if (!draft && plan) {
+    const k = portalCopyDraftKey(file.name, file.size, await listDraftKeys());
+    const d = k ? await getDraft(k) : null;
+    if (d && d.payload) { key = k; draft = d; }
   }
   if (!draft) return;
 
