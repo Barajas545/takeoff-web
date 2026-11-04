@@ -9,7 +9,8 @@
 // no offline copy at all — both directions matter.
 //
 // So this walks js/main.js's imports (static, plus literal import() calls,
-// plus the workers the program starts), checks PROGRAM against them, checks every listed file exists, and drives
+// plus the workers the program starts, plus the files index.html loads
+// itself), checks PROGRAM against them, checks every listed file exists, and drives
 // the worker's own install and activate handlers against stubbed caches.
 // The lists are read by RUNNING sw.js in a sandbox, not by pattern-matching
 // its text, so what is checked is what the worker actually has.
@@ -110,6 +111,19 @@ ok('the walk finds the Keep on This Device writer worker', runtimeFiles.has('js/
 eq('every worker the program starts is in PROGRAM',
   [...runtimeFiles].filter(f => !program.has(f)), []);
 eq('… and exists', [...runtimeFiles].filter(f => !existsSync(path.join(APP, f))), []);
+
+// What the page itself loads. index.html's own <script src> and stylesheets
+// are no import either — the layout boot (js/ui-mode-boot.js) runs in its
+// <head>, a file of its own since the portal's copy allows no inline script —
+// and a page that opens offline without them paints the wrong layout, or none.
+const html = readFileSync(path.join(APP, 'index.html'), 'utf8');
+const pageFiles = [
+  ...[...html.matchAll(/<script\b[^>]*\ssrc="([^"]+)"/gi)].map(m => m[1]),
+  ...[...html.matchAll(/<link\b[^>]*\srel="stylesheet"[^>]*\shref="([^"]+)"/gi)].map(m => m[1]),
+].filter(u => !/^[a-z]+:/i.test(u) && !u.startsWith('//'));
+ok('the page\'s own files are found (the layout boot, main.js, the stylesheet)',
+  ['js/ui-mode-boot.js', 'js/main.js', 'css/app.css'].every(u => pageFiles.includes(u)));
+eq('every file index.html loads itself is in PROGRAM', pageFiles.filter(u => !program.has(u)), []);
 
 // ── the lists themselves ─────────────────────────────────────────────────
 for (const shell of ['./', 'index.html', 'css/app.css', 'js/main.js']) {

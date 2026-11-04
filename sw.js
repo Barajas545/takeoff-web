@@ -43,6 +43,8 @@ const PROGRAM = [
   'index.html',
   'css/app.css',
   'js/main.js',
+  // Not an import: the page's own <script> in its <head>, the layout decided before the stylesheet paints.
+  'js/ui-mode-boot.js',
   'js/site-config.js',
   'js/core/canvas-limits.js',
   'js/core/counting.js',

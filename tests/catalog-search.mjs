@@ -8,7 +8,7 @@
 // Part 2 is the real check: a differential over the full catalog against what
 // the Python matcher actually returns, captured by catalog-python-truth.py.
 import { readFile } from 'node:fs/promises';
-import { buildIndex, search } from '../js/ui/catalog.js';
+import { buildIndex, search, fuseDims } from '../js/ui/catalog.js';
 
 let fails = 0;
 const check = (desc, got, want) => {
@@ -66,6 +66,28 @@ check('S("df248")[0] exact code above everything', S('df248')[0], 'DF248');
   const a = S('2x4x8');
   S('1/2 cdx'); S('248d'); S('hdu2'); S('2412');
   check('no regex state leaks across searches', JSON.stringify(S('2x4x8')), JSON.stringify(a));
+}
+
+// ── Part 1b: the x between dimensions, without a look-behind ─────────────
+// Safari before 16.4 refuses a whole module with a look-behind, so fuseDims
+// matches the digit and puts it back. It must drop exactly what the old
+// /(?<=\d)\s*[x×]\s*(?=\d)/g dropped — built here from a string, so this
+// file is the only place the look-behind still exists, and only in Node.
+{
+  const OLD = new RegExp('(?<=\\d)\\s*[x×]\\s*(?=\\d)', 'g');
+  const was = t => String(t).replace(OLD, '');
+  const fixed = ['2x4x8', '2x4', '2 x 4 x 8', '2×4×8', '2 ×4', '248', 'x4', '2x', 'x', '', '2xx4', '2x x4', '1/2x4', '4x8 cdx',
+    '12x3', '2x4x', 'xx2x4xx', '2X4', 'df2x4x12', '2x4 x 8\'', '3\tx\t5', '2  x  x 4', '9x9x9x9x9'];
+  for (const t of fixed) check(`fuseDims(${JSON.stringify(t)}) drops what the look-behind did`, fuseDims(t), was(t));
+  // and every short string of the characters that matter
+  const alphabet = ['1', '2', 'x', '×', ' ', 'a', '/', 'X'];
+  let n = 0, same = 0;
+  const all = (prefix, depth) => {
+    if (depth === 0) { n += 1; if (fuseDims(prefix) === was(prefix)) same += 1; else check(`fuseDims(${JSON.stringify(prefix)})`, fuseDims(prefix), was(prefix)); return; }
+    for (const c of alphabet) all(prefix + c, depth - 1);
+  };
+  for (let d = 0; d <= 6; d++) all('', d);
+  console.log(`  fuseDims == the old look-behind on ${same}/${n} strings`);
 }
 
 // ── Part 2: differential against the Python, full catalog ─────────────────
