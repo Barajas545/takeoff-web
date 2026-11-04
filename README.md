@@ -88,8 +88,16 @@ Chrome.
 someone chooses otherwise for their own device in *Settings › Plan files*.
 
 On a phone or a tablet the browser cannot open a folder: use *Open a .takeoff
-project* and pick the file in the OneDrive app; Save hands it back through the
-share sheet.
+project* and pick the file in the Files app (the OneDrive app's files) — or,
+for the people who see prices, open it from the portal's 📐 menu with the
+portal in Safari (its home-screen icon cannot hand a plan over). Save there
+gives back a new file under the name it was opened by: through the share sheet
+(*Save to Files*) up to 150 MB, and as a download into *Files › Downloads*
+above that. Only a share the person finished marks the project saved. A
+download on a phone or a tablet cannot be confirmed, so the project stays
+marked unsaved and its draft is kept until a save is confirmed — the work is
+never thrown away on a guess. A plan picked from OneDrive that is not on the
+device yet can take minutes to come down; it opens when it arrives.
 
 **Only the OneDrive Plans Archive.** A computer that synced the old SharePoint
 library also has a folder called *DCR - Floor Plans - Archive* there, and the
@@ -138,9 +146,11 @@ you.
 ## Honest limits
 
 **Very large projects.** Opening is cheap at any size — a 2.3 GB set reads
-about 2 KB to open. Saving is not: on a phone the whole file has to be
-rebuilt in memory to hand back, so jobs in the hundreds of megabytes are
-better saved at a desk. Measuring and marking up a big set on a phone is
+about 2 KB to open. Saving is heavier: the share sheet reads the whole file
+into memory, so on a phone or a tablet a project over 150 MB is downloaded
+instead (streamed, any size), and a plan opened over a portal link is
+downloaded sheet by sheet to be saved. Jobs in the hundreds of megabytes are
+still better saved at a desk. Measuring and marking up a big set on a phone is
 fine; it is the save that is heavy.
 
 **Very large sheets on iPhone and iPad.** Safari refuses a canvas past about

@@ -17,7 +17,10 @@ import {
   libraryOwner, portalCopies, keptCopies, keepFile, keptFile, removeKept, removePortalCopy, sizeText,
   keepWriterFor, workerWriter, CANNOT_KEEP,
 } from './core/device-plans.js';
-import { openAfterAsking } from './core/plans-link.js';
+import { openAfterAsking, isPhoneOrTablet } from './core/plans-link.js';
+import {
+  deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
+} from './core/save-route.js';
 import {
   PORTAL_ORIGINS, HANDOFF_WAIT_MS, RENEW_WAIT_MS, parsePortalHash, isPortalOrigin, readyMessage, renewMessage,
   offlineMessage, openFromMessage, linkFromMessage,
@@ -2377,6 +2380,17 @@ window.addEventListener('resize', () => placeToolOptions(controller.mode));
 const canUseFsApi = 'showOpenFilePicker' in window
   && !new URLSearchParams(location.search).has('nofsapi');
 
+/** A phone or a tablet: an iPad calls itself a Mac, so this is the touch test, not the user agent's word. */
+const handheld = isPhoneOrTablet(window);
+
+/**
+ * How many projects have been opened or started in this tab. A file picked in
+ * the Files app can arrive minutes after the pick (pickFileFallback); by then
+ * the person may have opened something else, and the late file must not
+ * replace it. Each open, and each new project, moves this on.
+ */
+let openEpoch = 0;
+
 /**
  * Where plans come from on this device: 'folder' (the Plans Archive folder)
  * or 'sharepoint' (handed over by the portal). Settings first, then the
@@ -2421,11 +2435,19 @@ const plansArchive = new PlansArchive({
  * `beforeOpen` runs once a file has been chosen, just before it is opened: a
  * #plans link's panel closes itself there, and stays on screen when the
  * person backs out of the question or the picker.
+ *
+ * A file from the plain picker can arrive long after it was picked (a big
+ * plan the OneDrive app has to bring down first). It still opens then —
+ * unless something else was opened meanwhile, and after asking again if work
+ * was done on the open project while it was on its way (lateArrival).
  */
 async function openProjectFile({ beforeOpen = null } = {}) {
   if (app.project.dirty) {
     if (!(await confirmDiscard())) return;
   }
+  const epoch = openEpoch;
+  const dirtyAtPick = app.project.dirty;
+  let slow = false;
   let file, handle = null;
   if (canUseFsApi) {
     try {
@@ -2441,8 +2463,18 @@ async function openProjectFile({ beforeOpen = null } = {}) {
       throw err;
     }
   } else {
-    file = await pickFileFallback(`${FILE_EXTENSION},${LEGACY_EXTENSION}`);
+    file = await pickFileFallback(`${FILE_EXTENSION},${LEGACY_EXTENSION}`, false, {
+      onSlow: () => { slow = true; setStatus(STILL_COMING); },
+    });
     if (!file) return;
+    const next = lateArrival({
+      epochAtPick: epoch, epochNow: openEpoch, dirtyAtPick, dirtyNow: app.project.dirty, slow,
+    });
+    if (next === 'ignore') {
+      setStatus(`${file.name} arrived after something else was opened, so it was not opened. Open it again if you want it.`);
+      return;
+    }
+    if (next === 'ask' && !(await confirmDiscard())) return;
   }
   if (beforeOpen) beforeOpen();
   await loadProjectFile(file, handle);
@@ -2462,6 +2494,7 @@ async function openProjectFile({ beforeOpen = null } = {}) {
  * guards it the same way whichever door it came in by.
  */
 async function loadProjectFile(file, handle = null, { library = null, archive = null } = {}) {
+  openEpoch += 1;
   showProgress('Opening project…', 0, 1, file.name);
   try {
     // Only the header, the metadata and the page index are read here — about
@@ -2658,6 +2691,17 @@ async function saveProject({ saveAs = false } = {}) {
     }
   }
 
+  // The work goes into the draft store first. Composing a big project — a
+  // portal link's plan is downloaded sheet by sheet to do it — and handing it
+  // to the share sheet are exactly the moments a phone runs out of memory and
+  // reloads the tab; until now the last draft was from whenever the page was
+  // last hidden. It is the metadata only (measurements, markup, the project's
+  // fields — never a sheet), the same write a hidden page makes. It goes when
+  // the save is confirmed (afterSave), and stays when it is not. Its key is
+  // taken now: a Save As renames the project, and the draft written here
+  // must go with a confirmed save all the same.
+  const draftBefore = currentDraftKey();
+  await saveDraftNow();
   showProgress('Saving…', 0, app.pages.pageCount);
   try {
     const blob = await writeProject({
@@ -2666,6 +2710,9 @@ async function saveProject({ saveAs = false } = {}) {
       revisionSources: app.pages.saveRevisionSources(),
       onProgress: (done, total, label) => showProgress(label, done, total),
     });
+    let outcome = 'written';
+    let why = '';
+    let savedName = app.fileName || suggestedFileName();
     if (handle) {
       const w = await handle.createWritable();
       await w.write(blob);
@@ -2681,15 +2728,31 @@ async function saveProject({ saveAs = false } = {}) {
       // somebody else's; and a takeoff saved into the archive is one of its
       // plans from here on.
       await noteArchiveSave(handle, handle !== handleBefore);
+      savedName = app.fileName || suggestedFileName();
     } else {
-      const how = await downloadBlob(blob, suggestedFileName());
-      if (how === 'cancelled') { setStatus('Save cancelled.'); return; }
+      // The file leaves as a new one: under the name it was opened by, so
+      // Save to Files can put it back beside (or over) the plan it came from.
+      savedName = saveFileName({ openedName: app.fileName, projectName: app.project.metadata.project_name });
+      // The bar comes down first: a "Your file is ready" dialog may follow.
+      hideProgress();
+      ({ outcome, why } = await deliverBlob(blob, savedName));
     }
-    app.project.markSaved();
-    syncTitle();
-    await dropDraft(draftKey(app.fileName || suggestedFileName(),
-                             app.fileSize || 0));
-    setStatus(`Saved ${app.fileName || suggestedFileName()}`);
+    // Saved, and the draft dropped, ONLY when the save is known to have
+    // happened. A download on an iPad is not known to have: the project
+    // stays unsaved and the draft written above stays (js/core/save-route.js).
+    const next = afterSave(outcome, { name: savedName, why, standalone: isStandalone(window) });
+    if (next.markSaved) {
+      app.project.markSaved();
+      syncTitle();
+    }
+    if (next.dropDraft) {
+      const key = currentDraftKey();
+      await dropDraft(key);
+      if (draftBefore !== key) await dropDraft(draftBefore);
+    }
+    setStatus(next.status);
+    // An unconfirmed download is said where it stays on screen.
+    if (next.tell) await D.alertDialog('Download started', next.status);
   } catch (err) {
     await D.alertDialog('Could not save', err.message);
   } finally {
@@ -2989,31 +3052,86 @@ function suggestedFileName() {
 }
 
 /**
- * Hand the finished project back to the user.
+ * Hand the finished project back to the user. Resolves { outcome, why } —
+ * what really happened, for afterSave (js/core/save-route.js) to judge.
  *
  * On a phone this is the ONLY save — there are no writable file handles in
  * Safari — so it has to actually work there. Two problems with a plain
  * <a download>: iOS puts the file in Downloads with no say in where it goes,
- * and inside an installed home-screen app the anchor has historically done
- * nothing at all, silently.
+ * and nothing tells the page whether it happened at all — inside an
+ * installed home-screen app the anchor has historically done nothing,
+ * silently.
  *
  * So where the browser can share a file, share it: iOS then offers Files,
- * Drive, Mail, AirDrop — the estimator picks where the job goes, and it
- * works the same installed or not. The anchor stays as the fallback, and is
- * still the whole story on a desktop.
+ * Drive, Mail, AirDrop — the estimator picks where the job goes, it works
+ * the same installed or not, and share() resolving says it went. But only
+ * up to SHARE_CAP_BYTES (WebKit reads the whole file into memory first), and
+ * only from a live tap: a save that took longer than the browser lets a tap
+ * count gets "Your file is ready" and its own Save button (askFileReady). The
+ * anchor is the way out past the cap and the fallback when the sheet cannot
+ * take the file — and is still the whole story on a desktop, where a
+ * download is the save.
  */
-async function downloadBlob(blob, name) {
+function deliverBlob(blob, name) {
   const file = new File([blob], name, { type: 'application/octet-stream' });
-  if (navigator.canShare?.({ files: [file] }) && navigator.share) {
-    try {
-      await navigator.share({ files: [file], title: name });
-      return 'shared';
-    } catch (err) {
-      // The user dismissing the sheet is an answer, not a failure.
-      if (err && err.name === 'AbortError') return 'cancelled';
-      // Anything else: fall through and try the ordinary download.
-    }
-  }
+  const share = () => navigator.share({ files: [file], title: name });
+  return deliverFile({ size: blob.size }, {
+    canShare: () => {
+      try { return typeof navigator.share === 'function' && !!navigator.canShare?.({ files: [file] }); } catch { return false; }
+    },
+    activation: () => (navigator.userActivation ? !!navigator.userActivation.isActive : null),
+    share,
+    ask: () => askFileReady(name, blob.size, share),
+    download: () => startDownload(blob, name),
+    touch: handheld,
+    standalone: isStandalone(window),
+  });
+}
+
+/**
+ * "Your file is ready": the save took long enough that the tap which started
+ * it no longer counts, and the share sheet opens only from a tap. This
+ * dialog's Save button is that tap — share() is called INSIDE its click, not
+ * after the dialog has closed, and its promise is handed back with when it
+ * started. Resolves that, 'download' (Download instead), or null (Cancel).
+ */
+function askFileReady(name, size, share) {
+  return D.showDialog(close => {
+    const body = D.el('div');
+    body.style.cssText = 'font-size:12.5px;line-height:1.6;white-space:pre-line';
+    body.textContent = `${name} (${sizeText(size)}) is ready.\n\n`
+      + 'Tap Save, then choose “Save to Files” in the list that opens — the Files app '
+      + 'can put it in OneDrive, beside the plan it came from.';
+    const save = D.button('Save', 'primary', () => {
+      let started;
+      try { started = share(); } catch (err) { started = Promise.reject(err); }
+      // Settled here, so a rejection waiting for deliverFile is never "unhandled".
+      started.catch(() => {});
+      close({ share: started, at: Date.now() });
+    });
+    return D.dlg({
+      title: 'Your file is ready',
+      body,
+      buttons: [
+        D.button('Cancel', '', () => close(null)),
+        D.button('Download instead', '', () => close('download')),
+        save,
+      ],
+    });
+  });
+}
+
+/** The download that is still in hand, so the next one can let it go. */
+let pendingDownload = null;
+
+/**
+ * Start an <a download> of the project. The browser streams it from the
+ * parts it is made of, so it works at any size. Its blob: address is kept
+ * for a while — on a phone Safari may ask "Download?" first, and the address
+ * must outlive that question (downloadUrlKeepMs).
+ */
+function startDownload(blob, name) {
+  if (pendingDownload) pendingDownload.release();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -3021,8 +3139,16 @@ async function downloadBlob(blob, name) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-  return 'downloaded';
+  let timer = 0;
+  const me = {
+    release: () => {
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+      if (pendingDownload === me) pendingDownload = null;
+    },
+  };
+  pendingDownload = me;
+  timer = setTimeout(me.release, downloadUrlKeepMs({ touch: handheld }));
 }
 
 /**
@@ -3038,8 +3164,26 @@ async function downloadBlob(blob, name) {
  *
  * It also has to be called inside the user's click, not after an await — see
  * openProjectFile.
+ *
+ * And one that is iOS: what settles it is `change` (a file) or `cancel` (no
+ * file) — never a guess from the window's focus coming back. iOS hands the
+ * page a picked document only once it has copied the whole of it into the
+ * browser, and a plan in the OneDrive app that is not on the iPad yet is
+ * downloaded first: minutes, for a big one, with the page in front again
+ * meanwhile. The old 8-second "focus came back, nothing yet" rule called that
+ * a cancel and threw the file away when it came. Now the long wait is only
+ * said (`onSlow`, after the same 8 seconds) and the file opens when it
+ * arrives; the caller decides then whether it is still wanted (lateArrival).
+ * Every browser this app runs in (Safari 16.4+, Firefox 113+, Chrome) fires
+ * `cancel` on a dismissed picker. One that did not would leave this waiting
+ * — harmless, because the next pick settles it (`currentPick`), so a person
+ * tapping Open again is never stuck behind an old one.
  */
-function pickFileFallback(accept, multiple = false) {
+let currentPick = null;
+
+function pickFileFallback(accept, multiple = false, { onSlow = null } = {}) {
+  // A new pick replaces any still waiting: only the newest one opens.
+  if (currentPick) currentPick.abandon();
   return new Promise(resolve => {
     const i = document.createElement('input');
     i.type = 'file';
@@ -3059,30 +3203,33 @@ function pickFileFallback(accept, multiple = false) {
     document.body.appendChild(i);
 
     let settled = false;
+    const me = {};
     const done = value => {
       if (settled) return;
       settled = true;
+      if (currentPick === me) currentPick = null;
       i.remove();
       resolve(value);
     };
+    me.abandon = () => done(multiple ? [] : null);
+    currentPick = me;
 
     i.addEventListener('change', () => {
       done(multiple ? [...i.files] : i.files[0] || null);
     });
-    // Chrome and Firefox 91+ fire this on dismiss.
+    // Chrome 113+, Firefox 91+ and Safari 16.4+ (iPadOS too) fire this on dismiss.
     i.addEventListener('cancel', () => done(multiple ? [] : null));
-    // Everything else: the window regains focus with no files chosen. But
-    // iOS copies the picked document into the app sandbox BEFORE it fires
-    // `change`, and a project off iCloud or Google Drive can be hundreds of
-    // megabytes — focus comes back first and a single 400 ms check called it
-    // a cancel and threw the file away. Poll instead, and only give up when
-    // the whole window has passed with nothing there.
+    // The window has its focus back and still no file: on an iPad that is a
+    // file being copied in, not a cancel (see above). Say so, keep waiting.
     window.addEventListener('focus', () => {
       const deadline = Date.now() + 8000;
       const tick = () => {
         if (settled) return;
         if (i.files && i.files.length) return;      // `change` will settle it
-        if (Date.now() >= deadline) { done(multiple ? [] : null); return; }
+        if (Date.now() >= deadline) {
+          if (onSlow) { try { onSlow(); } catch { /* words only */ } }
+          return;
+        }
         setTimeout(tick, 250);
       };
       setTimeout(tick, 400);
@@ -3403,6 +3550,8 @@ function reportActionError(act, err) {
 
 /** Tear the open project down and start clean. */
 function newProject() {
+  // A file still on its way from the picker is for the project that was open.
+  openEpoch += 1;
   // A dialog left open over a project that no longer exists would write its
   // result into the new one.
   D.closeAllDialogs();
@@ -3498,14 +3647,28 @@ async function runAction(act) {
     case 'keep-on-device': await keepOnDevice(); break;
     case 'import-pdf': {
       // The picker is opened first, before anything that could await, so the
-      // click's user activation is still live when it runs.
-      const f = await pickFileFallback('.pdf,application/pdf');
+      // click's user activation is still live when it runs. A PDF that comes
+      // late is still taken — importPdfFile asks about unsaved changes
+      // itself — unless another project was opened while it was on its way.
+      const epoch = openEpoch;
+      const f = await pickFileFallback('.pdf,application/pdf', false, { onSlow: () => setStatus(STILL_COMING) });
+      if (f && lateArrival({ epochAtPick: epoch, epochNow: openEpoch }) === 'ignore') {
+        setStatus(`${f.name} arrived after something else was opened, so it was not imported.`);
+        break;
+      }
       if (f) await importPdfFile(f);
       break;
     }
     case 'import-more': {
       if (!app.pages.pageCount) return;
-      const f = await pickFileFallback('.pdf,application/pdf');
+      // Sheets for THIS project: if another one is open by the time the PDF
+      // arrives, they are not put into that one.
+      const epoch = openEpoch;
+      const f = await pickFileFallback('.pdf,application/pdf', false, { onSlow: () => setStatus(STILL_COMING) });
+      if (f && lateArrival({ epochAtPick: epoch, epochNow: openEpoch }) === 'ignore') {
+        setStatus(`${f.name} arrived after another project was opened, so its sheets were not added.`);
+        break;
+      }
       if (f) await importPdfFile(f, { intoOpen: true });
       break;
     }

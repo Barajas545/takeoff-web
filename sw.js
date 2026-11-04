@@ -58,6 +58,7 @@ const PROGRAM = [
   'js/core/project.js',
   'js/core/remote-file.js',
   'js/core/revisions.js',
+  'js/core/save-route.js',
   'js/core/scratch.js',
   'js/core/takeoff-file.js',
   'js/core/units.js',
