@@ -410,6 +410,74 @@ for (const [state, why] of [['refused', 'Not a plan the portal handed over.'], [
     Object.assign(globalThis, real);
   }
 }
+// Time the page spends hidden is not counted. Switching apps while the portal spools a big plan suspends the
+// portal's page and this frame together; on the way back this page's timer is overdue at once — and once
+// ended the wait with "not saved" a moment before the portal's 'kept', which then went unheard while the
+// portal sent the file anyway. A made-up document says whether the page is in front.
+function fakeDoc(state = 'visible') {
+  const fns = new Set();
+  return {
+    get visibilityState() { return state; },
+    addEventListener: (type, fn) => { if (type === 'visibilitychange') fns.add(fn); },
+    removeEventListener: (type, fn) => { if (type === 'visibilitychange') fns.delete(fn); },
+    set(s) { state = s; for (const fn of [...fns]) fn(); },
+    listeners: () => fns.size,
+  };
+}
+{
+  // hidden at 10 s, away for three minutes (the wait comes due while hidden), back, then the portal's 'kept'
+  const w = world();
+  const doc = fakeDoc();
+  const p = watch(askPortalToKeep({ peer: PEER, ...SAVE }, { ...w.env, doc }));
+  w.c.advance(10 * 1000);
+  doc.set('hidden');
+  w.c.advance(180 * 1000);
+  doc.set('visible');
+  w.c.advance(5 * 1000);
+  await tick();
+  eq('hidden past the 2 minutes, then back: still waiting (the portal was put away too)', settledAs, null);
+  w.say('kept');
+  eq('… and the portal\'s "kept" is heard: saved', (await p).ending, 'kept');
+  eq('… the page\'s visibility no longer watched', doc.listeners(), 0);
+}
+{
+  // suspended with the frame: no timer runs while away, and the overdue one fires the moment the page is back
+  const w = world();
+  const doc = fakeDoc();
+  const p = watch(askPortalToKeep({ peer: PEER, ...SAVE }, { ...w.env, doc }));
+  w.c.advance(10 * 1000);
+  doc.set('hidden');
+  doc.set('visible');                      // back — and the clock jumps past the window at once
+  w.c.advance(SAVE_WAIT_MS);
+  await tick();
+  eq('the wait comes due just after the page is back (hidden since the post): it starts again', settledAs, null);
+  w.c.advance(SAVE_WAIT_MS - 20 * 1000);
+  await tick();
+  eq('… for the whole window, not the rest of it', settledAs, null);
+  w.c.advance(20 * 1000);
+  const r = await p;
+  eq('… and a whole window in front with no answer is a timeout all the same', r.ending, 'timeout');
+  eq('… nothing left listening, ticking or watching', [w.handlers.size, w.c.pending(), doc.listeners()], [0, 0, 0]);
+}
+{
+  const w = world();
+  const doc = fakeDoc();
+  const p = watch(askPortalToKeep({ peer: PEER, ...SAVE }, { ...w.env, doc }));
+  w.c.advance(SAVE_WAIT_MS);
+  eq('never hidden: a timeout at 120 s, as ever', (await p).ending, 'timeout');
+  eq('… its watch gone too', doc.listeners(), 0);
+}
+{
+  const w = world();
+  const doc = fakeDoc('hidden');
+  const p = watch(askPortalToKeep({ peer: PEER, ...SAVE }, { ...w.env, doc }));
+  w.c.advance(3 * SAVE_WAIT_MS);
+  await tick();
+  eq('a save posted from a hidden page waits while it stays hidden', settledAs, null);
+  w.say('refused', { why: 'Not allowed.' });
+  eq('… and still hears the portal\'s answer', (await p).ending, 'refused');
+  eq('… then stops watching', doc.listeners(), 0);
+}
 {
   // a computer's tab (the opener), pinned to the plan's address: the same rules
   const opener = { closed: false };

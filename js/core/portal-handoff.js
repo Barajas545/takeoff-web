@@ -285,7 +285,19 @@ export function saveStateFromMessage(d, nonce, req) {
  *           peerGone() → bool         the portal's window has closed
  *           onNews(news)              a later word about this save (SAVE_NEWS,
  *                                     or a 'failed' after 'kept'), never waited for
+ *           doc                       the document, for whether the page is in
+ *                                     front (default: the page's own; null: never hidden)
  *           waitMs, pollMs, origins, setTimeout/clearTimeout/setInterval/clearInterval
+ *
+ * Time the page spends hidden is not counted (as workerWriter's watchdog,
+ * js/core/device-plans.js). Switching apps while the portal spools a big plan
+ * suspends the portal's page and this frame together; this page's timer runs
+ * on a clock that kept going, so on the way back it is already overdue and
+ * would end the wait — "not saved" — a moment before the portal's 'kept'
+ * arrives, while the portal goes on to send the file. So a wait that comes
+ * due while the page is hidden, or after it has been hidden since the save
+ * was posted (or since the wait last started again), starts again from now,
+ * for the whole window.
  *
  * Resolves { ending, why, stop }:
  *   ending  'kept' — the portal has the bytes in its own storage: the ONE
@@ -309,6 +321,8 @@ export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env
   };
   const noop = () => {};
   const gone = () => { try { return !!(env.peerGone && env.peerGone()); } catch { return true; } };
+  const doc = 'doc' in env ? env.doc : (typeof document !== 'undefined' ? document : null);
+  const hiddenNow = () => { try { return !!doc && doc.visibilityState === 'hidden'; } catch { return false; } };
   const msg = saveMessage({ nonce, req, name, size, file });
   // Exactly one address: the one the plan came from (an opener's is pinned
   // only once the plan has come; before that it could be any portal address).
@@ -322,11 +336,26 @@ export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env
     let unlisten = noop;
     let timer = 0;
     let poll = 0;
+    let wasHidden = hiddenNow();          // hidden at any moment since the wait (last) started
+    const onVisibility = () => { if (hiddenNow()) wasHidden = true; };
+    let unwatch = noop;
+    try {
+      if (doc && typeof doc.addEventListener === 'function') {
+        doc.addEventListener('visibilitychange', onVisibility);
+        unwatch = () => doc.removeEventListener('visibilitychange', onVisibility);
+      }
+    } catch { /* counted as always in front */ }
+    const quiet = () => {
+      const w = unwatch;
+      unwatch = noop;
+      try { w(); } catch { /* gone with the page */ }
+    };
     const stop = () => {
       const u = unlisten;
       unlisten = noop;
       T.clearTimeout(timer);
       T.clearInterval(poll);
+      quiet();
       try { u(); } catch { /* already gone */ }
     };
     const end = (ending, why = '') => {
@@ -334,8 +363,20 @@ export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env
       settled = true;
       T.clearTimeout(timer);
       T.clearInterval(poll);
+      quiet();
       if (ending !== 'kept') stop();
       resolve({ ending, why, stop });
+    };
+    const waitMs = Number(env.waitMs) > 0 ? Number(env.waitMs) : SAVE_WAIT_MS;
+    const due = () => {
+      if (settled) return;
+      if (hiddenNow() || wasHidden) {
+        // Put away meanwhile: the portal was too. Wait again, from now.
+        wasHidden = hiddenNow();
+        timer = T.setTimeout(due, waitMs);
+        return;
+      }
+      end('timeout');
     };
     const heard = ev => {
       if (!fromPeer(ev, peer, env.origins)) return;
@@ -350,7 +391,7 @@ export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env
       if (settled && (s.state === 'sent' || s.state === 'copy' || s.state === 'failed')) stop();
     };
     try { unlisten = env.listen(heard) || noop; } catch { end('not-sent'); return; }
-    timer = T.setTimeout(() => end('timeout'), Number(env.waitMs) > 0 ? Number(env.waitMs) : SAVE_WAIT_MS);
+    timer = T.setTimeout(due, waitMs);
     poll = T.setInterval(() => { if (gone()) end('gone'); }, Number(env.pollMs) > 0 ? Number(env.pollMs) : 2000);
     try { env.post(peer.win, msg, targets[0]); } catch { end(gone() ? 'gone' : 'not-sent'); }
   });
