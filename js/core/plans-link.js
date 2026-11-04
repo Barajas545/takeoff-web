@@ -22,8 +22,17 @@ import { canPickFolders, parseProjectCode, projectCodeOf } from './plans-folder.
 /** Said when a link's number is not a project number (the wording the app has always used). */
 export const INVALID_LINK = 'That link did not name a project number — showing the whole Plans Archive.';
 
-export const HANDHELD_HINT = 'Pick the plan from the Plans Archive in the OneDrive app. '
-  + 'Then File › Keep on This Device keeps it here for next time.';
+/**
+ * Under a phone's or a tablet's "Open a .takeoff project". What exists, and no
+ * more: the file is picked in the Files app (where the OneDrive app's files
+ * are), Keep on This Device keeps it, the portal's 📐 menu opens plans for the
+ * people who see prices — in Safari only, since its home-screen icon cannot
+ * hand a plan over — and Save is a new file through the share sheet.
+ */
+export const HANDHELD_HINT = 'Pick the plan from the Plans Archive in the Files app (the OneDrive app’s files). '
+  + 'Then File › Keep on This Device keeps it here for next time. If you see prices in the portal, '
+  + '📐 on the project opens its plans too — with the portal in Safari, not from its home-screen icon. '
+  + 'Save gives you a new file through the share sheet: choose Save to Files.';
 export const COMPUTER_HINT = 'Pick the plan from the Plans Archive folder in your OneDrive.';
 
 // ── which device ──────────────────────────────────────────────────────────

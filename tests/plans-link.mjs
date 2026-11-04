@@ -241,7 +241,12 @@ eq('… the computer\'s hint, no invalid note', [desk.openHint, desk.invalidNote
 const phone = linkPanelModel({ code: 'A274', handheld: true, ...both, pageHref: SITE });
 eq('a phone: the same plans, no Copy link, no "use Edge"', [phone.title, phone.count, phone.href, phone.browserNote], ['Plans for A274', 3, '', '']);
 eq('… and where to pick the plan', phone.openHint, HANDHELD_HINT);
-ok('… the OneDrive app, then Keep on This Device', /OneDrive app/.test(HANDHELD_HINT) && /File › Keep on This Device/.test(HANDHELD_HINT));
+ok('… the OneDrive app\'s files in the Files app, then Keep on This Device',
+  /Files app/.test(HANDHELD_HINT) && /OneDrive app/.test(HANDHELD_HINT) && /File › Keep on This Device/.test(HANDHELD_HINT));
+ok('… the portal\'s 📐 menu, in Safari, for the people who see prices',
+  /📐/.test(HANDHELD_HINT) && /Safari/.test(HANDHELD_HINT) && /see prices/.test(HANDHELD_HINT));
+ok('… and what Save really does there: a new file through the share sheet',
+  /share sheet/.test(HANDHELD_HINT) && /Save to Files/.test(HANDHELD_HINT));
 
 const bare = linkPanelModel({ code: '', handheld: false, ...both, pageHref: SITE });
 eq('a bare #plans: the Plans Archive, every plan on the device, its own link',

@@ -4628,8 +4628,8 @@ function renewerFor(r) {
 /** Said when a hand-over brought nothing: a reload of a used tab, a tab
  *  opened without its opener (an iPhone or iPad home-screen app opens other
  *  sites that way), or a portal page that went away before it answered. */
-const NOTHING_FROM_PORTAL = 'Nothing came from the portal — open the plan again from the portal (Search, or its Plans Library). '
-  + 'On an iPhone or iPad, open the portal in Safari rather than from its home-screen icon.';
+const NOTHING_FROM_PORTAL = 'Nothing came from the portal — open the plan again there: 📐 on the project, or its Plans Library. '
+  + 'On an iPhone or iPad that works only with the portal open in Safari: its home-screen icon cannot hand a plan over.';
 
 /** While a hand-over is waiting for its plan, a new version of this app must
  *  not reload the page under it (reloadForUpdateIfIdle). */
@@ -4701,7 +4701,12 @@ async function receiveFromPortal(nonce) {
     if (opened) {
       setStatus(plan.updateAvailable
         ? 'Opened the copy saved on this device — a newer version is in the Plans Archive; the portal downloads it while it is open.'
-        : 'Opened the copy saved on this device (the portal\'s Plans Library). Save goes to Save As.');
+        : 'Opened the copy saved on this device (the portal\'s Plans Library). '
+          + (canUseFsApi
+            ? 'Save goes to Save As.'
+            : handheld
+              ? 'Save gives you a new file through the share sheet (Save to Files); the portal\'s copy is not changed.'
+              : 'Save downloads a new copy; the portal\'s copy is not changed.'));
     }
     return;
   }
@@ -5248,9 +5253,14 @@ const HANDOFF = PORTAL_HANDOFF ? null : /(?:^|[#&])open=([^&]+)/.exec(location.h
 // Plans Archive or one job's plans in it. A project number is no credential,
 // so unlike a handoff it may travel in the address.
 const PLANS_LINK = HANDOFF || PORTAL_HANDOFF ? null : parsePlansLink(location.hash || '');
+// On an iPad (or a phone) what Save does is said plainly: a new file, through
+// the share sheet, never the plan in OneDrive itself.
 const IDLE_STATUS = canUseFsApi
   ? 'Open a .takeoff project, or start from a PDF.'
-  : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.';
+  : handheld
+    ? 'Open a .takeoff project, or start from a PDF.  ·  Save gives you a new file through the share sheet — '
+      + 'choose Save to Files; it cannot write back into the plan you opened.'
+    : 'Open a .takeoff project, or start from a PDF.  ·  Save downloads a copy here — this browser cannot write back to the original file.';
 if (PORTAL_HANDOFF) {
   // Consumed: a reload must not wait for a plan that already came.
   try { history.replaceState(null, '', location.pathname + location.search); } catch { /* cosmetic */ }
