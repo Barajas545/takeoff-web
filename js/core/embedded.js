@@ -19,6 +19,12 @@
  *     no Keep on This Device (a copy the portal could not account for), and
  *     not the OLD portal's Plans Library list (another site's names: never
  *     this one's) — PLANS_SOURCE behaves as 'sharepoint', the portal's way;
+ *   · no File › Recent, and nothing noted for it: a list of the names of
+ *     plans gated by prices, on the portal's site, would outlive the
+ *     person's prices (the portal's purge clears this app's drafts and kept
+ *     copies; Recent could only offer the file picker there anyway);
+ *   · a draft of a plan the portal handed over is offered back, never
+ *     dropped because the file is dated later (draftFate in save-route.js);
  *   · Save hands the saved project back to the portal when it said it would
  *     take one (canSave), else does what it does on any phone (a new file
  *     through the share sheet or a download);
@@ -96,12 +102,18 @@ export const EMBEDDED_NOTHING = 'Nothing came from the portal — close this and
   + 'or its Plans Library.';
 
 /**
- * A plan the portal will NOT take a save of (opened over the internet, or
- * without its say-so): on a phone or a tablet, how its work does get to
- * OneDrive — and what Save does meanwhile (HANDHELD_SAVE).
+ * A plan opened over the internet inside the portal (its Plans Library had
+ * no room to keep it on the device, C3): it is never handed back, and how
+ * its work may yet reach OneDrive — only where the portal lets this person
+ * save plans back (its switch on, and admin or Sees prices with "Can upload
+ * to OneDrive"), which this page cannot know, so it is said as an "if" —
+ * then what Save does here (HANDHELD_SAVE). Said inside the portal only: a
+ * tab of its own is never offered a save, whatever it reopens.
  */
-export const TO_ONEDRIVE_HINT = 'To save to OneDrive, open the plan from the 📐 menu after it is saved on this device.';
-export const NO_SAVE_BACK = `${TO_ONEDRIVE_HINT} Until then: ${HANDHELD_SAVE}`;
+export const TO_ONEDRIVE_HINT = 'A plan opened over the internet is not saved back to OneDrive from here. '
+  + 'If the portal lets you save plans back, open it again from 📐 when this device has room to keep it: '
+  + 'Save then hands it to the portal.';
+export const NO_SAVE_BACK = `${TO_ONEDRIVE_HINT} ${HANDHELD_SAVE}`;
 
 /** The fallback offered beside a save the portal did not keep: P1's share sheet or download, under its own name. */
 export const COPY_TO_FILES = 'Save a copy to Files';

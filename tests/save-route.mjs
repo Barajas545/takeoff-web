@@ -616,8 +616,10 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
   ok('… a fresh link and "offline" go to that peer too', /portalRenewer\(pinned, nonce\)/.test(recv) && /tellPortalOffline\(pinned, nonce\)/.test(recv)
     && /if \(!fromPeer\(ev, peer\)\) return;/.test(body('portalRenewer')));
   ok('main.js never reaches for window.opener itself, and never posts to "*"', !/window\.opener/.test(main) && !/postMessage\([^)]*['"]\*['"]/.test(main));
-  ok('a plan over the internet on a phone is told how its work reaches OneDrive', /portalLinkOpen\(\)\) words \+= ` \$\{TO_ONEDRIVE_HINT\}`/.test(save)
-    && /Opened \$\{plan\.name\} from OneDrive, over the internet\. \$\{NO_SAVE_BACK\}/.test(recv));
+  ok('a plan over the internet inside the portal is told how its work may reach OneDrive — inside the portal only (review fix)',
+    /else if \(!toPortal && embedded && moved === 'same' && portalLinkOpen\(\)\) words \+= ` \$\{TO_ONEDRIVE_HINT\}`/.test(save)
+    && /if \(embedded\) setStatus\(`Opened \$\{plan\.name\} from OneDrive, over the internet\. \$\{NO_SAVE_BACK\}`\);/.test(recv)
+    && !/handheld\)? ?setStatus\(`Opened \$\{plan\.name\} from OneDrive/.test(recv));
   // Review fix: a draft of a plan the portal handed over is never dropped by the file's date.
   const restore = body('offerDraftRestore');
   ok('offerDraftRestore judges a draft by draftFate, by the date only when the plan is not the portal\'s',

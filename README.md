@@ -89,9 +89,10 @@ someone chooses otherwise for their own device in *Settings › Plan files*.
 
 On a phone or a tablet the browser cannot open a folder: use *Open a .takeoff
 project* and pick the file in the Files app (the OneDrive app's files) — or,
-for the people who see prices, open it from the portal's 📐 menu: on an iPhone
-or iPad the portal opens the takeoff tool inside itself (see *Inside the
-portal* below), from its home-screen icon too. Save there
+for the people who see prices, open it from the portal's 📐 menu. On an iPhone
+or iPad, if the portal asks for Safari, open the portal in Safari and use 📐
+again: a portal that opens the takeoff tool inside itself (see *Inside the
+portal* below) never asks, from its home-screen icon too. Save there
 gives back a new file under the name it was opened by: through the share sheet
 (*Save to Files*) up to 150 MB, and as a download into *Files › Downloads*
 above that (an app opened from the home-screen icon, which may not download,
@@ -126,8 +127,16 @@ is marked saved only once the portal answers that it has the file in its own
 storage — the portal then sends it to OneDrive. If it refuses, has no room, or
 does not answer within two minutes, the work stays unsaved and kept on the
 device, the app says so, and offers *Save a copy to Files* instead. A plan
-opened over the internet is never handed back: to save one to OneDrive, open
-it from the 📐 menu after it is saved on the device. The page has no inline
+opened over the internet (the portal had no room to keep it on the device) is
+never handed back; where the portal lets the person save plans back, opening
+it again from the 📐 menu once there is room keeps it on the device, and its
+Save then goes to the portal. Inside the portal the app notes no recent files
+(a list of plan names on the portal's site would outlive the person's prices),
+and a draft of a plan the portal handed over is offered back, never dropped
+because the file is newer: the portal dates a plan it sent by OneDrive's
+upload, after work done since the save. A separate copy the portal made of a
+save (`<plan> - iPad <date> <time>.takeoff`) offers back the work drafted
+under the plan it was saved from. The page has no inline
 script (the portal holds its copy to a strict page policy): the layout is set
 before the first paint by `js/ui-mode-boot.js`.
 

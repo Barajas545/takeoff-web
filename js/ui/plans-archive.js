@@ -37,8 +37,8 @@ import { EMBEDDED_PLANS, EMBEDDED_NO_ARCHIVE } from '../core/embedded.js';
 // it does get a plan, and what its Save really does (HANDHELD_SAVE: a new
 // file, through the share sheet only up to its cap, a download above it, and
 // what replacing the plan in Files would do). Only what exists is promised:
-// the portal's 📐 menu opens plans for the people who see prices, and on an
-// iPhone or iPad it opens this app inside the portal (FROM_THE_PORTAL).
+// the portal's 📐 menu opens plans for the people who see prices, with the
+// portal in Safari when it asks for that (FROM_THE_PORTAL).
 const UNSUPPORTED_COMPUTER =
   'Opening plans from a folder needs Chrome or Edge on a computer. In this '
   + 'browser, use “Open a .takeoff project” and pick the plan file in your '

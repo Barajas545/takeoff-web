@@ -24,15 +24,24 @@ import { HANDHELD_SAVE, REPLACE_WARNING } from './save-route.js';
 export const INVALID_LINK = 'That link did not name a project number — showing the whole Plans Archive.';
 
 /**
+ * What an iPhone or iPad does when the portal asks for Safari. Once the
+ * portal opens this app INSIDE itself on a phone or a tablet (its own copy,
+ * in a frame over its page — from its home-screen icon too), it never asks.
+ * Before that is live, and whenever its switch for the frame is off, its
+ * home-screen app cannot hand a plan over and it says to open the portal in
+ * Safari, which works. This page cannot tell which the portal does today, so
+ * the words hold either way.
+ */
+export const PORTAL_SAFARI_IF_ASKED = 'On an iPhone or iPad, if the portal asks you to open it in Safari, do that and use 📐 again.';
+
+/**
  * Where a phone or a tablet gets its plans, before anything else is said:
  * the DCR Portal, for the people who see prices there (a crew without prices
- * would be sent round in a loop: their 📐 leads back here). On an iPhone or
- * iPad the portal opens this app INSIDE itself (its own copy, in a frame
- * over its page — from its home-screen icon too), which is the one way a
- * plan saved on the device reaches it there.
+ * would be sent round in a loop: their 📐 leads back here) — with Safari
+ * only when the portal asks for it (PORTAL_SAFARI_IF_ASKED).
  */
-export const FROM_THE_PORTAL = 'Plans come from the DCR Portal: if you see prices there, use 📐 on the project — '
-  + 'on an iPhone or iPad the takeoff tool opens inside the portal.';
+export const FROM_THE_PORTAL = 'Plans come from the DCR Portal: if you see prices there, use 📐 on the project. '
+  + PORTAL_SAFARI_IF_ASKED;
 
 /**
  * Under a phone's or a tablet's "Open a .takeoff project". What exists, and no

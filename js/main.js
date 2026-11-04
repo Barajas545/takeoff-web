@@ -17,7 +17,7 @@ import {
   libraryOwner, portalCopies, keptCopies, keepFile, keptFile, removeKept, removePortalCopy, sizeText,
   keepWriterFor, workerWriter, CANNOT_KEEP, sweepKept,
 } from './core/device-plans.js';
-import { openAfterAsking, isPhoneOrTablet, deviceWord } from './core/plans-link.js';
+import { openAfterAsking, isPhoneOrTablet, deviceWord, PORTAL_SAFARI_IF_ASKED } from './core/plans-link.js';
 import {
   deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
   savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
@@ -2619,7 +2619,8 @@ async function loadProjectFile(file, handle = null, { library = null, archive = 
     syncVersionUi({ rebuild: true });
     app.project.markSaved();
     // Not a library copy: Recent can only offer the OS file picker, and that
-    // cannot see the browser's private storage the copy lives in.
+    // cannot see the browser's private storage the copy lives in. Nor inside
+    // the portal (noteRecent).
     if (!library) noteRecent(file);
     if (handle && !archive) await adoptIfInArchive(handle, file);
     syncTitle();
@@ -2918,7 +2919,7 @@ async function saveProjectOnce({ saveAs = false } = {}) {
     // OneDrive (it is never handed back from here).
     let words = next.status;
     if (copied && next.confirmed) words += ' The plan in the portal is not changed.';
-    else if (!toPortal && handheld && moved === 'same' && portalLinkOpen()) words += ` ${TO_ONEDRIVE_HINT}`;
+    else if (!toPortal && embedded && moved === 'same' && portalLinkOpen()) words += ` ${TO_ONEDRIVE_HINT}`;
     setStatus(words);
     // An unconfirmed download is said where it stays on screen — unless the
     // dialog that offered the share sheet beside it already said it.
@@ -4399,6 +4400,11 @@ async function openProjectInfo() {
 const RECENT_KEY = 'ptt.recent.v1';
 
 function noteRecent(file) {
+  // Inside the portal nothing is noted: its plans are gated by prices, and a
+  // list of their names on the portal's site would outlive that (the portal's
+  // purge on lost prices clears this app's drafts and kept copies, not this).
+  // Recent could only offer the file picker there anyway; it is not shown.
+  if (embedded) return;
   try {
     const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
     const entry = {
@@ -4804,7 +4810,7 @@ wireMenus();
 // Inside the portal its Plans Library keeps the plans: this app's own doors
 // to a folder and to a copy of its own are not offered (js/core/embedded.js).
 if (embedded) {
-  for (const act of ['plans-archive', 'keep-on-device']) {
+  for (const act of ['plans-archive', 'keep-on-device', 'recent']) {
     for (const b of document.querySelectorAll(`[data-act="${act}"]`)) b.hidden = true;
   }
 }
@@ -4914,11 +4920,13 @@ function renewerFor(r) {
 // ── handed over by Portal 2 (another site, or the portal's own copy of this app) ──
 /** Said when a hand-over brought nothing: a reload of a used tab, a tab
  *  opened without its opener, or a portal page that went away before it
- *  answered. On an iPhone or iPad the portal now opens this app inside
- *  itself (its own copy, in a frame), so nobody is sent to Safari any more;
- *  inside that frame the words are the portal's (EMBEDDED_NOTHING). */
+ *  answered. Words true whether the portal opens this app inside itself on
+ *  an iPhone or iPad (its own copy, in a frame) or not yet — or not now (its
+ *  switch for the frame off): then it asks for Safari itself, and Safari is
+ *  the way (PORTAL_SAFARI_IF_ASKED). Inside that frame the words are the
+ *  portal's (EMBEDDED_NOTHING). */
 const NOTHING_FROM_PORTAL = 'Nothing came from the portal — open the plan again there: 📐 on the project, or its Plans Library. '
-  + 'On an iPhone or iPad the portal opens the takeoff tool inside itself.';
+  + PORTAL_SAFARI_IF_ASKED;
 const nothingFromPortal = () => (embedded ? EMBEDDED_NOTHING : NOTHING_FROM_PORTAL);
 
 /** While a hand-over is waiting for its plan, a new version of this app must
@@ -5028,9 +5036,11 @@ async function receiveFromPortal(nonce) {
   }), null, { fromPortal: true });
   if (opened) {
     app.portal = { peer: pinned, nonce, kind: 'link', name: plan.name, canSave: false, hold: null, epoch: openEpoch };
-    // A plan opened over the internet is never handed back: on a phone or a
-    // tablet, the way its work does reach OneDrive is said now.
-    if (handheld) setStatus(`Opened ${plan.name} from OneDrive, over the internet. ${NO_SAVE_BACK}`);
+    // A plan opened over the internet is never handed back. Inside the
+    // portal, where a plan saved on the device can be, the way its work may
+    // reach OneDrive is said now (NO_SAVE_BACK: only where the portal lets
+    // this person save plans back). In a tab of its own nothing is promised.
+    if (embedded) setStatus(`Opened ${plan.name} from OneDrive, over the internet. ${NO_SAVE_BACK}`);
   }
 }
 

@@ -23,7 +23,7 @@ import {
 import { portalPeer } from '../js/core/portal-handoff.js';
 import { resolvePlansSource } from '../js/core/plans-folder.js';
 import { HANDHELD_SAVE } from '../js/core/save-route.js';
-import { FROM_THE_PORTAL, HANDHELD_HINT, deviceWord } from '../js/core/plans-link.js';
+import { FROM_THE_PORTAL, HANDHELD_HINT, PORTAL_SAFARI_IF_ASKED, deviceWord } from '../js/core/plans-link.js';
 import {
   PORTAL_INDEX_KEY, PORTAL_DIR, PORTAL_DB, PORTAL_TOKEN_KEY, OWNER_KEY, KEPT_INDEX_KEY, KEPT_DIR, OPEN_LOCK, WRITE_LOCK,
 } from '../js/core/device-plans.js';
@@ -109,18 +109,29 @@ for (const [name, words] of Object.entries({ EMBEDDED_PLANS, EMBEDDED_IDLE, EMBE
 }
 ok('Keep on This Device inside the portal: the Plans Library keeps plans (📐 › Save to this device)',
   /Plans Library/.test(EMBEDDED_NO_KEEP) && /Save to this device/.test(EMBEDDED_NO_KEEP));
-eq('a plan the portal does not take a save of: the words asked for', TO_ONEDRIVE_HINT,
-  'To save to OneDrive, open the plan from the 📐 menu after it is saved on this device.');
-ok('… with what Save does until then', NO_SAVE_BACK.startsWith(TO_ONEDRIVE_HINT) && NO_SAVE_BACK.includes(HANDHELD_SAVE));
+// Review fix: a way to OneDrive exists only where the portal lets this person save plans back (its switch on, and
+// admin or Sees prices with "Can upload to OneDrive"), and only for a plan it can keep on the device — a plan opened
+// over the internet inside the portal means it had no room. So the words say "if", and name the room.
+eq('a plan opened over the internet inside the portal: how its work may reach OneDrive, as an "if"', TO_ONEDRIVE_HINT,
+  'A plan opened over the internet is not saved back to OneDrive from here. '
+  + 'If the portal lets you save plans back, open it again from 📐 when this device has room to keep it: '
+  + 'Save then hands it to the portal.');
+ok('… never promised outright (the old words were)', !/^To save to OneDrive/.test(TO_ONEDRIVE_HINT) && /\bIf the portal lets you\b/.test(TO_ONEDRIVE_HINT));
+ok('… with what Save does here', NO_SAVE_BACK === `${TO_ONEDRIVE_HINT} ${HANDHELD_SAVE}`);
 eq('the fallback\'s button', COPY_TO_FILES, 'Save a copy to Files');
-// github.io on a phone or a tablet (not inside the portal): plans come from the DCR Portal, opened inside it on an iPhone or iPad
-ok('the handheld start screen says plans come from the DCR Portal, and the takeoff tool opens inside it on an iPhone or iPad',
+// github.io on a phone or a tablet (not inside the portal): plans come from the DCR Portal — with Safari only if the
+// portal asks (review fix: true before the portal's frame is live, and whenever its switch for it is off)
+ok('the handheld start screen says plans come from the DCR Portal, with Safari only when the portal asks for it',
   /Plans come from the DCR Portal/.test(FROM_THE_PORTAL) && /📐 on the project/.test(FROM_THE_PORTAL)
-  && /on an iPhone or iPad the takeoff tool opens inside the portal/.test(FROM_THE_PORTAL) && /see prices/.test(FROM_THE_PORTAL));
+  && FROM_THE_PORTAL.endsWith(PORTAL_SAFARI_IF_ASKED) && /see prices/.test(FROM_THE_PORTAL)
+  && !/opens inside the portal|inside itself/.test(FROM_THE_PORTAL));
+ok('… and so does "nothing came from the portal" in a tab of its own',
+  /const NOTHING_FROM_PORTAL = 'Nothing came from the portal[^']*'\s*\+ PORTAL_SAFARI_IF_ASKED;/.test(read('js/main.js'))
+  && !/On an iPhone or iPad the portal opens the takeoff tool inside itself/.test(read('js/main.js')));
 ok('… in the phone hint, still with what Save really does', HANDHELD_HINT.startsWith(FROM_THE_PORTAL) && HANDHELD_HINT.includes(HANDHELD_SAVE));
 const archiveUi = read('js/ui/plans-archive.js');
 ok('… and in the Plans Archive note on a phone', /\$\{FROM_THE_PORTAL\} Or use “Open a \.takeoff project”/.test(archiveUi));
-ok('nobody is sent to Safari for the 📐 menu any more', !/in Safari \(not from its home-screen icon\)/.test(archiveUi)
+ok('nobody is sent to Safari unasked any more (the old words that always did are gone)', !/in Safari \(not from its home-screen icon\)/.test(archiveUi)
   && !/with the portal in Safari/.test(read('js/core/plans-link.js')) && !/works only with the portal open in Safari/.test(read('js/main.js')));
 {
   const ua = (userAgent, maxTouchPoints = 0, mobile) => ({ navigator: { userAgent, maxTouchPoints, userAgentData: mobile === undefined ? undefined : { mobile } }, matchMedia: () => ({ matches: maxTouchPoints > 0 }) });
@@ -155,7 +166,11 @@ ok('plans come from the portal inside it (plansSourceFor)', /plansSourceFor\(\{\
 ok('no old-portal list inside it', /if \(embedded\) return \[\];/.test(body(main, 'libraryEntries')));
 ok('no kept copies listed, none swept', /if \(embedded\) return \[\];/.test(body(main, 'keptEntries')) && /if \(embedded \|\|/.test(body(main, 'sweepKeptLeftovers')));
 ok('no Keep on This Device: said, before anything is written', /^function keepOnDevice\(\) \{[\s\S]{0,400}if \(embedded\) \{ await D\.alertDialog\('Keep on This Device', EMBEDDED_NO_KEEP\); return; \}/.test(body(main, 'keepOnDevice')));
-ok('… and the menu does not offer it, nor the Plans Archive', /if \(embedded\) \{\s*for \(const act of \['plans-archive', 'keep-on-device'\]\)/.test(main));
+ok('… and the menu does not offer it, nor the Plans Archive, nor Recent', /if \(embedded\) \{\s*for \(const act of \['plans-archive', 'keep-on-device', 'recent'\]\)/.test(main));
+// Review fix: a plan opened over the internet inside the portal was noted by name in Recent (localStorage on the
+// portal's site), which the portal's purge on lost prices never clears.
+ok('nothing is noted in Recent inside the portal (names of plans gated by prices, on the portal\'s site)',
+  /^function noteRecent\(file\) \{[\s\S]{0,400}?\n  if \(embedded\) return;\n  try \{/.test(body(main, 'noteRecent')));
 ok('the idle words are the portal\'s', /const IDLE_STATUS = embedded\s*\?\s*EMBEDDED_IDLE/.test(main));
 ok('"nothing came" in the portal\'s words inside it', /const nothingFromPortal = \(\) => \(embedded \? EMBEDDED_NOTHING : NOTHING_FROM_PORTAL\);/.test(main));
 ok('the Plans Archive section says where plans come from, and reads no folders inside the portal',

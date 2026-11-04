@@ -12,7 +12,7 @@
 // Run: node tests/plans-link.mjs
 import {
   INVALID_LINK, HANDHELD_HINT, COMPUTER_HINT, isPhoneOrTablet, canOpenArchiveFolder, keptCode, portalCode,
-  plansForProject, plansLinkHref, copyText, linkPanelModel, openAfterAsking,
+  plansForProject, plansLinkHref, copyText, linkPanelModel, openAfterAsking, PORTAL_SAFARI_IF_ASKED,
 } from '../js/core/plans-link.js';
 import { parsePlansLink } from '../js/core/plans-folder.js';
 import {
@@ -243,11 +243,15 @@ eq('a phone: the same plans, no Copy link, no "use Edge"', [phone.title, phone.c
 eq('… and where to pick the plan', phone.openHint, HANDHELD_HINT);
 ok('… the OneDrive app\'s files in the Files app, then Keep on This Device',
   /Files app/.test(HANDHELD_HINT) && /OneDrive app/.test(HANDHELD_HINT) && /File › Keep on This Device/.test(HANDHELD_HINT));
-// On an iPhone or iPad the portal now opens this app inside itself (its own copy, in a frame), from its
-// home-screen icon too: nobody is sent to Safari for the 📐 menu any more.
-ok('… the DCR Portal\'s 📐 menu first, for the people who see prices, opening the tool inside the portal on an iPhone or iPad',
+// Review fix: these words are live on github.io whatever the portal does today. Once the portal opens this app
+// inside itself on an iPhone or iPad (its own copy, in a frame) it never asks for Safari; before that is live, and
+// whenever its switch for the frame is off, its home-screen app says to open the portal in Safari — which works.
+// So: Safari only when the portal asks, and no claim that the tool opens inside the portal.
+ok('… the DCR Portal\'s 📐 menu first, for the people who see prices — and Safari only if the portal asks for it',
   /^Plans come from the DCR Portal/.test(HANDHELD_HINT) && /📐/.test(HANDHELD_HINT) && /see prices/.test(HANDHELD_HINT)
-  && /on an iPhone or iPad the takeoff tool opens inside the portal/.test(HANDHELD_HINT) && !/Safari/.test(HANDHELD_HINT));
+  && HANDHELD_HINT.includes(PORTAL_SAFARI_IF_ASKED) && !/opens inside the portal|inside itself/.test(HANDHELD_HINT));
+eq('… in words true either way', PORTAL_SAFARI_IF_ASKED,
+  'On an iPhone or iPad, if the portal asks you to open it in Safari, do that and use 📐 again.');
 ok('… and what Save really does there: a new file through the share sheet',
   /share sheet/.test(HANDHELD_HINT) && /Save to Files/.test(HANDHELD_HINT));
 
