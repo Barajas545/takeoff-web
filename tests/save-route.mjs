@@ -277,6 +277,35 @@ eq('restorable from the file it was opened from, sheets as they were', draftHome
 eq('… not once sheets were added (import-more): the draft would be refused', draftHomeFor([P0], 14), '');
 eq('… not for a takeoff started from a PDF (no file at all)', draftHomeFor([], 12), '');
 eq('… from the file last saved, when that is the one with these sheets', draftHomeFor([P0, { name: 'P2.takeoff', size: 9, pages: 14 }], 14), 'P2.takeoff');
+// Review LW-5: a save handed to the portal whose "kept" came after the wait ran out and the frame was closed. The
+// portal keeps exactly the bytes posted, and hands that file over when the plan is reopened: work done after the
+// timeout must be found from it — so the file posted is a home from the moment it is posted (pending), not only once
+// a "kept" is heard by a page that may be gone by then.
+{
+  const S1 = { name: 'P.takeoff', size: 1400, pages: 12 };
+  const S2 = { name: 'P.takeoff', size: 1500, pages: 12 };
+  const S3 = { name: 'P.takeoff', size: 1600, pages: 12 };
+  const posted = nextDraftHomes([P0], S1, { pending: true });
+  eq('posted to the portal: the file it came from, and the posted one as a pending home', posted, [P0, { ...S1, pending: true }]);
+  // the wait runs out ("not saved"), the person carries on: the drafts go under every home (main.js draftKeysNow)
+  const keys = posted.map(h => draftKey(h.name, h.size));
+  ok('… so the work done after the timeout is drafted under the posted file too', keys.includes(draftKey(S1.name, S1.size)));
+  ok('… and found when the portal, having kept it after the frame closed, hands that file back', keys.includes(draftKey('P.takeoff', 1400)));
+  eq('… still found from the file it was opened from (the portal may yet have refused it)', keys[0], draftKey(P0.name, P0.size));
+  eq('kept after all (in time, or late and heard): the posted file is a home like any saved one', nextDraftHomes(posted, S1), [P0, S1]);
+  eq('the next save posted: the newest saved file stays a home (the portal holds it while this one may be refused)',
+    nextDraftHomes([P0, S1], S2, { pending: true }), [P0, S1, { ...S2, pending: true }]);
+  eq('… one pending home at a time, never a growing list (only the latest save handed over is heard)',
+    nextDraftHomes([P0, S1, { ...S2, pending: true }], S3, { pending: true }), [P0, S1, { ...S3, pending: true }]);
+  eq('… and a save confirmed after it leaves no pending one', nextDraftHomes([P0, S1, { ...S2, pending: true }], S3), [P0, S3]);
+  eq('a posted file the same as a saved one stays a saved home', nextDraftHomes([P0, S1], { ...S1 }, { pending: true }), [P0, S1]);
+  eq('the portal\'s "copy" news: the copy is the home, not the plan at the kept size (no file of that name holds it)',
+    nextDraftHomes(posted, { name: 'P - iPad 2026-11-04 1415.takeoff', size: 1400, pages: 12 }),
+    [P0, { name: 'P - iPad 2026-11-04 1415.takeoff', size: 1400, pages: 12 }]);
+  eq('a pending home is never the one a confirmed save keeps as "the file it came from"',
+    nextDraftHomes([{ ...S1, pending: true }], S2), [S2]);
+  eq('… and the words still name a home with these sheets', draftHomeFor(posted, 12), 'P.takeoff');
+}
 
 // ── a draft and the date of the file it is found for (review fix) ────────
 // The portal hands a plan over dated by the portal: after its send of a kept save, by OneDrive's upload. So work
@@ -776,6 +805,12 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
     /showPortalSaving\(name\);\s*portalSaving = true;/.test(hand) && /portalSaving = true;[\s\S]*await askPortalToKeep\([\s\S]*waitMs: SAVE_WAIT_MS[\s\S]*finally \{\s*portalSaving = false;/.test(hand)
     && /showProgress\(known \? `Saving to the portal… \$\{pct\}%` : 'Saving to the portal…', 0, 1, name\);/.test(body('showPortalSaving')));
   ok('… a fresh req for every save, the peer and nonce kept on app.portal', /req: newSaveReq\(\)/.test(hand) && /peer: p\.peer, nonce: p\.nonce/.test(hand));
+  {
+    const at = hand.indexOf('app.draftHomes = nextDraftHomes(app.draftHomes, { name, size: file.size, pages }, { pending: true });');
+    ok('… the file posted is a pending home of the drafts BEFORE it is posted, for the project the save is for (review LW-5)',
+      at > 0 && at < hand.indexOf('await askPortalToKeep(')
+      && /if \(epoch === openEpoch\) \{\s*app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size: file\.size, pages \}, \{ pending: true \}\);\s*\}/.test(hand));
+  }
   ok('… the news of the send only on the status line', /onNews: news => \{[\s\S]*portalNewsWords\(news[\s\S]*setStatus\(words\)/.test(hand));
   ok('… and only kept is a save', /if \(ending === 'kept'\) \{[\s\S]*return \{ outcome: 'kept', why: '', portalWhy: '', late: null \}/.test(hand)
     && /if \(ending !== 'timeout'\) return \{ outcome: 'not-kept', why: ending, portalWhy: why, late: null \};/.test(hand)

@@ -561,14 +561,27 @@ export function savedStill({ epochAtSave = 0, epochNow = 0, changesAtCompose, ch
  *             write through a handle: in place, or Save As to a new file the
  *             project carries on in); false for a share or a download, whose
  *             new file may sit anywhere, or beside the one it was opened from
+ *   pending   true for a file that is not known to hold the project yet: a
+ *             save handed to the portal, as it is posted (main.js
+ *             handToPortal). The portal keeps exactly those bytes, so that is
+ *             the file the plan is reopened as if it keeps them — even when
+ *             its 'kept' comes after this page has gone (the wait ran out and
+ *             the frame was closed: review LW-5). Nothing is dropped for it:
+ *             the save may yet be refused, and the newest saved file is still
+ *             the one the portal holds then.
  *
- * Kept: the one it was opened from (the first), and the newest saved one.
+ * Kept: the one it was opened from (the first), and the newest saved one —
+ * and, for a pending file, that file as well (`pending: true`), in place of
+ * any earlier pending one. A save that is confirmed leaves no pending file.
  */
-export function nextDraftHomes(homes = [], saved = null, { replaces = false } = {}) {
+export function nextDraftHomes(homes = [], saved = null, { replaces = false, pending = false } = {}) {
   const ok = h => h && typeof h.name === 'string' && h.name && Number(h.size) > 0;
   const key = h => `${h.name}|${Number(h.size)}`;
-  const list = replaces ? [] : (Array.isArray(homes) ? homes.filter(ok).slice(0, 1) : []);
-  if (ok(saved)) list.push({ name: saved.name, size: Number(saved.size), pages: Number(saved.pages) || 0 });
+  const held = replaces ? [] : (Array.isArray(homes) ? homes.filter(h => ok(h) && !h.pending) : []);
+  const list = pending ? [...held.slice(0, 1), ...held.slice(1).slice(-1)] : held.slice(0, 1);
+  if (ok(saved)) {
+    list.push({ name: saved.name, size: Number(saved.size), pages: Number(saved.pages) || 0, ...(pending ? { pending: true } : {}) });
+  }
   const seen = new Set();
   return list.filter(h => (seen.has(key(h)) ? false : (seen.add(key(h)), true)));
 }

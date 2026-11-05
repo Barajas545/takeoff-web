@@ -5080,8 +5080,9 @@ function portalLinkOpen() {
  *
  * While it waits the bar says so and no update may reload the page
  * (portalSaving). The portal may say it is at it — 'keeping', with how far
- * (it copies a big plan into its storage first) — and each word starts the
- * wait again; how far goes on the bar ("Saving to the portal… 45%").
+ * (it copies a big plan into its storage first) — and each one that got
+ * further starts the wait again; how far goes on the bar ("Saving to the
+ * portal… 45%").
  * After 'kept' the portal may say how its send to OneDrive goes; that is
  * shown on the status line, and nothing waits for it — except a 'copy' (the
  * plan changed in the office meanwhile, and the save was filed as a separate
@@ -5104,6 +5105,13 @@ async function handToPortal(blob, name, { pages = 0, epoch = openEpoch } = {}) {
   const after = { copy: false, said: '' };
   try {
     const file = new File([blob], name, { type: 'application/octet-stream' });
+    // If the portal keeps it, these very bytes are what reopening the plan
+    // hands over — also when its 'kept' comes after this page has gone (the
+    // wait ran out, then the frame was closed): so the drafts written from
+    // now on go under this file too (a pending home: review LW-5).
+    if (epoch === openEpoch) {
+      app.draftHomes = nextDraftHomes(app.draftHomes, { name, size: file.size, pages }, { pending: true });
+    }
     const { ending, why, stop, late } = await askPortalToKeep({
       peer: p.peer, nonce: p.nonce, req: newSaveReq(), name, size: file.size, file,
     }, {
