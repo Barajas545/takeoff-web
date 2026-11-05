@@ -202,7 +202,8 @@ const topTab = (origin, opener = null) => { const w = page(origin, { opener }); 
 eq('Save waits 120 s for the portal\'s answer (C2)', SAVE_WAIT_MS, 120 * 1000);
 eq('the answers that end the wait', [...SAVE_ENDINGS], ['kept', 'refused', 'no-room', 'failed']);
 eq('what the portal may say while it keeps the file (each word starts the wait again)', [...SAVE_PROGRESS], ['keeping']);
-eq('the news after it', [...SAVE_NEWS], ['sending', 'sent', 'copy']);
+eq('the news after it (\'checking\': in OneDrive, its check against office saves waiting — never "not sent")', [...SAVE_NEWS],
+  ['sending', 'sent', 'copy', 'checking']);
 {
   const reqs = new Set();
   let seed = 7;
@@ -273,6 +274,8 @@ const SAVE = { nonce: NONCE, req: 's1Ab_-9xyz', name: 'A000T1 Made up plan.takeo
   eq('copy, with the copy\'s name', saveStateFromMessage(st({ state: 'copy', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' }), NONCE, SAVE.req),
     { state: 'copy', final: false, why: '', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' });
   eq('… a name that is not a plan\'s: none', saveStateFromMessage(st({ state: 'copy', name: '../x.takeoff' }), NONCE, SAVE.req).name, '');
+  eq('checking: in OneDrive, being checked against office saves — a word of news, never an answer',
+    saveStateFromMessage(st({ state: 'checking' }), NONCE, SAVE.req), { state: 'checking', final: false, why: '' });
   const ignored = [
     ['another save\'s answer', st({ req: 's2' })],
     ['another tab\'s answer', st({ nonce: 'Another_tab_nonce_123' })],
@@ -374,6 +377,38 @@ const tick = () => new Promise(r => setImmediate(r));
   eq('stop(): no more listening (the next save, or the frame closing)', w.handlers.size, 0);
   w.say('sent');
   eq('… and nothing more is heard', w.news.length, 0);
+}
+{
+  // Repair round 3b: the portal's check against office saves waits on OneDrive (its broker's 503 with Retry-After),
+  // and a send that did not get through is sent again by the portal while this page is open. Neither ends the news:
+  // what became of the save — 'sent', or 'copy' with the copy's name — is still heard.
+  const COPY = 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff';
+  const w = world();
+  const p = keep(w);
+  w.say('kept');
+  const r = await p;
+  w.say('sending', { pct: 99 });
+  w.say('checking');
+  eq('after kept: "checking" is news, and the listener stays', [w.news.map(n => n.state), w.handlers.size], [['sending', 'checking'], 1]);
+  w.say('failed', { why: 'OneDrive\'s last step did not get through.' });
+  eq('… a "failed" send is news too, with its words — and the listener stays (the portal sends it again)',
+    [w.news.at(-1), w.handlers.size], [{ state: 'failed', final: true, why: 'OneDrive\'s last step did not get through.' }, 1]);
+  w.say('checking');
+  w.say('copy', { name: COPY });
+  eq('… so its later "copy" is heard, with the copy\'s name, and only then is it over',
+    [w.news.map(n => n.state), w.news.at(-1).name, w.handlers.size],
+    [['sending', 'checking', 'failed', 'checking', 'copy'], COPY, 0]);
+  w.say('sent');
+  eq('… and nothing after that', w.news.length, 5);
+  r.stop();
+  const w2 = world();
+  const p2 = keep(w2);
+  w2.say('kept');
+  await p2;
+  w2.say('failed', { why: 'no signal' });
+  w2.say('failed', { why: 'no signal' });
+  w2.say('sent');
+  eq('a send that failed twice and then went: "sent" heard, then over', [w2.news.map(n => n.state), w2.handlers.size], [['failed', 'failed', 'sent'], 0]);
 }
 for (const [state, why] of [['refused', 'Not a plan the portal handed over.'], ['no-room', ''], ['failed', 'OPFS write failed']]) {
   const w = world();
@@ -630,7 +665,7 @@ const now = p => Promise.race([p, tick().then(() => ({ ending: 'still waiting', 
   w.say('kept');
   eq('… and its "kept" is a save', (await p).ending, 'kept');
 }
-for (const state of ['sending', 'sent', 'copy']) {
+for (const state of ['sending', 'sent', 'copy', 'checking']) {
   // C2 lets any word that is not an answer come; before the answer it is shown, but it is not "the portal got further"
   const w = world();
   const p = watch(keep(w));

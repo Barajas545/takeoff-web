@@ -124,7 +124,10 @@ portal says it will take a save of the plan it handed over, *Save* composes
 the project as ever (its untouched sheets are slices of the portal's own copy,
 so nothing is read into memory) and hands it back to the portal; the project
 is marked saved only once the portal answers that it has the file in its own
-storage — the portal then sends it to OneDrive. If it has no room, or does
+storage — the portal then sends it to OneDrive, and what it says of that send
+is shown while the app is open (sending, being checked against office saves,
+sent, filed as a copy, or not sent yet and sent again — the app goes on
+listening after that, so a later "sent" or "copy" is still heard). If it has no room, or does
 not answer within two minutes, the work stays unsaved and kept on the device,
 the app says so, and offers *Save a copy to Files* instead. If it refuses (a
 save from another window or tab of the plan waits there), the work stays

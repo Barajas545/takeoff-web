@@ -81,8 +81,10 @@ export const SAVE_ENDINGS = Object.freeze(['kept', 'refused', 'no-room', 'failed
 /** What the portal may say while it keeps the file, before its answer — `pct` how far, 0-100, when it knows. Optional
  *  (a portal that never says it is waited for as ever); one that is further than before starts the wait again. */
 export const SAVE_PROGRESS = Object.freeze(['keeping']);
-/** What the portal may say afterwards, while it sends the kept file to OneDrive (never waited for). */
-export const SAVE_NEWS = Object.freeze(['sending', 'sent', 'copy']);
+/** What the portal may say afterwards, while it sends the kept file to OneDrive (never waited for). 'checking': the
+ *  save is in OneDrive and the portal is checking it against office saves (its broker asked it to wait for the check:
+ *  it is neither failed nor unsent). */
+export const SAVE_NEWS = Object.freeze(['sending', 'sent', 'copy', 'checking']);
 
 const NONCE_RE = /^[A-Za-z0-9_-]{16,64}$/;
 // A save's own word: up to 20 characters, the nonce's alphabet (the portal checks the same, as it does a renewal's).
@@ -365,8 +367,10 @@ export function saveStateFromMessage(d, nonce, req) {
  *           After a late 'kept' the news of the send is heard as after one in
  *           time.
  *   stop()  stops listening. After 'kept' the listener stays for the news of
- *           the send, until 'sent', 'copy' or 'failed'; after 'timeout', for
- *           a late answer (and then as after 'kept'); until this either way.
+ *           the send, until 'sent' or 'copy' — not a 'failed', after which
+ *           the portal sends the save again (also while this page is open),
+ *           so its 'sent' or 'copy' may still come; after 'timeout', for a
+ *           late answer (and then as after 'kept'); until this either way.
  */
 export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env = {}) {
   // Called through wrappers, never as T.setTimeout(...) of the browser's own:
@@ -474,7 +478,9 @@ export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env
       // A second answer to a save already answered, or 'keeping' after it: nothing new.
       if (!(SAVE_NEWS.includes(s.state) || s.state === 'failed')) return;
       tell(s);
-      if (s.state === 'sent' || s.state === 'copy' || s.state === 'failed') stop();
+      // Over once it is in OneDrive as the plan or as a copy. A 'failed' send
+      // is sent again by the portal, and what became of it is still news.
+      if (s.state === 'sent' || s.state === 'copy') stop();
     };
     try { unlisten = env.listen(heard) || noop; } catch { end('not-sent'); return; }
     timer = T.setTimeout(due, waitMs);

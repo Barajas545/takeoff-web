@@ -1083,6 +1083,13 @@ ok('the waiting words say it opens when it arrives', /opens when it arrives/.tes
   ok('… with no name: a separate file', /saved as a separate file next to it/.test(portalNewsWords({ state: 'copy', name: '' })));
   ok('news: a send that failed after kept says it is still saved here', /could not send A\.takeoff to OneDrive yet: no signal\. It is saved on this iPad/.test(
     portalNewsWords({ state: 'failed', why: 'no signal.' }, { name: 'A.takeoff', device: 'iPad' })));
+  // Repair round 3b: the portal's check against office saves waits on OneDrive (its broker's 503 with Retry-After).
+  const checking = portalNewsWords({ state: 'checking', why: 'anything' }, { name: 'A.takeoff', device: 'iPad' });
+  eq('news: checking — in OneDrive, being checked, nothing to do', checking,
+    'Your save of A.takeoff is in OneDrive and is being checked against office saves — keep the portal open; there is nothing to do. '
+    + 'It is saved on this iPad.');
+  ok('… never "not sent", "could not", "failed" or "retry", and never what the check has not proved',
+    !/not sent|could not|fail|retry|replaced|overwrit/i.test(checking));
   eq('news: anything else says nothing', [portalNewsWords({ state: 'kept' }), portalNewsWords(null)], ['', '']);
 }
 

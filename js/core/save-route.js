@@ -572,7 +572,7 @@ export function savesToPortal({ portal = null, libraryCopy = null, saveAs = fals
 
 /**
  * The status line for the portal's word about a kept save while it sends it
- * to OneDrive (SAVE_NEWS, or a send that failed after 'kept') — '' for
+ * to OneDrive and checks it (SAVE_NEWS, or a send that failed after 'kept') — '' for
  * anything else ('keeping', while the portal keeps the file, goes on the bar:
  * main.js handToPortal). Words only: nothing waits for these.
  */
@@ -588,6 +588,11 @@ export function portalNewsWords(news, { name = 'the plan', device = 'device' } =
     case 'copy':
       return `Someone saved this plan in the office after this ${device} got it. Your work was saved as `
         + `${news.name ? `“${news.name}”` : 'a separate file'} next to it — nothing was overwritten.`;
+    case 'checking':
+      // OneDrive has the save, and the portal's check against office saves
+      // waits on OneDrive: neither "not sent" nor "failed" — nothing to do.
+      return `Your save of ${name} is in OneDrive and is being checked against office saves — keep the portal open; `
+        + `there is nothing to do. It is saved on this ${device}.`;
     case 'failed':
       return `The portal could not send ${name} to OneDrive yet${news.why ? `: ${news.why.replace(/[.\s]+$/, '')}` : ''}. `
         + `It is saved on this ${device}, and the portal's Plans Library sends it again.`;
