@@ -386,6 +386,26 @@ export const REPLACE_WARNING = 'If Files asks whether to replace a file of the s
   + 'over anything saved into that file elsewhere since you opened it here.';
 
 /**
+ * The status line when the portal refused a save handed to it
+ * ('ptt-save-state' 'refused': contract addendum 3 D7), in the contract's
+ * own words. The portal refuses when another window or tab has a save of
+ * the plan waiting there (review LW-1) — and reopening the plan then hands
+ * THAT save, at another size, so the draft keyed to this opening's files is
+ * not the file's own: the words never promise that reopening offers the
+ * changes back. The draft is kept all the same (afterSave never drops it).
+ *
+ *   portalWhy  the portal's own short words for it, '' for none
+ *   dirty      there were unsaved changes when Save was tapped
+ */
+export function portalRefusedWords({ portalWhy = '', dirty = true } = {}) {
+  const said = portalWhy ? ` (${String(portalWhy).replace(/[.\s]+$/, '')})` : '';
+  return `Not saved: the portal did not take this save${said}. `
+    + (dirty
+      ? 'Your changes are still in this window - use Save a copy to Files to keep them.'
+      : 'There were no unsaved changes, so nothing is lost.');
+}
+
+/**
  * After the file has gone (or not): whether the project is now saved, whether
  * its draft may go, and the words for the status line. Unknown outcomes keep
  * everything — the rule is that only a confirmed save loses the safety net.
@@ -453,9 +473,13 @@ export function afterSave(outcome, {
       // The portal did not take it (or never answered): nothing is saved,
       // the draft stays, and the person is told plainly — in a dialog that
       // also offers a copy to Files (main.js), since the status line clears.
+      // A refusal never promises that reopening offers the work back
+      // (portalRefusedWords).
+      if (why === 'refused') {
+        return { markSaved: false, dropDraft: false, tell: true, confirmed, status: portalRefusedWords({ portalWhy, dirty }) };
+      }
       const said = portalWhy ? `: ${portalWhy.replace(/[.\s]+$/, '')}` : '';
       const reason = {
-        refused: `The portal did not take this save${said}.`,
         'no-room': `This ${device} has no room for the portal to keep the save${said}. Free some space — the portal's `
           + 'Plans Library can remove plans you no longer need — and Save again.',
         failed: `The portal could not keep the save${said || ': it did not say why'}.`,

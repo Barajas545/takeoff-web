@@ -29,7 +29,7 @@ import {
   SHARE_CAP_BYTES, SHEET_MIN_MS, downloadUrlKeepMs, saveRoute, shareErrorKind, deliverFile, afterSave,
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
   HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords, draftFate, DRAFT_DATE_SLACK_MS, planOfPortalCopy,
-  afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN, findDraft, draftKeptNow,
+  afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN, findDraft, draftKeptNow, portalRefusedWords,
   REMOTE_SAVE_CAP_BYTES, remoteSaveBytes, remoteSaveRefused, remoteSaveWords, handheldSaveWords, remoteSaveRefusedWords,
 } from '../js/core/save-route.js';
 import { RemoteFile } from '../js/core/remote-file.js';
@@ -676,19 +676,41 @@ ok('the waiting words say it opens when it arrives', /opens when it arrives/.tes
   for (const why of ['refused', 'no-room', 'failed', 'timeout', 'gone', 'not-sent', '']) {
     const n = not(why);
     eq(`not kept (${why || 'no reason'}): NOT saved, the draft stays, it is told, nothing confirmed`, [n.markSaved, n.dropDraft, n.tell, n.confirmed], [false, false, true, false]);
+    if (why === 'refused') continue;               // its own words: below (contract addendum 3 D7)
     ok(`… (${why || 'no reason'}) it says nothing reached the portal or OneDrive, that the work is kept, and what to do`,
       /^Not saved to the portal or OneDrive\./.test(n.status) && /kept on this device: opening A000T1 Made up plan\.takeoff again offers them back/.test(n.status)
       && /Save again, or save a copy to Files\./.test(n.status));
   }
-  ok('refused: the portal\'s own words', /did not take this save: Not a plan the portal handed over\./.test(
-    afterSave('not-kept', { why: 'refused', portalWhy: 'Not a plan the portal handed over.' }).status));
+  // Contract addendum 3 D7 (the re-check's LW-1 problem): the portal refuses a save when another window or tab of the
+  // plan has a save waiting there, and reopening then hands THAT save, at another size, so the promise "opening it
+  // again offers them back" was false. The refusal says the contract's words, with no promise, the draft kept.
+  {
+    const WHY = 'This plan has a save from another window or tab on this iPad that is not in OneDrive yet.';
+    const r = afterSave('not-kept', { why: 'refused', portalWhy: WHY, keptIn: 'A000T1 Made up plan.takeoff', dirty: true, device: 'iPad' });
+    eq('refused (D7): the contract\'s words exactly, the portal\'s why in them',
+      r.status, 'Not saved: the portal did not take this save (This plan has a save from another window or tab on this iPad that is not '
+        + 'in OneDrive yet). Your changes are still in this window - use Save a copy to Files to keep them.');
+    eq('… not saved, the draft kept (never dropped), told in a dialog, nothing confirmed', [r.markSaved, r.dropDraft, r.tell, r.confirmed],
+      [false, false, true, false]);
+    ok('… and never a promise that reopening offers the changes back, even with a draft home',
+      !/offers? (them|it) back|again offers|kept on this device|Restore/.test(r.status));
+    eq('… the words are portalRefusedWords\'s', r.status, portalRefusedWords({ portalWhy: WHY, dirty: true }));
+    eq('refused with no words of the portal\'s: no brackets', afterSave('not-kept', { why: 'refused', keptIn: 'A.takeoff' }).status,
+      'Not saved: the portal did not take this save. Your changes are still in this window - use Save a copy to Files to keep them.');
+    eq('… nothing was unsaved: nothing is lost', afterSave('not-kept', { why: 'refused', portalWhy: 'Not allowed.', dirty: false }).status,
+      'Not saved: the portal did not take this save (Not allowed). There were no unsaved changes, so nothing is lost.');
+    eq('… no draft home: the same words (the window is the place either way)', afterSave('not-kept', { why: 'refused', keptIn: '' }).status,
+      portalRefusedWords({}));
+  }
   ok('no room: says the device is full, and what frees room', /no room for the portal to keep the save/.test(not('no-room').status) && /Plans Library can remove/.test(not('no-room').status));
   ok('failed with no words: says it gave none', /could not keep the save: it did not say why\./.test(not('failed').status));
+  ok('failed: the portal\'s own words', /could not keep the save: The copy did not check out\./.test(
+    afterSave('not-kept', { why: 'failed', portalWhy: 'The copy did not check out.' }).status));
   ok('timeout: the two minutes', /did not answer within 2 minutes/.test(not('timeout').status));
   ok('gone: the portal page closed', /has closed/.test(not('gone').status));
   ok('no draft home (sheets added since it opened): never "kept", the page is the only place',
-    /in this page only: keep it open/.test(afterSave('not-kept', { why: 'refused', keptIn: '' }).status)
-    && !/kept on this device/.test(afterSave('not-kept', { why: 'refused', keptIn: '' }).status));
+    /in this page only: keep it open/.test(afterSave('not-kept', { why: 'failed', keptIn: '' }).status)
+    && !/kept on this device/.test(afterSave('not-kept', { why: 'failed', keptIn: '' }).status));
   ok('nothing unsaved: nothing is lost', /no unsaved changes, so nothing is lost/.test(afterSave('not-kept', { why: 'timeout', dirty: false }).status));
   // edited while the portal was keeping it, or another project opened meanwhile: P1's rules, for 'kept' too
   const edited = afterSave('kept', { device: 'iPad', moved: 'edited' });
@@ -782,6 +804,10 @@ async function portalSave({ answer = 'kept', why = '', editWhileWaiting = false,
   for (const [answer, why] of [['refused', 'Not allowed.'], ['no-room', ''], ['failed', 'The copy did not check out.'], ['timeout', ''], ['gone', '']]) {
     const r = await portalSave({ answer, why });
     eq(`end to end — ${answer}: the project stays unsaved, the draft stays, and it is told`, [r.dirty, r.drafts, r.tell], [true, 1, true]);
+    if (answer === 'refused') {
+      eq('end to end — refused: the contract\'s words (D7), the portal\'s why in them, no promise of a reopen offer', r.status,
+        'Not saved: the portal did not take this save (Not allowed). Your changes are still in this window - use Save a copy to Files to keep them.');
+    }
   }
   const e = await portalSave({ answer: 'kept', editWhileWaiting: true });
   eq('end to end — kept, but edited while waiting: still unsaved, the draft stays', [e.dirty, e.drafts], [true, 1]);
