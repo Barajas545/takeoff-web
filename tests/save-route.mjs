@@ -29,7 +29,7 @@ import {
   SHARE_CAP_BYTES, SHEET_MIN_MS, downloadUrlKeepMs, saveRoute, shareErrorKind, deliverFile, afterSave,
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
   HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords, draftFate, DRAFT_DATE_SLACK_MS, planOfPortalCopy,
-  afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN, findDraft, draftKeptNow, portalRefusedWords,
+  afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN, findDraft, draftKeptNow, portalRefusedWords, earlierDraftWords,
   REMOTE_SAVE_CAP_BYTES, remoteSaveBytes, remoteSaveRefused, remoteSaveWords, handheldSaveWords, remoteSaveRefusedWords,
 } from '../js/core/save-route.js';
 import { RemoteFile } from '../js/core/remote-file.js';
@@ -532,6 +532,164 @@ function brokerCopy(planName, stamp, n = 1, room = 200) {
       v(await findDraft({ name: PLAN, size: S, portal: true, who: A }, st)),
     ], [null, ['A\'s hour', false, draftKey(PLAN, S, A)]]);
   }
+}
+
+// Contract addendum 3 D7: inside the portal, with no draft of this person's for the file (name, size, who), their
+// newest draft of the same plan name at ANOTHER size is offered — said to be of an earlier version, never dropped
+// unasked. Picked from the keys: no other person's draft and no other plan's is ever read.
+{
+  const A = 'AbCdEfGhIjKl';
+  const B = 'Zz9_-0aB1cD2';
+  const PLAN = 'A000T1 - Main Level.takeoff';
+  const S0 = 43853, S1 = 44120, SB = 45002;
+  // a made-up drafts store: [key, what, savedAt]; which keys were read, and whether the keys were listed
+  const store = entries => {
+    const m = new Map(entries.map(([k, v, at = 1]) => [k, { payload: { v }, savedAt: at, pageCount: 3 }]));
+    const read = [];
+    let listed = 0;
+    return {
+      read, get listed() { return listed; },
+      get: async k => { read.push(k); return m.get(k) || null; },
+      keys: async () => { listed += 1; return [...m.keys()]; },
+    };
+  };
+  const at = (o, st) => findDraft({ name: PLAN, portal: true, embedded: true, ...o }, st);
+  const v = f => (f ? [f.draft.payload.v, f.key, f.legacy, f.earlier] : null);
+  {
+    const st = store([[draftKey(PLAN, S0, A), 'A at S0']]);
+    const f = await at({ size: SB, who: A }, st);
+    eq('the plan handed at another size: A\'s draft of it is found, as an earlier version (not legacy)', v(f),
+      ['A at S0', draftKey(PLAN, S0, A), false, true]);
+    eq('… its own key is the file\'s, for the draft from now on', f && f.own, draftKey(PLAN, SB, A));
+    eq('… the file\'s own draft comes first, as ever (not an earlier one)', v(await at({ size: SB, who: A },
+      store([[draftKey(PLAN, S0, A), 'old', 9], [draftKey(PLAN, SB, A), 'own', 1]]))), ['own', draftKey(PLAN, SB, A), false, false]);
+    eq('… a tab of its own (not inside the portal): never at another size', await findDraft({ name: PLAN, size: SB, portal: true, who: A }, st), null);
+    eq('… no word for the person: none (only a person\'s own drafts are ever looked for at another size)',
+      [await at({ size: SB }, st), await at({ size: SB, who: 'nope' }, st)], [null, null]);
+  }
+  {
+    const st = store([[draftKey(PLAN, S0, A), 'A at S0', 5], [draftKey(PLAN, S1, A), 'A at S1', 7], [draftKey(PLAN, S0, B), 'B', 99],
+      [draftKey(PLAN, S1), 'no person', 99], [draftKey('A000T1 - Roof.takeoff', S0, A), 'another plan', 99],
+      [draftKey(`${PLAN}|${S0}`, S1, A), 'a plan named like a key', 99], [draftKey(PLAN, 0, A), 'no file', 99]]);
+    const f = await at({ size: SB, who: A }, st);
+    eq('several: the newest of THIS person\'s, of THIS plan', v(f), ['A at S1', draftKey(PLAN, S1, A), false, true]);
+    eq('… the keys listed once, and only this person\'s drafts of this plan read (never B\'s, one of no person, another plan\'s)',
+      [st.listed, st.read.filter(k => k !== draftKey(PLAN, SB, A) && k !== draftKey(PLAN, SB))].map(x => (Array.isArray(x) ? [...x].sort() : x)),
+      [1, [draftKey(PLAN, S0, A), draftKey(PLAN, S1, A)].sort()]);
+    eq('B: never A\'s — B\'s own earlier one', v(await at({ size: SB, who: B }, st)), ['B', draftKey(PLAN, S0, B), false, true]);
+    eq('… a person with no draft of the plan: nothing (not another person\'s, not one of no person at another size)',
+      await at({ size: SB, who: 'Qq1_-Qq1_-Qq' }, st), null);
+  }
+  {
+    eq('one of no person keeps CONTRACT-2\'s rule: at the file\'s own size only (offered as legacy)', [
+      await at({ size: SB, who: A }, store([[draftKey(PLAN, S0), 'no person at S0']])),
+      v(await at({ size: SB, who: A }, store([[draftKey(PLAN, SB), 'no person at SB']]))),
+    ], [null, ['no person at SB', draftKey(PLAN, SB), true, false]]);
+    eq('… the person\'s own earlier one before it (theirs for certain)', v(await at({ size: SB, who: A },
+      store([[draftKey(PLAN, SB), 'no person at SB'], [draftKey(PLAN, S0, A), 'A at S0']]))), ['A at S0', draftKey(PLAN, S0, A), false, true]);
+    const empty = { get: async k => (k === draftKey(PLAN, S0, A) ? { savedAt: 9, pageCount: 3 } : null), keys: async () => [draftKey(PLAN, S0, A)] };
+    eq('… a draft with nothing in it is no draft', await at({ size: SB, who: A }, empty), null);
+  }
+  {
+    // one opening drafts the same work under every file it may come back from: those keys are its twins, and go with
+    // it by the person's answer — never a key that holds anything else
+    const S2 = 44500;
+    const m = new Map([
+      [draftKey(PLAN, S0, A), { payload: { v: 'the same work' }, savedAt: 5, pageCount: 3 }],
+      [draftKey(PLAN, S1, A), { payload: { v: 'the same work' }, savedAt: 7, pageCount: 3 }],
+      [draftKey(PLAN, S2, A), { payload: { v: 'other work' }, savedAt: 3, pageCount: 3 }],
+      [draftKey(PLAN, 44600, A), { payload: { v: 'the same work' }, savedAt: 2, pageCount: 4 }],
+      [draftKey(PLAN, S0, B), { payload: { v: 'the same work' }, savedAt: 1, pageCount: 3 }],
+    ]);
+    const f = await at({ size: SB, who: A }, { get: async k => m.get(k) || null, keys: async () => [...m.keys()] });
+    eq('twins: the other keys of THIS person\'s that hold exactly the same work (not other work, other sheets, another person)',
+      f && [f.key, f.twins], [draftKey(PLAN, S1, A), [draftKey(PLAN, S0, A)]]);
+    eq('… a draft that is no earlier one has none', [
+      (await at({ size: S0, who: A }, { get: async k => m.get(k) || null, keys: async () => [...m.keys()] })).twins,
+      (await findDraft({ name: PLAN, size: S0 }, store([[draftKey(PLAN, S0), 'x']]))).twins,
+      (await at({ size: S0, who: A }, store([[draftKey(PLAN, S0), 'x']]))).twins,
+    ], [[], [], []]);
+  }
+  eq('the words for it are the contract\'s', earlierDraftWords('11/4/2026, 3:15:00 PM'),
+    'These are your unsaved changes from an earlier version of this plan (11/4/2026, 3:15:00 PM). Restoring them replaces what is open now.');
+}
+
+// The re-check's scenario (contract addendum 3 D7), walked out of the pieces main.js joins: one person, one iPad, two
+// openings W1 and W2 of plan P, both handed the portal's file F1 (size S0). W2 saves first: the portal keeps it. W1
+// saves: refused (another opening's save waits). W1 is closed (its draft kept under every home first: saveDraftNow), and
+// reopened later — handed W2's save, now the plan, at its own size. W1's work is offered, as an earlier version.
+{
+  const A = 'AbCdEfGhIjKl';
+  const B = 'Zz9_-0aB1cD2';
+  const P = 'A000T1 - Main Level.takeoff';
+  const S0 = 43853;
+  const WORD = 'Zk3pQ9_x-7LmN2aBcD4e';           // the hand-over's nonce
+  const drafts = new Map();
+  const keysOf = homes => homes.map(h => draftKey(h.name, h.size, A));
+  const write = (homes, work, savedAt) => { for (const k of keysOf(homes)) drafts.set(k, { payload: { v: work }, savedAt, pageCount: 3 }); };
+  const read = [];
+  const st = { get: async k => { read.push(k); return drafts.get(k) || null; }, keys: async () => [...drafts.keys()] };
+  // what the portal answers W's save (the hand-over itself, made-up portal and clock)
+  const handOver = async (file, answer, why) => {
+    const c = fakeClock();
+    const win = { closed: false };
+    const handlers = new Set();
+    const peer = { via: 'frame', win, origin: 'https://portal.dcrframing.com' };
+    const waiting = askPortalToKeep({ peer, nonce: WORD, req: 'w1', name: P, size: file.size, file }, {
+      ...c, waitMs: SAVE_WAIT_MS, pollMs: 2000, doc: null,
+      listen: fn => { handlers.add(fn); return () => handlers.delete(fn); }, post: () => {}, peerGone: () => win.closed,
+    });
+    for (const h of [...handlers]) h({ source: win, origin: peer.origin, data: { type: 'ptt-save-state', v: 1, nonce: WORD, req: 'w1', state: answer, why } });
+    return waiting;
+  };
+  let w1 = nextDraftHomes([], { name: P, size: S0, pages: 3 });
+  let w2 = nextDraftHomes([], { name: P, size: S0, pages: 3 });
+  // W1 has been working (its page hidden once), so has W2
+  write(w1, 'W1 work', 100);
+  write(w2, 'W2 work', 110);
+  // W2 saves first: drafted, posted (a pending home), kept — its drafts go
+  const fileB = new Blob([new Uint8Array(45002)]);
+  {
+    const before = keysOf(w2);
+    write(w2, 'W2 work', 200);
+    w2 = nextDraftHomes(w2, { name: P, size: fileB.size, pages: 3 }, { pending: true });
+    const { ending } = await handOver(fileB, 'kept', '');
+    const next = afterSave(ending === 'kept' ? 'kept' : 'not-kept', { name: P, why: ending, keptIn: P, dirty: true, device: 'iPad' });
+    if (next.confirmed) w2 = nextDraftHomes(w2, { name: P, size: fileB.size, pages: 3 });
+    if (next.dropDraft) for (const k of new Set([...before, ...keysOf(w2)])) drafts.delete(k);
+  }
+  // W1 saves: drafted, posted, refused — the draft is kept, and the words promise no reopen offer
+  const file1 = new Blob([new Uint8Array(44120)]);
+  let words;
+  {
+    write(w1, 'W1 work', 300);
+    w1 = nextDraftHomes(w1, { name: P, size: file1.size, pages: 3 }, { pending: true });
+    const { ending, why } = await handOver(file1, 'refused', 'This plan has a save from another window or tab on this iPad that is not in OneDrive yet.');
+    const next = afterSave(ending === 'kept' ? 'kept' : 'not-kept', { name: P, why: ending, portalWhy: why, keptIn: draftHomeFor(w1, 3), dirty: true, device: 'iPad' });
+    eq('walk — W1\'s save is refused: not saved, the draft kept', [ending, next.markSaved, next.dropDraft], ['refused', false, false]);
+    words = next.status;
+    // Close: the portal asks for the draft first (TakeoffApp.saveDraftNow), under every home
+    write(w1, 'W1 work', 400);
+  }
+  ok('walk — W1\'s status line promises no reopen offer, and says Save a copy to Files', /^Not saved: the portal did not take this save \(/.test(words)
+    && /Your changes are still in this window - use Save a copy to Files to keep them\.$/.test(words) && !/offers them back|again offers/.test(words));
+  eq('walk — W1\'s work is under W1\'s files only (the plan\'s first file, and the one refused); W2\'s went with its kept save',
+    [...drafts.keys()].sort(), [draftKey(P, S0, A), draftKey(P, file1.size, A)].sort());
+  // later: W2's save was sent and adopted, so reopening P hands W2's file, at ITS size
+  const f = await findDraft({ name: P, size: fileB.size, portal: true, who: A, embedded: true }, st);
+  eq('walk — W1 reopens P (handed at W2\'s size): W1\'s work is offered, as an earlier version, nothing dropped',
+    f && [f.draft.payload.v, f.earlier, f.legacy, f.own, drafts.size], ['W1 work', true, false, draftKey(P, fileB.size, A), 2]);
+  ok('walk — … with the contract\'s words, and its date', f && earlierDraftWords(new Date(f.draft.savedAt).toLocaleString())
+    === `These are your unsaved changes from an earlier version of this plan (${new Date(400).toLocaleString()}). Restoring them replaces what is open now.`);
+  read.length = 0;
+  eq('walk — another person on this iPad opens P: offered nothing, and none of A\'s drafts read',
+    [await findDraft({ name: P, size: fileB.size, portal: true, who: B, embedded: true }, st), read.filter(k => k.endsWith(`|@${A}`))], [null, []]);
+  // A answers: the offered key and its twin (the same work under W1's other file) go together — so the same work is
+  // never offered a second time, whichever way A answered (main.js offerDraftRestore: Cancel, or Restore once the work
+  // is written under the file's own key)
+  eq('walk — the twin is W1\'s other file\'s key', f && [[f.key, ...f.twins].sort()], [[draftKey(P, S0, A), draftKey(P, file1.size, A)].sort()]);
+  for (const k of [f.key, ...f.twins]) drafts.delete(k);
+  eq('walk — once A has answered, nothing of that work is offered again', await findDraft({ name: P, size: fileB.size, portal: true, who: A, embedded: true }, st), null);
 }
 
 // listDraftKeys reads the keys only — never a draft (a draft can be megabytes of takeoff).
@@ -1057,14 +1215,18 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
   ok('… and the hand-over says it for both kinds: a copy on the device and a link',
     /loadProjectFile\(file, null, \{ library: hold, fromPortal: true \}\)/.test(recv) && /\}\), null, \{ fromPortal: true \}\);/.test(recv));
   ok('… the draft is found by findDraft (a copy\'s plan, a cut name, the person: tested above), from the drafts store',
-    /const found = await findDraft\(\{ name: file\.name, size: file\.size, portal, who: app\.draftWho \},\s*\{ get: getDraft, keys: listDraftKeys \}\);\s*if \(!found\) return;\s*const \{ key, draft, own, legacy \} = found;/.test(restore)
+    /const found = await findDraft\(\{ name: file\.name, size: file\.size, portal, who: app\.draftWho, embedded \},\s*\{ get: getDraft, keys: listDraftKeys \}\);\s*if \(!found\) return;\s*const \{ key, draft, own, legacy, earlier, twins \} = found;\s*(?:\/\/[^\n]*\n\s*)*const keysOfIt = \[key, \.\.\.twins\];/.test(restore)
     && !/planOfPortalCopy|portalCopyDraftKey|draftKey\(/.test(restore));
+  ok('… inside the portal only, an earlier version\'s draft (D7): never dropped by the date, offered in the contract\'s words, never as anyone\'s',
+    /if \(!legacy && !earlier && draftFate\(/.test(restore)
+    && /earlier\s*\?\s*`\$\{earlierDraftWords\(when\)\}\\n\\nRestore them\?`\s*:\s*`There is takeoff for/.test(restore)
+    && restore.indexOf('DRAFT_OF_ANYONE') > restore.indexOf('`There is takeoff for'));
   ok('… a copy the portal made keeps the draft under its own keys once restored — and one of no person is left where it was',
-    /if \(key !== own && await saveDraftNow\(\) && !legacy\) await dropDraft\(key\);/.test(restore));
+    /if \(key !== own && await saveDraftNow\(\) && !legacy\) for \(const k of keysOfIt\) await dropDraft\(k\);/.test(restore));
   ok('… "no" drops the draft — never one of no person, which may be someone else\'s (review PRICE-4)',
-    /if \(!ok\) \{\s*if \(!legacy\) await dropDraft\(key\);\s*return;\s*\}/.test(restore)
-    && /if \(!legacy && draftFate\(/.test(restore)
-    && (restore.match(/dropDraft\(/g) || []).length === 3
+    /if \(!ok\) \{\s*if \(!legacy\) for \(const k of keysOfIt\) await dropDraft\(k\);\s*return;\s*\}/.test(restore)
+    && /if \(!legacy && (?:!earlier && )?draftFate\(/.test(restore)
+    && (restore.match(/dropDraft\(/g) || []).length === 3 && (restore.match(/keysOfIt/g) || []).length === 3
     && /\(legacy \? `\\n\\n\$\{DRAFT_OF_ANYONE\}` : ''\)/.test(restore));
   ok('the drafts are written under the person\'s word, for every key (review PRICE-4)',
     /homes\.map\(h => draftKey\(h\.name, h\.size, app\.draftWho\)\)/.test(body('draftKeysNow'))

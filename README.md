@@ -130,7 +130,8 @@ the app says so, and offers *Save a copy to Files* instead. If it refuses (a
 save from another window or tab of the plan waits there), the work stays
 unsaved and its draft is kept, but the app only says it is still in the
 window and to keep it with *Save a copy to Files*: reopening the plan hands
-that other save, so it never promises the work comes back. A plan
+that other save, so it never promises the work comes back (it may, as an
+earlier version's draft: below). A plan
 opened over the internet (the portal had no room to keep it on the device) is
 never handed back; where the portal lets the person save plans back, opening
 it again from the 📐 menu once there is room keeps it on the device, and its
@@ -149,7 +150,10 @@ under the plan it was saved from. Drafts there are kept per person: the
 portal tells the app an opaque word for who is signed in (never an id or an
 e-mail), so on an iPad two people share, one person's unsaved work is never
 offered to the other; a draft kept before the portal said who is still
-offered, saying it may be someone else's, and never dropped. The page has no inline
+offered, saying it may be someone else's, and never dropped. With no draft
+of the person's for the plan as handed over, their newest draft of the plan's
+name at another size (an earlier version of it: another window's save was
+kept since) is offered, saying so, and never dropped unasked. The page has no inline
 script (the portal holds its copy to a strict page policy): the layout is set
 before the first paint by `js/ui-mode-boot.js`.
 
