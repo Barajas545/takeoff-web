@@ -150,15 +150,19 @@ under the plan it was saved from. Drafts there are kept per person: the
 portal tells the app an opaque word for who is signed in (never an id or an
 e-mail), so on an iPad two people share, one person's unsaved work is never
 offered to the other; a draft kept before the portal said who is still
-offered, saying it may be someone else's, and never dropped. With no draft
-of the person's for the plan as handed over, their newest draft of the same
-plan at another size (an earlier version of it: another window's save was
-kept since) is offered, saying so: the same plan is the same name AND the
-project number the portal handed it with, kept in the draft, because two
-jobs can share a plan's name. *Not now* leaves it for the next opening, and
-only *Discard them* throws it away. Declining or restoring a draft takes the
-same work kept under the person's other files of that plan with it, so work
-turned down is never offered again. The page has no inline
+offered, saying it may be someone else's, and never dropped. They are kept
+per plan too: the portal tells the app an opaque word for the plan (the same
+for every version of it, another for a plan of the same name in another
+folder or job), because two lots' folders can hold one house model's plan,
+the same name and the same bytes — one lot's draft is never offered on,
+dropped by or written over by the other's. With no draft of the person's for
+the plan as handed over, their newest draft of the same plan at another size
+(an earlier version of it: another window's save was kept since) is offered,
+saying so; a portal that names no plan gets the file's own draft only.
+*Not now* leaves it for the next opening, and only *Discard them* throws it
+away. Declining or restoring a draft takes the same work kept under the
+person's other files of that plan with it, so work turned down is never
+offered again. The page has no inline
 script (the portal holds its copy to a strict page policy): the layout is set
 before the first paint by `js/ui-mode-boot.js`.
 

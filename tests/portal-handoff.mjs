@@ -16,7 +16,7 @@ import {
   PORTAL_ORIGINS, HANDOFF_VERSION, HANDOFF_WAIT_MS, parsePortalHash, isPortalOrigin, readyMessage, renewMessage, offlineMessage,
   linkOk, openFromMessage, linkFromMessage,
   SAVE_WAIT_MS, SAVE_ENDINGS, SAVE_PROGRESS, SAVE_NEWS, framedBySameSite, portalPeer, fromPeer, peerTargets, newSaveReq, saveMessage,
-  saveStateFromMessage, askPortalToKeep, WHO_RE,
+  saveStateFromMessage, askPortalToKeep, WHO_RE, PLAN_RE,
 } from '../js/core/portal-handoff.js';
 import { parsePlansLink } from '../js/core/plans-folder.js';
 
@@ -97,6 +97,21 @@ eq('… and nothing else is one (too short, too long, padded, base64 not base64u
 eq('… an old portal that never says it: no who, the plan as before', [ 'who' in openFromMessage(fileMsg, NONCE), 'who' in openFromMessage(linkMsg, NONCE)],
   [false, false]);
 eq('… and a word never makes a message the plan\'s that is not', openFromMessage({ ...fileMsg, who: 'AbCdEfGhIjKl', nonce: 'Another_tab_nonce_123' }, NONCE), null);
+// Contract addendum 4 E4: ptt-open gains an optional `plan`, the portal's opaque word for the plan — base64url of 9
+// bytes of a sha256 of its number, folder and name: exactly 12 of A-Z a-z 0-9 - _. Inside the portal drafts are kept
+// per plan (two lots' folders can hold one house model's plan: the same name, the same bytes).
+eq('the plan\'s word: exactly the portal\'s shape', PLAN_RE.source, '^[A-Za-z0-9_-]{12}$');
+eq('plan, for a copy on the device and for a link', [openFromMessage({ ...fileMsg, plan: 'pLaN_A274-x9' }, NONCE).plan,
+  openFromMessage({ ...linkMsg, plan: 'Qq_other-lot' }, NONCE).plan], ['pLaN_A274-x9', 'Qq_other-lot']);
+eq('… with the person\'s word beside it, each its own', (({ who, plan }) => [who, plan])(openFromMessage({ ...fileMsg, who: 'AbCdEfGhIjKl', plan: 'pLaN_A274-x9' }, NONCE)),
+  ['AbCdEfGhIjKl', 'pLaN_A274-x9']);
+eq('… and nothing else is one (too short, too long, padded, base64 not base64url, a name or a number in the clear, not a string): no plan at all',
+  ['pLaN_A274-x', 'pLaN_A274-x9Z', 'pLaN_A274x==', 'pLaN_A274x+/', 'A274/Plans/Main.takeoff', 'A274', 'pLaN_A274-\n9', 42, null, {}]
+    .map(w => 'plan' in openFromMessage({ ...fileMsg, plan: w }, NONCE)), Array(10).fill(false));
+eq('… an old portal that never says it: no plan, the plan as before', ['plan' in openFromMessage(fileMsg, NONCE), 'plan' in openFromMessage(linkMsg, NONCE)],
+  [false, false]);
+eq('… and a plan word never makes a message the plan\'s that is not', [openFromMessage({ ...fileMsg, plan: 'pLaN_A274-x9', nonce: 'Another_tab_nonce_123' }, NONCE),
+  openFromMessage({ ...linkMsg, plan: 'pLaN_A274-x9', url: 'https://evil.test/x' }, NONCE)], [null, null]);
 
 const refused = [
   ['another tab\'s nonce', { ...fileMsg, nonce: 'Another_tab_nonce_123' }],
