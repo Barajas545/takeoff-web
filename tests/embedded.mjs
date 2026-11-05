@@ -200,6 +200,19 @@ ok('the app shows no install prompt of its own (none to hide inside the portal)'
     && js.every(src => !/\bapp\.project\s*=(?!=)/.test(src))
     && /get dirty\(\) \{ return this\._dirty; \}/.test(read('js/core/project.js')));
 }
+// Review FRAME-1 (contract addendum 2 C2b): the portal's Close removes the frame, and a frame removed by its page
+// gets no time after pagehide — the draft that event starts never lands. So Close first awaits
+// window.TakeoffApp.saveDraftNow() (up to 3 s): Promise<boolean>, true once the draft is kept or nothing needed keeping.
+{
+  const keep = body(main, 'keepDraftForPortal');
+  ok('TakeoffApp.saveDraftNow is there for the portal\'s frame, and it is keepDraftForPortal',
+    /\nwindow\.TakeoffApp = \{[^}]*\n  saveDraftNow: keepDraftForPortal,/.test(main));
+  ok('… which asks draftKeptNow with the live project, whether there is anything to keep, and the real draft write',
+    /return await draftKeptNow\(\{\s*dirty: app\.project\.dirty,\s*hasWork: !!app\.pages\.pageCount \|\| \[\.\.\.app\.project\.allItems\(\)\]\.length > 0,\s*write: saveDraftNow,\s*\}\);/.test(keep)
+    && /\} catch \{\s*return false;\s*\}/.test(keep));
+  ok('… and the draft write it uses is the one under every key (all homes, the person\'s word)',
+    /Promise\.all\(draftKeysNow\(\)\.map\(key => putDraft\(key, work, info\)\)\)/.test(body(main, 'saveDraftNow')));
+}
 ok('the old portal\'s Plans Library link is only in the list of plans on this device, which stays hidden inside the portal (both of its lists are empty there)',
   (read('index.html').match(/dcr-portal\//g) || []).length === 1
   && /<div class="es-lib" id="esLibrary" hidden>\s*<div class="es-lib-head"><span>Plans on this device<\/span><a class="es-lib-manage" href="\.\.\/dcr-portal\/plans-library\.html">/.test(read('index.html'))

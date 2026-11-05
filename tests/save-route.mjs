@@ -29,7 +29,7 @@ import {
   SHARE_CAP_BYTES, SHEET_MIN_MS, downloadUrlKeepMs, saveRoute, shareErrorKind, deliverFile, afterSave,
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
   HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords, draftFate, DRAFT_DATE_SLACK_MS, planOfPortalCopy,
-  afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN, findDraft,
+  afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN, findDraft, draftKeptNow,
 } from '../js/core/save-route.js';
 import { draftKey, draftKeyTail, draftWho } from '../js/core/drafts.js';
 import { Project } from '../js/core/project.js';
@@ -305,6 +305,32 @@ eq('… from the file last saved, when that is the one with these sheets', draft
   eq('a pending home is never the one a confirmed save keeps as "the file it came from"',
     nextDraftHomes([{ ...S1, pending: true }], S2), [S2]);
   eq('… and the words still name a home with these sheets', draftHomeFor(posted, 12), 'P.takeoff');
+}
+// Review FRAME-1 (contract addendum 2 C2b): window.TakeoffApp.saveDraftNow() — the portal's Close awaits it (up to
+// 3 s) before it removes the frame. true once the draft is kept or nothing needed keeping; false only when work could
+// not be kept; never a rejection (the portal must be able to close the frame whatever happens here).
+{
+  const calls = [];
+  const write = answer => () => { calls.push('write'); return typeof answer === 'function' ? answer() : Promise.resolve(answer); };
+  eq('no unsaved changes: nothing needed keeping — true, and nothing written',
+    [await draftKeptNow({ dirty: false, hasWork: true, write: write(true) }), calls.length], [true, 0]);
+  eq('… nothing to keep (no sheet, no item): true, nothing written', [await draftKeptNow({ dirty: true, hasWork: false, write: write(true) }), calls.length], [true, 0]);
+  eq('unsaved work, kept: true', [await draftKeptNow({ dirty: true, hasWork: true, write: write(true) }), calls.length], [true, 1]);
+  eq('unsaved work the store would not take (full, blocked): false — the portal can still ask before closing',
+    [await draftKeptNow({ dirty: true, hasWork: true, write: write(false) }),
+      await draftKeptNow({ dirty: true, hasWork: true, write: write(() => Promise.reject(new Error('blocked'))) }),
+      await draftKeptNow({ dirty: true, hasWork: true, write: write(() => { throw new Error('gone'); }) }),
+      await draftKeptNow({ dirty: true, hasWork: true, write: write(undefined) })], [false, false, false, false]);
+  eq('… nothing given: nothing needed keeping', await draftKeptNow(), true);
+  // it resolves only once the write has: the portal may remove the frame the moment it does
+  let land = null;
+  let settled = 'not yet';
+  const p = draftKeptNow({ dirty: true, hasWork: true, write: () => new Promise(r => { land = r; }) }).then(v => { settled = v; });
+  await new Promise(r => setImmediate(r));
+  eq('… and not before the draft has landed', settled, 'not yet');
+  land(true);
+  await p;
+  eq('… then true', settled, true);
 }
 
 // ── a draft and the date of the file it is found for (review fix) ────────

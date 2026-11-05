@@ -600,6 +600,32 @@ export function draftHomeFor(homes = [], pageCount = 0) {
   return h ? h.name : '';
 }
 
+/**
+ * The answer of window.TakeoffApp.saveDraftNow() (main.js), which the
+ * portal's frame calls — same-origin, from its page — before its Close takes
+ * this page away (contract addendum 2 C2b, review FRAME-1). A frame its page
+ * removes gets no time after its pagehide: the draft that event starts, an
+ * IndexedDB write, never lands. So the portal asks first, and waits for it
+ * (up to 3 s).
+ *
+ *   dirty    the project has unsaved changes
+ *   hasWork  there is anything to keep (a sheet, or an item)
+ *   write()  writes the draft under every key it may be found by, resolving
+ *            whether it was written (main.js saveDraftNow)
+ *
+ * Resolves true once the draft is kept, or when nothing needed keeping;
+ * false only when there was work to keep and it could not be written (a full
+ * or blocked store). Never rejects.
+ */
+export async function draftKeptNow({ dirty = false, hasWork = false, write } = {}) {
+  if (dirty !== true || !hasWork) return true;
+  try {
+    return (await write()) === true;
+  } catch {
+    return false;
+  }
+}
+
 /** How much later than its draft a file may be dated and still be the save that draft went into. */
 export const DRAFT_DATE_SLACK_MS = 1500;
 

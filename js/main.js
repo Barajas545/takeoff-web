@@ -21,7 +21,7 @@ import { openAfterAsking, isPhoneOrTablet, deviceWord, PORTAL_SAFARI_IF_ASKED } 
 import {
   deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
   savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
-  draftFate, afterLateKept, findDraft,
+  draftFate, afterLateKept, findDraft, draftKeptNow,
 } from './core/save-route.js';
 import {
   HANDOFF_WAIT_MS, RENEW_WAIT_MS, SAVE_WAIT_MS, parsePortalHash, readyMessage, renewMessage,
@@ -3193,6 +3193,25 @@ async function saveDraftNow() {
 }
 
 /**
+ * window.TakeoffApp.saveDraftNow(), for the portal's frame: its Close awaits
+ * this (up to 3 s) before it removes this page, which then gets no time to
+ * write the draft its pagehide starts. Resolves true once the draft is kept,
+ * or when nothing needed keeping; false when it could not be written
+ * (js/core/save-route.js draftKeptNow). Never rejects.
+ */
+async function keepDraftForPortal() {
+  try {
+    return await draftKeptNow({
+      dirty: app.project.dirty,
+      hasWork: !!app.pages.pageCount || [...app.project.allItems()].length > 0,
+      write: saveDraftNow,
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Offer back the draft of the file just opened, if there is one.
  *
  * `portal`: the plan came from the portal (or this page is inside it). Its
@@ -5893,6 +5912,10 @@ window.TakeoffApp = {
   app, viewport, renderer, controller, itemsPanel, thumbs, calloutPreview,
   goToPage, loadProjectFile, importPdfFile, saveProject, runAction, newProject,
   requestDraw, pageFinalLabel,
+  // The portal's frame, before its Close removes this page: keep the draft
+  // now (Promise<boolean>; contract addendum 2 C2b). Same-origin callers only
+  // — another site cannot reach this window's properties at all.
+  saveDraftNow: keepDraftForPortal,
   // Plan revisions — the same entry points the panel and the bar call, so a
   // test drives the real path rather than a parallel one.
   versionView, overlay, versionBar, revisionsPanel,
