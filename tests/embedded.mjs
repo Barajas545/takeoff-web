@@ -18,11 +18,11 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import {
   EMBEDDED_KEY, embeddedFrom, detectEmbedded, plansSourceFor, EMBEDDED_PLANS, EMBEDDED_IDLE, EMBEDDED_NO_KEEP,
-  EMBEDDED_NO_ARCHIVE, EMBEDDED_NOTHING, TO_ONEDRIVE_HINT, NO_SAVE_BACK, COPY_TO_FILES, DRAFT_OF_ANYONE,
+  EMBEDDED_NO_ARCHIVE, EMBEDDED_NOTHING, TO_ONEDRIVE_HINT, NO_SAVE_BACK, COPY_TO_FILES, DRAFT_OF_ANYONE, noSaveBackWords,
 } from '../js/core/embedded.js';
 import { portalPeer } from '../js/core/portal-handoff.js';
 import { resolvePlansSource } from '../js/core/plans-folder.js';
-import { HANDHELD_SAVE } from '../js/core/save-route.js';
+import { HANDHELD_SAVE, remoteSaveWords } from '../js/core/save-route.js';
 import { FROM_THE_PORTAL, HANDHELD_HINT, PORTAL_SAFARI_IF_ASKED, deviceWord } from '../js/core/plans-link.js';
 import {
   PORTAL_INDEX_KEY, PORTAL_DIR, PORTAL_DB, PORTAL_TOKEN_KEY, OWNER_KEY, KEPT_INDEX_KEY, KEPT_DIR, OPEN_LOCK, WRITE_LOCK,
@@ -118,6 +118,18 @@ eq('a plan opened over the internet inside the portal: how its work may reach On
   + 'Save then hands it to the portal.');
 ok('… never promised outright (the old words were)', !/^To save to OneDrive/.test(TO_ONEDRIVE_HINT) && /\bIf the portal lets you\b/.test(TO_ONEDRIVE_HINT));
 ok('… with what Save does here', NO_SAVE_BACK === `${TO_ONEDRIVE_HINT} ${HANDHELD_SAVE}`);
+// Review MEM-1: a plan too big for Save to make a file of on a phone or a tablet (its sheets on the server would all
+// come into memory) is never promised a new file when it opens.
+{
+  const MB = 1024 * 1024;
+  eq('the words when such a plan opens: NO_SAVE_BACK while Save can make a file of it',
+    [noSaveBackWords({ remoteBytes: 120 * MB, device: 'iPad' }), noSaveBackWords({ remoteBytes: 2300 * MB, device: 'iPad', handheld: false })],
+    [NO_SAVE_BACK, NO_SAVE_BACK]);
+  const big = noSaveBackWords({ remoteBytes: 2300 * MB, device: 'iPad' });
+  ok('… and over the cap on a phone or a tablet: the way to OneDrive, then that Save keeps the changes instead — no new file promised',
+    big === `${TO_ONEDRIVE_HINT} ${remoteSaveWords({ remoteBytes: 2300 * MB, device: 'iPad' })}` && !big.includes(HANDHELD_SAVE)
+    && !/share sheet|download/i.test(big));
+}
 eq('the fallback\'s button', COPY_TO_FILES, 'Save a copy to Files');
 // Review PRICE-4: a draft kept before the portal said who is signed in may be another person's, and "no" keeps it.
 ok('a draft of no person is offered with the word that it may be someone else\'s, and that Cancel leaves it',

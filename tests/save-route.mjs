@@ -30,7 +30,9 @@ import {
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
   HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords, draftFate, DRAFT_DATE_SLACK_MS, planOfPortalCopy,
   afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN, findDraft, draftKeptNow,
+  REMOTE_SAVE_CAP_BYTES, remoteSaveBytes, remoteSaveRefused, remoteSaveWords, handheldSaveWords, remoteSaveRefusedWords,
 } from '../js/core/save-route.js';
+import { RemoteFile } from '../js/core/remote-file.js';
 import { draftKey, draftKeyTail, draftWho } from '../js/core/drafts.js';
 import { Project } from '../js/core/project.js';
 import { HANDHELD_HINT } from '../js/core/plans-link.js';
@@ -577,6 +579,54 @@ ok('… the share sheet up to it, and a download into Downloads above it or with
   && /cannot share a file/.test(HANDHELD_SAVE) && /Files › Downloads/.test(HANDHELD_SAVE));
 ok('the #plans link\'s phone hint says it, and what replacing does', HANDHELD_HINT.includes(HANDHELD_SAVE) && HANDHELD_HINT.includes(REPLACE_WARNING));
 
+// ── a big plan opened over the internet, on a phone or a tablet (review MEM-1) ──
+// A handheld with no room for a 2 GB plan opens it over the internet. Its Save composed the file — every sheet read
+// whole into memory (RemoteSlice.blob) before the share sheet or the download — and the page's process (inside the
+// portal, the portal's page) was killed; Save could never succeed, and the words promised a new file.
+{
+  const remote = new RemoteFile({ url: 'https://made-up.test/plan', name: 'A000T1 - Big.takeoff', size: 2300 * MB });
+  const sheet = (a, b) => ({ kind: 'slice', data: remote.slice(a, b) });
+  const onDevice = new Blob([new Uint8Array(4096)]);
+  ok('(a sheet of a plan over the internet is a slice that is no Blob: the one encodePageSource reads whole)',
+    !(remote.slice(0, 10) instanceof Blob) && remote.slice(0, 10).size === 10);
+  eq('the bytes a save would bring down whole: every remote sheet and revision sheet, nothing on the device or in memory',
+    remoteSaveBytes([sheet(0, 700 * MB), sheet(700 * MB, 1400 * MB), { kind: 'slice', data: onDevice }, { kind: 'png', data: new Uint8Array(9) }],
+      [[sheet(1400 * MB, 1500 * MB)], [], [{ kind: 'slice', data: onDevice.slice(0, 100) }]]), 1500 * MB);
+  eq('… a plan on the device: none', remoteSaveBytes([{ kind: 'slice', data: onDevice }], [[{ kind: 'slice', data: onDevice }]]), 0);
+  eq('… nothing to count: none', [remoteSaveBytes(), remoteSaveBytes(null, null), remoteSaveBytes([null, {}, { kind: 'slice' }], [null])], [0, 0, 0]);
+  eq('the cap: 300 MB', REMOTE_SAVE_CAP_BYTES, 300 * MB);
+  eq('refused on a phone or a tablet over the cap only — never on a computer, never at or under it',
+    [remoteSaveRefused({ handheld: true, remoteBytes: 2300 * MB }), remoteSaveRefused({ handheld: true, remoteBytes: REMOTE_SAVE_CAP_BYTES + 1 }),
+      remoteSaveRefused({ handheld: true, remoteBytes: REMOTE_SAVE_CAP_BYTES }), remoteSaveRefused({ handheld: true, remoteBytes: 0 }),
+      remoteSaveRefused({ handheld: false, remoteBytes: 2300 * MB }), remoteSaveRefused({ remoteBytes: 2300 * MB })],
+    [true, true, false, false, false, false]);
+  // the words at open: never a promise of a file that cannot come
+  const big = handheldSaveWords({ remoteBytes: 2300 * MB, device: 'iPad' });
+  eq('what Save does, for a plan that is not refused: HANDHELD_SAVE, as ever',
+    [handheldSaveWords({ remoteBytes: 100 * MB, device: 'iPad' }), handheldSaveWords({ remoteBytes: 2300 * MB, handheld: false })], [HANDHELD_SAVE, HANDHELD_SAVE]);
+  ok('… for a refused one: that it cannot make a file here, why, and that it keeps the changes — no share sheet, no download promised',
+    big === remoteSaveWords({ remoteBytes: 2300 * MB, device: 'iPad' }) && /^Save cannot make a file of this plan on this iPad/.test(big)
+    && /opened over the internet/.test(big) && /2300 MB/.test(big) && /memory/.test(big) && /keeps your changes on this iPad/.test(big)
+    && !/share sheet|download|new file/i.test(big));
+  // the words when Save refuses
+  const w = o => remoteSaveRefusedWords({ name: 'A000T1 - Big.takeoff', remoteBytes: 2300 * MB, device: 'iPad', ...o });
+  const inPortal = w({ embedded: true, keptIn: 'A000T1 - Big.takeoff', dirty: true });
+  ok('refused inside the portal: not saved, why, the work kept and where it comes back, and the way to save it',
+    /^Not saved: A000T1 - Big\.takeoff was opened over the internet, and Save cannot make a file of it on this iPad/.test(inPortal)
+    && /2300 MB of its drawings would have to come into the iPad's memory at once, which closes the app\./.test(inPortal)
+    && /Your changes are kept on this iPad: opening A000T1 - Big\.takeoff again offers them back\./.test(inPortal)
+    && /free some room on this iPad \(the portal's Plans Library can remove plans you no longer need\), open the plan again from 📐 so the portal keeps it on this iPad, choose “Restore it” when it offers your changes, then Save\.$/.test(inPortal));
+  const inTab = w({ embedded: false, keptIn: 'A000T1 - Big.takeoff', dirty: true });
+  ok('… in a tab of its own: a copy on the device from the Files app, never the portal\'s 📐 here',
+    /open the plan from a copy on this iPad instead — pick it in the Files app \(the OneDrive app's files\), choose “Restore it” if it offers your changes — then Save\.$/.test(inTab)
+    && !/📐/.test(inTab));
+  ok('… with no unsaved changes: nothing is lost, and no restoring', /There were no unsaved changes, so nothing is lost\./.test(w({ embedded: true, dirty: false }))
+    && !/Restore it/.test(w({ embedded: true, dirty: false })) && !/Restore it/.test(w({ embedded: false, dirty: false })));
+  ok('… with no file to bring the work back from: never said to be kept — keep the page open',
+    /Your changes are still here, in this page only: keep it open\.$/.test(w({ embedded: true, dirty: true, keptIn: '' }))
+    && !/kept on this|Restore it/.test(w({ embedded: true, dirty: true, keptIn: '' })));
+}
+
 // ── home-screen app, and the download address ────────────────────────────
 const mm = matches => q => ({ matches: q === '(display-mode: standalone)' && matches });
 eq('iOS\'s own flag', isStandalone({ navigator: { standalone: true } }), true);
@@ -952,8 +1002,24 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
   ok('main.js never reaches for window.opener itself, and never posts to "*"', !/window\.opener/.test(main) && !/postMessage\([^)]*['"]\*['"]/.test(main));
   ok('a plan over the internet inside the portal is told how its work may reach OneDrive — inside the portal only (review fix)',
     /else if \(!toPortal && embedded && moved === 'same' && portalLinkOpen\(\)\) words \+= ` \$\{TO_ONEDRIVE_HINT\}`/.test(save)
-    && /if \(embedded\) setStatus\(`Opened \$\{plan\.name\} from OneDrive, over the internet\. \$\{NO_SAVE_BACK\}`\);/.test(recv)
-    && !/handheld\)? ?setStatus\(`Opened \$\{plan\.name\} from OneDrive/.test(recv));
+    && /if \(embedded\) \{\s*const remoteBytes = remoteSaveBytes\(app\.pages\.saveSources\(\), app\.pages\.saveRevisionSources\(\)\);\s*setStatus\(`Opened \$\{plan\.name\} from OneDrive, over the internet\. \$\{noSaveBackWords\(\{ remoteBytes, device, handheld \}\)\}`\);/.test(recv)
+    && !/handheld\)? ?setStatus\(`Opened \$\{plan\.name\} from OneDrive/.test(recv) && !/NO_SAVE_BACK/.test(main));
+  // Review MEM-1: a big plan opened over the internet on a phone or a tablet is never composed for Save.
+  {
+    const refuse = body('refuseBigRemoteSave');
+    ok('Save asks refuseBigRemoteSave first — before any picker, any draft or bar, and before the file is composed',
+      /if \(await refuseBigRemoteSave\(\)\) return;/.test(save)
+      && save.indexOf('await refuseBigRemoteSave()') < save.indexOf("showProgress('Saving…'")
+      && save.indexOf('await refuseBigRemoteSave()') < save.indexOf('await writeProject(')
+      && save.indexOf('await refuseBigRemoteSave()') < save.indexOf('showSaveFilePicker'));
+    ok('… which counts the sheets on the server, and refuses on a phone or a tablet over the cap only',
+      /const remoteBytes = remoteSaveBytes\(app\.pages\.saveSources\(\), app\.pages\.saveRevisionSources\(\)\);\s*if \(!remoteSaveRefused\(\{ handheld, remoteBytes \}\)\) return false;/.test(refuse));
+    ok('… keeps the draft (a few seconds at most), says why and what to do — on the status line and in a dialog — composes nothing',
+      /const drafted = await Promise\.race\(\[saveDraftNow\(\), new Promise\(r => setTimeout\(\(\) => r\(false\), 4000\)\)\]\);/.test(refuse)
+      && /remoteSaveRefusedWords\(\{\s*name: app\.fileName \|\| suggestedFileName\(\), remoteBytes, device, embedded, dirty,\s*keptIn: drafted \? draftHomeFor\(app\.draftHomes, app\.pages\.pageCount\) : '',\s*\}\);/.test(refuse)
+      && /setStatus\(words\);\s*await D\.alertDialog\('Not saved', words\);\s*return true;/.test(refuse)
+      && !/writeProject|markSaved|dropDraft|deliverBlob|handToPortal/.test(refuse));
+  }
   // Review fix: a draft of a plan the portal handed over is never dropped by the file's date.
   const restore = body('offerDraftRestore');
   ok('offerDraftRestore judges a draft by draftFate, by the date only when the plan is not the portal\'s',

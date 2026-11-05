@@ -21,14 +21,14 @@ import { openAfterAsking, isPhoneOrTablet, deviceWord, PORTAL_SAFARI_IF_ASKED } 
 import {
   deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
   savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
-  draftFate, afterLateKept, findDraft, draftKeptNow,
+  draftFate, afterLateKept, findDraft, draftKeptNow, remoteSaveBytes, remoteSaveRefused, remoteSaveRefusedWords,
 } from './core/save-route.js';
 import {
   HANDOFF_WAIT_MS, RENEW_WAIT_MS, SAVE_WAIT_MS, parsePortalHash, readyMessage, renewMessage,
   offlineMessage, openFromMessage, linkFromMessage, portalPeer, fromPeer, peerTargets, newSaveReq, askPortalToKeep,
 } from './core/portal-handoff.js';
 import {
-  detectEmbedded, plansSourceFor, EMBEDDED_IDLE, EMBEDDED_NO_KEEP, EMBEDDED_NOTHING, NO_SAVE_BACK, TO_ONEDRIVE_HINT,
+  detectEmbedded, plansSourceFor, EMBEDDED_IDLE, EMBEDDED_NO_KEEP, EMBEDDED_NOTHING, noSaveBackWords, TO_ONEDRIVE_HINT,
   COPY_TO_FILES, DRAFT_OF_ANYONE,
 } from './core/embedded.js';
 import { PlansArchive } from './ui/plans-archive.js';
@@ -2689,6 +2689,11 @@ async function saveProjectOnce({ saveAs = false } = {}) {
     return;
   }
 
+  // A big plan opened over the internet on a phone or a tablet: composing it
+  // would bring every sheet into memory whole and close the app. Not even
+  // tried — the work is kept, and the person told why and what to do.
+  if (await refuseBigRemoteSave()) return;
+
   // A project opened from a Plans Library copy reads every untouched sheet
   // out of that copy as it is written. If the portal has removed or replaced
   // the copy since, those reads fail part-way through — or, where a download
@@ -2945,6 +2950,30 @@ async function saveProjectOnce({ saveAs = false } = {}) {
   } finally {
     hideProgress();
   }
+}
+
+/**
+ * Save of a plan opened over the internet on a phone or a tablet, whose
+ * sheets on the server are over REMOTE_SAVE_CAP_BYTES (js/core/save-route.js
+ * remoteSaveRefused): writeProject would read every one of them whole into
+ * memory before any file could leave, and the page's process — inside the
+ * portal, the portal's page too — would be killed (review MEM-1). So it is
+ * never composed: the draft is written (a few seconds at most, as Save's
+ * own), and the person is told, in a dialog, why and what to do. Resolves
+ * whether Save was refused.
+ */
+async function refuseBigRemoteSave() {
+  const remoteBytes = remoteSaveBytes(app.pages.saveSources(), app.pages.saveRevisionSources());
+  if (!remoteSaveRefused({ handheld, remoteBytes })) return false;
+  const dirty = app.project.dirty;
+  const drafted = await Promise.race([saveDraftNow(), new Promise(r => setTimeout(() => r(false), 4000))]);
+  const words = remoteSaveRefusedWords({
+    name: app.fileName || suggestedFileName(), remoteBytes, device, embedded, dirty,
+    keptIn: drafted ? draftHomeFor(app.draftHomes, app.pages.pageCount) : '',
+  });
+  setStatus(words);
+  await D.alertDialog('Not saved', words);
+  return true;
 }
 
 /**
@@ -5080,9 +5109,14 @@ async function receiveFromPortal(nonce) {
     app.portal = { peer: pinned, nonce, kind: 'link', name: plan.name, canSave: false, hold: null, epoch: openEpoch };
     // A plan opened over the internet is never handed back. Inside the
     // portal, where a plan saved on the device can be, the way its work may
-    // reach OneDrive is said now (NO_SAVE_BACK: only where the portal lets
-    // this person save plans back). In a tab of its own nothing is promised.
-    if (embedded) setStatus(`Opened ${plan.name} from OneDrive, over the internet. ${NO_SAVE_BACK}`);
+    // reach OneDrive is said now (only where the portal lets this person save
+    // plans back), with what Save does here — for a plan too big to make a
+    // file of on this device, that it keeps the changes instead
+    // (noSaveBackWords). In a tab of its own nothing is promised.
+    if (embedded) {
+      const remoteBytes = remoteSaveBytes(app.pages.saveSources(), app.pages.saveRevisionSources());
+      setStatus(`Opened ${plan.name} from OneDrive, over the internet. ${noSaveBackWords({ remoteBytes, device, handheld })}`);
+    }
   }
 }
 

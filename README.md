@@ -130,7 +130,12 @@ device, the app says so, and offers *Save a copy to Files* instead. A plan
 opened over the internet (the portal had no room to keep it on the device) is
 never handed back; where the portal lets the person save plans back, opening
 it again from the 📐 menu once there is room keeps it on the device, and its
-Save then goes to the portal. Inside the portal the app notes no recent files
+Save then goes to the portal. On a phone or a tablet, Save does not even try
+to make a file of a plan opened over the internet whose drawings are over
+300 MB (inside the portal or not): every sheet would have to come into the
+device's memory at once, which closes the app. It keeps the work as a draft
+instead and says how to get it saved — from a copy kept on the device.
+Inside the portal the app notes no recent files
 (a list of plan names on the portal's site would outlive the person's prices),
 and a draft of a plan the portal handed over is offered back, never dropped
 because the file is newer: the portal dates a plan it sent by OneDrive's

@@ -283,6 +283,98 @@ export const HANDHELD_SAVE = `Save gives you a new file: through the share sheet
   + '(choose Save to Files), and above that, or where the browser cannot share a file, as a download into '
   + 'Downloads (Files › Downloads on an iPad).';
 
+/* ── a big plan opened over the internet, on a phone or a tablet ────────────
+
+   A plan opened over the internet (js/core/remote-file.js: the portal had no
+   room to keep it on the device, or a link) has its sheets on the server.
+   Composing a save of it reads every one of them WHOLE into memory first
+   (js/core/takeoff-file.js encodePageSource: RemoteSlice.blob() is
+   `new Blob([await arrayBuffer()])`), before the share sheet or the download
+   is reached. On a phone or a tablet that is the page's process killed —
+   inside the portal, the portal's page with it, and any send it had going —
+   and Save can never succeed (review MEM-1). Until a writer that streams the
+   sheets exists, such a save is not composed at all above a cap: the work is
+   kept as a draft, and the person is told plainly why and what to do. */
+
+/**
+ * Above this many bytes of sheets still on the server, a phone or a tablet
+ * does not compose a save of a plan opened over the internet. 300 MB: twice
+ * the share sheet's cap (whose copies are three times the file), and about a
+ * fifth of what kills the page's process on most iPhones, beside the decoded
+ * sheets the app already holds. The plan sets this is about are 500 MB to
+ * 2.3 GB.
+ */
+export const REMOTE_SAVE_CAP_BYTES = 300 * 1024 * 1024;
+
+/**
+ * How many bytes a save would bring down whole first: every page and
+ * revision source that is a slice not held as a Blob (a RemoteSlice — the one
+ * encodePageSource reads with blob()). A plan on the device is a Blob, and
+ * costs nothing; new sheets are in memory already.
+ */
+export function remoteSaveBytes(pageSources = [], revisionSources = []) {
+  let n = 0;
+  const count = s => {
+    if (!s || s.kind !== 'slice' || !s.data) return;
+    if (typeof Blob !== 'undefined' && s.data instanceof Blob) return;
+    n += Math.max(0, Number(s.data.size) || 0);
+  };
+  for (const s of Array.isArray(pageSources) ? pageSources : []) count(s);
+  for (const set of Array.isArray(revisionSources) ? revisionSources : []) {
+    for (const s of Array.isArray(set) ? set : []) count(s);
+  }
+  return n;
+}
+
+/** Whether Save refuses to compose: a phone or a tablet, over REMOTE_SAVE_CAP_BYTES of sheets on the server. */
+export function remoteSaveRefused({ handheld = false, remoteBytes = 0, cap = REMOTE_SAVE_CAP_BYTES } = {}) {
+  return handheld === true && Number(remoteBytes) > cap;
+}
+
+/** What Save does for such a plan, said where HANDHELD_SAVE would be (a plan opened over the internet). */
+export function remoteSaveWords({ remoteBytes = 0, device = 'device' } = {}) {
+  return `Save cannot make a file of this plan on this ${device}: it was opened over the internet, and all `
+    + `${MB(remoteBytes)} of its drawings would have to come into the ${device}'s memory at once, which closes the app. `
+    + `Save keeps your changes on this ${device} instead.`;
+}
+
+/**
+ * What Save does on a phone or a tablet for the plan open — HANDHELD_SAVE,
+ * unless it is a plan opened over the internet that Save cannot make a file
+ * of here (remoteSaveRefused): never a promise of a file that cannot come.
+ */
+export function handheldSaveWords({ remoteBytes = 0, device = 'device', handheld = true } = {}) {
+  return remoteSaveRefused({ handheld, remoteBytes }) ? remoteSaveWords({ remoteBytes, device }) : HANDHELD_SAVE;
+}
+
+/**
+ * The words when Save refused to compose such a plan (main.js
+ * refuseBigRemoteSave): what happened, where the work is, and what to do.
+ *
+ *   name      the plan's file name
+ *   keptIn    the name of a file whose reopening offers the draft back
+ *             (draftHomeFor), '' when there is none
+ *   dirty     there were unsaved changes
+ *   embedded  inside the portal (its 📐 and Plans Library), or a tab of its own
+ */
+export function remoteSaveRefusedWords({
+  name = 'the plan', remoteBytes = 0, device = 'device', embedded = false, keptIn = '', dirty = true,
+} = {}) {
+  const what = `Not saved: ${name} was opened over the internet, and Save cannot make a file of it on this ${device} — `
+    + `all ${MB(remoteBytes)} of its drawings would have to come into the ${device}'s memory at once, which closes the app.`;
+  if (dirty && !keptIn) return `${what} Your changes are still here, in this page only: keep it open.`;
+  const kept = dirty
+    ? `Your changes are kept on this ${device}: opening ${keptIn} again offers them back.`
+    : 'There were no unsaved changes, so nothing is lost.';
+  const restore = dirty ? ', choose “Restore it” when it offers your changes' : '';
+  const how = embedded
+    ? `To save it: free some room on this ${device} (the portal's Plans Library can remove plans you no longer `
+      + `need), open the plan again from 📐 so the portal keeps it on this ${device}${restore}, then Save.`
+    : `To save it: open the plan from a copy on this ${device} instead — pick it in the Files app (the OneDrive `
+      + `app's files)${dirty ? ', choose “Restore it” if it offers your changes' : ''} — then Save.`;
+  return `${what} ${kept} ${how}`;
+}
+
 /**
  * Said wherever Save to Files is suggested. The file keeps the name it was
  * opened by (saveFileName), so Files may offer to replace the plan itself —
