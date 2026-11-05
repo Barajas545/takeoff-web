@@ -13,7 +13,7 @@
 // Run: node tests/revisions-pixels.mjs
 import { open, stat, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { openProject, pageBlob } from '../js/core/takeoff-file.js';
+import { openProject, pageBlob, MAGIC, REVS_MAGIC } from '../js/core/takeoff-file.js';
 import { revPageCount, visibleRevisions, sheetVersions } from '../js/core/revisions.js';
 import { LIBRARY, haveLibrary, skip } from './config.mjs';
 
@@ -45,6 +45,7 @@ function lazyFile(fh, size, stats, start = 0, end = size) {
       const len = end - start;
       stats.reads += 1;
       stats.bytes += len;
+      stats.ranges.push([start, end]);
       const buf = Buffer.alloc(len);
       if (len) await fh.read(buf, 0, len, start);
       return buf.buffer.slice(buf.byteOffset, buf.byteOffset + len);
@@ -74,7 +75,7 @@ for await (const file of walk(ROOT)) {
   const size = (await stat(file)).size;
   const fh = await open(file, 'r');
   try {
-    const stats = { bytes: 0, reads: 0 };
+    const stats = { bytes: 0, reads: 0, ranges: [] };
     const blob = lazyFile(fh, size, stats);
     let opened;
     try {
@@ -89,21 +90,51 @@ for await (const file of walk(ROOT)) {
     const revCount = opened.revisions.length;
     const revSheets = opened.revisions.reduce((n, s) => n + s.length, 0);
 
-    // THE OPEN BUDGET. Header + metadata + the page index + the tail's size
-    // table. The size table is read as one bounded over-read of
+    // THE OPEN BUDGET is what the file's own layout needs, read here from its
+    // header rather than taken from the reader: the header, the metadata
+    // block, the page index, then the tail's magic, its set count and its
+    // size table. The size table is read as one bounded over-read of
     // revCount * 4 * (1 + 4096) bytes, because it is variable length and
-    // there is no way to know how long without reading it.
-    const budget = 256 * 1024 + revCount * 20 * 1024;
-    if (openBytes > budget) {
-      fail(`${path.basename(file)}: opening read ${(openBytes / 1024).toFixed(0)} KB, `
-        + `over the ${(budget / 1024).toFixed(0)} KB budget for ${revCount} revision sets`);
-    }
-
-    // Not one revision pixel. Every revision blob lives past the main pages,
-    // so any read into that region during an open is the bug this guards.
+    // there is no way to know how long without reading it -- one request,
+    // which matters when the file is read over the network in ranges.
+    //
+    // It used to be a flat 256 KB + 20 KB a set. The metadata block is the
+    // job's own items and notes, and on a busy job it is 765 KB by itself,
+    // so the flat number failed a job whose reader was doing nothing wrong
+    // -- and a test that is always red guards nothing.
+    const head = Buffer.alloc(MAGIC.length + 8);
+    await fh.read(head, 0, head.length, 0);
+    const metaLen = head.readUInt32LE(MAGIC.length + 4);
     const mainEnd = opened.pages.length
       ? opened.pages[opened.pages.length - 1].offset + opened.pages[opened.pages.length - 1].size
       : 0;
+    const tablePos = mainEnd + REVS_MAGIC.length + 4;
+    const tableMax = Math.min(size - tablePos, revCount * 4 * (1 + 4096));
+    const budget = head.length + metaLen + opened.pageCount * 12
+      + REVS_MAGIC.length + 4 + tableMax;
+    if (openBytes > budget) {
+      fail(`${path.basename(file)}: opening read ${(openBytes / 1024).toFixed(0)} KB, `
+        + `over the ${(budget / 1024).toFixed(0)} KB its header, metadata, page index `
+        + `and revision table need`);
+    }
+
+    // Not one sheet pixel. No read during the open may touch a main sheet.
+    const touched = opened.pages.filter(p => stats.ranges.some(
+      ([a, b]) => a < p.offset + p.size && b > p.offset)).length;
+    if (touched) {
+      fail(`${path.basename(file)}: the open read into ${touched} sheet(s)' pixels`);
+    }
+
+    // Not one revision pixel past the size table's bounded over-read: the
+    // blobs start right after the table's real end (4 bytes per set and per
+    // sheet), and the only bytes the open may read beyond it are the rest of
+    // that one bounded read.
+    const tableEnd = tablePos + 4 * (revCount + revSheets);
+    const past = stats.ranges.reduce((n, [a, b]) => n + Math.max(0, b - Math.max(a, tableEnd)), 0);
+    if (past > tablePos + tableMax - tableEnd) {
+      fail(`${path.basename(file)}: the open read ${past} B of revision pixels, more than `
+        + `the size table's bounded over-read`);
+    }
     const tailBytes = size - mainEnd;
     if (openBytes > tailBytes && tailBytes > 0 && openBytes > budget) {
       fail(`${path.basename(file)}: the open read more than the whole revision tail`);
@@ -166,6 +197,7 @@ for await (const file of walk(ROOT)) {
       sets: revCount,
       revSheets,
       'tail MB': +((size - mainEnd) / 1e6).toFixed(0),
+      'meta KB': +(metaLen / 1024).toFixed(0),
       'open KB': +(openBytes / 1024).toFixed(1),
       'open %': +((openBytes / size) * 100).toFixed(4),
       'one sheet KB': +sheetKB.toFixed(0),
