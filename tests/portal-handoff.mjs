@@ -505,7 +505,7 @@ function fakeDoc(state = 'visible') {
   eq('… and only its answer from there counts', (await p).ending, 'kept');
 }
 
-// ── the portal's heartbeat: "keeping" (and any word before its answer) starts the wait again ──
+// ── the portal's heartbeat: a "keeping" that got further starts the wait again ──
 // On an iPad, copying a 2 GB File into the portal's own storage can take longer than the 2 minutes: a save the portal
 // was about to keep was reported as not saved. A portal that says it is at it is waited for; one that says nothing
 // is waited for as ever (the tests above).
@@ -541,28 +541,88 @@ function fakeDoc(state = 'visible') {
   eq('… a "keeping" after the answer is not news', w.news.length, 20);
   r.stop();
 }
+// Only a word that the portal got further starts the wait again (review LW-6, contract addendum 2 C2b). A copy whose
+// read never comes back was still told every 10 s by the portal's worker, at the same how-far: each one started the
+// 2 minutes again, Save never ended, and every later Save was "Still saving" until the frame was closed.
+// (`now`: the ending if the wait has ended by now, never waiting for one that has not — so a wait that never ends
+// fails here instead of hanging the run.)
+const now = p => Promise.race([p, tick().then(() => ({ ending: 'still waiting', stop() {}, late: null }))]);
+{
+  // the reviewer's stall: the second slice never comes back, "keeping" at 40% every 10 s for ever
+  const w = world();
+  const p = watch(keep(w));
+  w.say('keeping', { pct: 40 });
+  for (let t = 10; t < 120; t += 10) { w.c.advance(10 * 1000); w.say('keeping', { pct: 40 }); }
+  w.c.advance(10 * 1000 - 1);
+  await tick();
+  eq('a copy stuck at 40% and told every 10 s: still waiting just under 120 s after it got to 40%', settledAs, null);
+  w.c.advance(1);
+  const r = await now(p);
+  eq('… then the wait ends, 120 s after the last time it got further — not for ever', r.ending, 'timeout');
+  eq('… every beat still shown on the bar', w.news.filter(n => n.state === 'keeping' && n.pct === 40).length, 12);
+  eq('… and a late answer is still heard after it', [w.handlers.size, typeof (r.late && r.late.then)], [1, 'function']);
+  r.stop();
+}
+{
+  const w = world();
+  const p = watch(keep(w));
+  w.c.advance(100 * 1000);
+  w.say('keeping', { pct: 40 });
+  w.c.advance(100 * 1000);
+  w.say('keeping', { pct: 40 });
+  w.say('keeping', { pct: 39 });
+  w.c.advance(19 * 1000);
+  w.say('keeping', { pct: 41 });
+  w.c.advance(SAVE_WAIT_MS - 1);
+  await tick();
+  eq('the same how-far, or less, does not start the wait again; further does (41% at 219 s: waiting until 339 s)', settledAs, null);
+  w.c.advance(1);
+  eq('… and 120 s after it with nothing further: a timeout', (await now(p)).ending, 'timeout');
+}
 {
   const w = world();
   const p = watch(keep(w));
   w.c.advance(110 * 1000);
   w.say('keeping');
-  w.c.advance(110 * 1000);
+  w.c.advance(10 * 1000 - 1);
   await tick();
-  eq('"keeping" with no number starts the wait again too', [settledAs, w.news.map(n => [n.state, n.pct])], [null, [['keeping', null]]]);
-  w.say('failed', { why: 'OPFS write failed' });
-  eq('… and an answer after it ends the wait', (await p).ending, 'failed');
+  eq('"keeping" with no number is shown (the bar) …', [settledAs, w.news.map(n => [n.state, n.pct])], [null, [['keeping', null]]]);
+  w.c.advance(1);
+  const r = await now(p);
+  eq('… but says nothing got further: the wait ends 120 s after the post, as ever', r.ending, 'timeout');
+  r.stop();
+}
+{
+  // a save queued behind another in the portal hears "keeping" with no number while the other one is kept
+  const w = world();
+  const p = watch(keep(w));
+  for (let t = 0; t < 115; t += 5) { w.c.advance(5 * 1000); w.say('keeping'); }
+  w.say('keeping', { pct: 0 });
+  w.c.advance(SAVE_WAIT_MS - 1);
+  await tick();
+  eq('queued (no number, for nearly 2 minutes), then its own copy starts at 0%: waited for 120 s from that', settledAs, null);
+  w.say('kept');
+  eq('… and its "kept" is a save', (await p).ending, 'kept');
 }
 for (const state of ['sending', 'sent', 'copy']) {
-  // C2 lets any word that is not an answer come; before the answer each one is a word that the portal is at it
+  // C2 lets any word that is not an answer come; before the answer it is shown, but it is not "the portal got further"
   const w = world();
   const p = watch(keep(w));
   w.c.advance(100 * 1000);
   w.say(state, state === 'copy' ? { name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' } : {});
-  w.c.advance(100 * 1000);
+  w.c.advance(20 * 1000 - 1);
   await tick();
-  eq(`"${state}" before the answer starts the wait again too`, settledAs, null);
+  eq(`"${state}" before the answer is passed on, and the wait goes on from where it was`, [settledAs, w.news.map(n => n.state)], [null, [state]]);
   w.say('kept');
   eq(`… and only "kept" after it is a save`, (await p).ending, 'kept');
+}
+{
+  const w = world();
+  const p = watch(keep(w));
+  w.c.advance(100 * 1000);
+  w.say('sending', { pct: 10 });
+  w.c.advance(20 * 1000);
+  eq('"sending" before the answer does not start the wait again: a timeout 120 s after the post', (await now(p)).ending, 'timeout');
 }
 {
   const w = world();

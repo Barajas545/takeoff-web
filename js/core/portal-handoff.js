@@ -37,8 +37,8 @@
  *      and waits for `{type: 'ptt-save-state', v, nonce, req, state, why?}`:
  *      'kept' (the portal has the bytes in its own storage — only then is the
  *      project saved), 'refused', 'no-room' or 'failed'. While it keeps them it
- *      may say so — `{..., state: 'keeping', pct?}` — and each such word (any
- *      word about this save that is not an answer) starts the wait again: a
+ *      may say so — `{..., state: 'keeping', pct?}` — and each one that says
+ *      it got further (a `pct` more than before) starts the wait again: a
  *      big plan takes more than the wait to copy on an iPad. Sending to
  *      OneDrive is the portal's job after that; it may say how it goes
  *      ('sending' with a `pct`, 'sent', 'copy' with the copy's `name`), and
@@ -69,13 +69,13 @@ export const HANDOFF_WAIT_MS = 120 * 1000;
 export const RENEW_WAIT_MS = 90 * 1000;
 
 /** How long Save waits for the portal to say it has the file before it keeps the work as a draft and says so (the
- *  portal spools the file into its own storage first: a gigabyte plan takes a while on an iPad). Any word of the
- *  portal's about the save that is not its answer starts this wait again, for the whole of it. */
+ *  portal spools the file into its own storage first: a gigabyte plan takes a while on an iPad). A 'keeping' that says
+ *  the portal got further (askPortalToKeep) starts this wait again, for the whole of it. */
 export const SAVE_WAIT_MS = 120 * 1000;
 /** The answers that end a save's wait: only 'kept' is a save. */
 export const SAVE_ENDINGS = Object.freeze(['kept', 'refused', 'no-room', 'failed']);
 /** What the portal may say while it keeps the file, before its answer — `pct` how far, 0-100, when it knows. Optional
- *  (a portal that never says it is waited for as ever); each one starts the wait again. */
+ *  (a portal that never says it is waited for as ever); one that is further than before starts the wait again. */
 export const SAVE_PROGRESS = Object.freeze(['keeping']);
 /** What the portal may say afterwards, while it sends the kept file to OneDrive (never waited for). */
 export const SAVE_NEWS = Object.freeze(['sending', 'sent', 'copy']);
@@ -300,12 +300,17 @@ export function saveStateFromMessage(d, nonce, req) {
  *                                     front (default: the page's own; null: never hidden)
  *           waitMs, pollMs, origins, setTimeout/clearTimeout/setInterval/clearInterval
  *
- * Any word of the portal's about this save that is not its answer — 'keeping'
- * while it copies the file into its own storage (with how far, when it
- * knows), or any of SAVE_NEWS — starts the wait again from now, for the whole
+ * A 'keeping' that says the portal got further — its `pct` more than any
+ * before it for this save — starts the wait again from now, for the whole
  * window: the portal is at it, and a 2 GB plan takes longer than the window
- * to copy on an iPad. A portal that says nothing before its answer is waited
- * for exactly as before.
+ * to copy on an iPad. Nothing else does: a 'keeping' at the same how-far, or
+ * with none, or any of SAVE_NEWS, is passed on (onNews) and the wait goes on.
+ * A copy that has stopped (a read that never comes back) may still be told
+ * as 'keeping' now and then by a timer, at the same how-far; it must end in
+ * the wait, as any silence does, never keep Save waiting for ever. 1% of the
+ * largest plan the portal takes (4 GiB) in 2 minutes is about 0.36 MB/s: a
+ * copy slower than that has stopped. A portal that says nothing before its
+ * answer is waited for exactly as before.
  *
  * Time the page spends hidden is not counted (as workerWriter's watchdog,
  * js/core/device-plans.js). Switching apps while the portal spools a big plan
@@ -419,13 +424,18 @@ export function askPortalToKeep({ peer, nonce, req, name, size, file } = {}, env
       end('timeout');
     };
     const tell = s => { try { if (env.onNews) env.onNews(s); } catch { /* words only */ } };
+    let furthest = -1;                    // the most of the file the portal has said it has kept (pct)
     const heard = ev => {
       if (!fromPeer(ev, peer, env.origins)) return;
       const s = saveStateFromMessage(ev && ev.data, nonce, req);
       if (!s) return;
       if (phase === 'waiting') {
         if (s.final) { end(s.state, s.why); return; }
-        arm();                            // the portal is at it: the whole wait again
+        // The portal got further: the whole wait again. Any other word is shown, and the wait goes on.
+        if (s.state === 'keeping' && typeof s.pct === 'number' && s.pct > furthest) {
+          furthest = s.pct;
+          arm();
+        }
         tell(s);
         return;
       }
