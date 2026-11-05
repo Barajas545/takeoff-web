@@ -146,7 +146,9 @@ and a draft of a plan the portal handed over is offered back, never dropped
 because the file is newer: the portal dates a plan it sent by OneDrive's
 upload, after work done since the save. A separate copy the portal made of a
 save (`<plan> - iPad <date> <time>.takeoff`) offers back the work drafted
-under the plan it was saved from. Drafts there are kept per person: the
+under the plan it was saved from — unless the portal names its plans (below):
+the copy is then a plan of its own, and that work comes back from the plan it
+was saved from. Drafts there are kept per person: the
 portal tells the app an opaque word for who is signed in (never an id or an
 e-mail), so on an iPad two people share, one person's unsaved work is never
 offered to the other; a draft kept before the portal said who is still

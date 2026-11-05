@@ -825,6 +825,36 @@ function brokerCopy(planName, stamp, n = 1, room = 200) {
     [draftKey(NAME, 5000000, A, P268), true]);
 }
 
+// Contract addendum 4 E4 and the portal's 'copy' news: a kept save the portal filed as a separate copy (the plan changed
+// in the office). The copy becomes a home of the drafts (followPortalCopy), keyed by THIS plan's word; the portal hands
+// the copy later with a word of its own (it is a plan of its own there), so the copy finds none of this plan's drafts —
+// and the work comes back from the plan it was saved from: its own file, or as an earlier version at the office's size.
+{
+  const A = 'AbCdEfGhIjKl';
+  const P = 'A000T1 - Main Level.takeoff';
+  const COPY = 'A000T1 - Main Level - iPad 2026-11-05 1010.takeoff';
+  const WP = 'pLaN_A000T1-', WC = 'cOpY_A000T1-';     // the portal's words for the plan and for its copy (made up)
+  const S0 = 43853, K = 45002, OFFICE = 46110;
+  const drafts = new Map();
+  const read = [];
+  const st = { get: async k => { read.push(k); return drafts.get(k) || null; }, keys: async () => [...drafts.keys()] };
+  let homes = nextDraftHomes([], { name: P, size: S0, pages: 3 });
+  homes = nextDraftHomes(homes, { name: P, size: K, pages: 3 }, { pending: true });
+  const next = afterSave('kept', { name: P, why: 'kept', keptIn: P, dirty: true, device: 'iPad' });
+  if (next.confirmed) homes = nextDraftHomes(homes, { name: P, size: K, pages: 3 });
+  homes = nextDraftHomes(homes, { name: COPY, size: K, pages: 3 });          // followPortalCopy
+  for (const h of homes) drafts.set(draftKey(h.name, h.size, A, WP), { payload: { v: 'work after the save' }, savedAt: 50, pageCount: 3 });
+  eq('copy — the work is drafted under the plan\'s first file and the copy, both by the plan\'s word',
+    [...drafts.keys()].sort(), [draftKey(P, S0, A, WP), draftKey(COPY, K, A, WP)].sort());
+  eq('copy — opened with its own word: nothing of the plan\'s found, nor read',
+    [await findDraft({ name: COPY, size: K, portal: true, who: A, embedded: true, plan: WC }, st), read.filter(k => k.endsWith(`|#${WP}`))], [null, []]);
+  const office = await findDraft({ name: P, size: OFFICE, portal: true, who: A, embedded: true, plan: WP }, st);
+  eq('copy — the plan, handed at the office\'s size: the work comes back, as an earlier version of it',
+    office && [office.key, office.earlier, office.draft.payload.v], [draftKey(P, S0, A, WP), true, 'work after the save']);
+  const same = await findDraft({ name: P, size: S0, portal: true, who: A, embedded: true, plan: WP }, st);
+  eq('copy — … or as its own, handed as it was', same && [same.key, same.earlier], [draftKey(P, S0, A, WP), false]);
+}
+
 // The re-check of D7: one opening, one plan, canSave. Save is answered 'no-room' (the same for refused, failed or the
 // two-minute wait): the draft stays under the plan's file AND the file posted (its pending home). Reopening the same,
 // unchanged plan offers the own draft; Cancel. The next reopening offers nothing — not the declined work again as

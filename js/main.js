@@ -3265,8 +3265,12 @@ async function keepDraftForPortal() {
  * finds the work drafted under the plan it was saved from: the same bytes,
  * so the same size (planOfPortalCopy — or, when the broker cut the plan's
  * name to fit, the one draft of a plan the copy's name begins, at that size:
- * portalCopyDraftKey). Inside the portal only the signed-in person's drafts
- * of the plan handed over are found (app.draftWho, app.draftPlan); one kept
+ * portalCopyDraftKey) — under the word the copy was handed with: inside a
+ * portal that names its plans, the copy is a plan of its own (another word),
+ * and that work comes back from the plan it was saved from instead (its own
+ * draft, or an earlier version's). Inside the portal only the signed-in
+ * person's drafts of the plan handed over are found (app.draftWho,
+ * app.draftPlan); one kept
  * before the portal said who is offered with a word that it may be someone
  * else's, and never dropped (`legacy`: findDraft). With none of this
  * person's for the file, inside the portal, their newest draft of the same
@@ -5303,7 +5307,11 @@ async function settleLateKept(word, { stop, after, name, size, pages, epochAtSav
  * office's version, and only the copy holds this save. So the copy becomes a
  * home of the project's drafts — the file it was opened from stays one — and
  * work not saved yet is drafted there at once: reopening the copy offers it
- * back. Nothing changes when another project is open by now.
+ * back. Inside a portal that names its plans (app.draftPlan), the copy's
+ * home is keyed by THIS plan's word, and the portal hands the copy with a
+ * word of its own: there the work comes back from the plan's own file
+ * instead (the first home), never from another plan's drafts. Nothing
+ * changes when another project is open by now.
  */
 function followPortalCopy({ name, size, pages, epoch }) {
   if (epoch !== openEpoch) return;
