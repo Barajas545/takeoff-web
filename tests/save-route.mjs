@@ -638,8 +638,8 @@ function brokerCopy(planName, stamp, n = 1, room = 200) {
     // a separate copy the portal made of a save finds the draft of its plan at the copy's size — inside the word the
     // portal handed the copy with, never another plan word's
     const COPY = 'A000T1 - Main Level - iPad 2026-11-05 1010.takeoff';
-    const st = store([[K(S0), 'P\'s', 2], [K(S0, A, Q), 'Q\'s', 9]]);
-    eq('a copy the portal made: the draft of its plan under the same word only', [
+    const st = store([[K(S0), 'P\'s', 2], [K(S0, A, Q), 'Q\'s', 9], [draftKey(PLAN, S0, A), 'no word', 99]]);
+    eq('a copy the portal made: the draft of its plan under the same word only (never another word\'s, nor one of no word)', [
       v(await at({ name: COPY, size: S0, who: A }, st)), v(await at({ name: COPY, size: S0, who: A, plan: Q }, st)),
       await at({ name: COPY, size: S0, who: A, plan: 'Rr_third-lot' }, st)],
     [['P\'s', K(S0), false, false], ['Q\'s', K(S0, A, Q), false, false], null]);
