@@ -16,7 +16,7 @@ import {
   PORTAL_ORIGINS, HANDOFF_VERSION, HANDOFF_WAIT_MS, parsePortalHash, isPortalOrigin, readyMessage, renewMessage, offlineMessage,
   linkOk, openFromMessage, linkFromMessage,
   SAVE_WAIT_MS, SAVE_ENDINGS, SAVE_PROGRESS, SAVE_NEWS, framedBySameSite, portalPeer, fromPeer, peerTargets, newSaveReq, saveMessage,
-  saveStateFromMessage, askPortalToKeep,
+  saveStateFromMessage, askPortalToKeep, WHO_RE,
 } from '../js/core/portal-handoff.js';
 import { parsePlansLink } from '../js/core/plans-folder.js';
 
@@ -86,6 +86,17 @@ const linkMsg = { type: 'ptt-open', v: HANDOFF_VERSION, nonce: NONCE, kind: 'lin
 eq('a OneDrive link', openFromMessage(linkMsg, NONCE),
   { kind: 'link', url: LINK, name: 'Roof.TAKEOFF', size: 99, number: 'A024-B', lastModified: 0 });
 eq('a link is never given a save back, whatever the message says', 'canSave' in openFromMessage({ ...linkMsg, canSave: true }, NONCE), false);
+// Contract addendum 2 C2b (review PRICE-4): ptt-open gains an optional `who`, the portal's opaque word for the person
+// signed in — base64url of 9 bytes: exactly 12 of A-Z a-z 0-9 - _. Inside the portal drafts are kept per person.
+eq('the person\'s word: exactly the portal\'s shape', WHO_RE.source, '^[A-Za-z0-9_-]{12}$');
+eq('who, for a copy on the device and for a link', [openFromMessage({ ...fileMsg, who: 'AbCdEfGhIj-_' }, NONCE).who,
+  openFromMessage({ ...linkMsg, who: 'Zz9_-0aB1cD2' }, NONCE).who], ['AbCdEfGhIj-_', 'Zz9_-0aB1cD2']);
+eq('… and nothing else is one (too short, too long, padded, base64 not base64url, an e-mail, not a string): no who at all',
+  ['AbCdEfGhIjK', 'AbCdEfGhIjKlM', 'AbCdEfGhIj==', 'AbCdEfGhIj+/', 'a@example.com', 'AbCdEfGhIj\nl', 42, null, {}]
+    .map(w => 'who' in openFromMessage({ ...fileMsg, who: w }, NONCE)), Array(9).fill(false));
+eq('… an old portal that never says it: no who, the plan as before', [ 'who' in openFromMessage(fileMsg, NONCE), 'who' in openFromMessage(linkMsg, NONCE)],
+  [false, false]);
+eq('… and a word never makes a message the plan\'s that is not', openFromMessage({ ...fileMsg, who: 'AbCdEfGhIjKl', nonce: 'Another_tab_nonce_123' }, NONCE), null);
 
 const refused = [
   ['another tab\'s nonce', { ...fileMsg, nonce: 'Another_tab_nonce_123' }],

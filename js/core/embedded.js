@@ -115,5 +115,14 @@ export const TO_ONEDRIVE_HINT = 'A plan opened over the internet is not saved ba
   + 'Save then hands it to the portal.';
 export const NO_SAVE_BACK = `${TO_ONEDRIVE_HINT} ${HANDHELD_SAVE}`;
 
+/**
+ * Said in "Unsaved work found" inside the portal, for a draft kept before the
+ * portal said who is signed in (js/core/save-route.js findDraft `legacy`):
+ * it may be another person's, and saying no leaves it as it is.
+ */
+export const DRAFT_OF_ANYONE = 'It was kept on this device before the portal told this app who is signed in, so on a '
+  + 'device more than one person uses it may be someone else\'s work. Restore it only if it is yours: Cancel leaves it '
+  + 'as it is.';
+
 /** The fallback offered beside a save the portal did not keep: P1's share sheet or download, under its own name. */
 export const COPY_TO_FILES = 'Save a copy to Files';

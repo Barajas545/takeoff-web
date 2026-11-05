@@ -18,7 +18,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import {
   EMBEDDED_KEY, embeddedFrom, detectEmbedded, plansSourceFor, EMBEDDED_PLANS, EMBEDDED_IDLE, EMBEDDED_NO_KEEP,
-  EMBEDDED_NO_ARCHIVE, EMBEDDED_NOTHING, TO_ONEDRIVE_HINT, NO_SAVE_BACK, COPY_TO_FILES,
+  EMBEDDED_NO_ARCHIVE, EMBEDDED_NOTHING, TO_ONEDRIVE_HINT, NO_SAVE_BACK, COPY_TO_FILES, DRAFT_OF_ANYONE,
 } from '../js/core/embedded.js';
 import { portalPeer } from '../js/core/portal-handoff.js';
 import { resolvePlansSource } from '../js/core/plans-folder.js';
@@ -119,6 +119,10 @@ eq('a plan opened over the internet inside the portal: how its work may reach On
 ok('… never promised outright (the old words were)', !/^To save to OneDrive/.test(TO_ONEDRIVE_HINT) && /\bIf the portal lets you\b/.test(TO_ONEDRIVE_HINT));
 ok('… with what Save does here', NO_SAVE_BACK === `${TO_ONEDRIVE_HINT} ${HANDHELD_SAVE}`);
 eq('the fallback\'s button', COPY_TO_FILES, 'Save a copy to Files');
+// Review PRICE-4: a draft kept before the portal said who is signed in may be another person's, and "no" keeps it.
+ok('a draft of no person is offered with the word that it may be someone else\'s, and that Cancel leaves it',
+  /someone else's work/.test(DRAFT_OF_ANYONE) && /Restore it only if it is yours/.test(DRAFT_OF_ANYONE)
+  && /Cancel leaves it as it is\.$/.test(DRAFT_OF_ANYONE) && !/prices|e-mail|id\b/.test(DRAFT_OF_ANYONE));
 // github.io on a phone or a tablet (not inside the portal): plans come from the DCR Portal — with Safari only if the
 // portal asks (review fix: true before the portal's frame is live, and whenever its switch for it is off)
 ok('the handheld start screen says plans come from the DCR Portal, with Safari only when the portal asks for it',

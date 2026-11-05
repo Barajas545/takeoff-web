@@ -60,6 +60,8 @@
  * the real download and the real "Your file is ready" dialog.
  */
 
+import { draftKey, draftKeyTail, draftWho } from './drafts.js';
+
 /**
  * Above this the share sheet is not offered at all: the file downloads.
  *
@@ -698,12 +700,14 @@ export function portalCopyKind(copy, plan) {
  * one whose name it only begins (cut), next. '' when there is none, or more
  * than one could be: a wrong match would need a plan of that beginning AND
  * of exactly those bytes' size, and two of them give none, never a guess.
+ * `who`: only that person's drafts (draftKey's "|@<who>"), or with none,
+ * only the drafts of no person.
  */
-export function portalCopyDraftKey(copy, size, keys) {
+export function portalCopyDraftKey(copy, size, keys, who = '') {
   const n = Number(size);
   if (typeof copy !== 'string' || !PORTAL_COPY_RE.test(copy.normalize('NFC'))) return '';
   if (!Number.isSafeInteger(n) || n <= 0 || !Array.isArray(keys)) return '';
-  const tail = `|${n}`;
+  const tail = draftKeyTail(n, who);
   const found = { whole: [], cut: [] };
   for (const k of keys) {
     if (typeof k !== 'string' || !k.endsWith(tail)) continue;
@@ -714,6 +718,55 @@ export function portalCopyDraftKey(copy, size, keys) {
   }
   const best = found.whole.length ? found.whole : found.cut;
   return best.length === 1 ? best[0] : '';
+}
+
+/**
+ * The draft to offer back for a file just opened (main.js offerDraftRestore),
+ * with no draft read but the one found:
+ *
+ *   name, size  the file's
+ *   portal      a plan the portal handed over, or this page is inside it: a
+ *               separate copy the portal made of a save also finds the draft
+ *               of the plan it was made from (planOfPortalCopy, and among the
+ *               keys portalCopyDraftKey)
+ *   who         inside the portal, its word for the person signed in
+ *               (js/core/drafts.js draftWho): the drafts are that person's,
+ *               and another person's are never found — on an iPad two
+ *               people share, one's unsaved work is never offered to the
+ *               other, nor dropped by the other's "no" (review PRICE-4)
+ *   store       { get(key) → the draft or null, keys() → every key }
+ *
+ * A draft written before the portal said who (a key with no person) is still
+ * found for a person who has none of their own — `legacy`: offered, never
+ * dropped (it may be another person's, and dropping it would lose their
+ * work), for this release.
+ *
+ * → { key, draft, own, legacy } or null — `own` the key the file's own
+ * draft goes under now.
+ */
+export async function findDraft({ name, size, portal = false, who = '' } = {}, { get, keys } = {}) {
+  const me = draftWho(who);
+  const own = draftKey(name, size, me);
+  const plan = portal ? planOfPortalCopy(name) : '';
+  const look = async w => {
+    const exact = [draftKey(name, size, w)];
+    if (plan) exact.push(draftKey(plan, size, w));
+    for (const k of exact) {
+      const d = await get(k);
+      if (d && d.payload) return { key: k, draft: d };
+    }
+    // A copy whose name does not give its plan's back: the broker cut a long
+    // name to fit (or tidied its end) — looked for among the keys.
+    if (!plan) return null;
+    const k = portalCopyDraftKey(name, size, await keys(), w);
+    const d = k ? await get(k) : null;
+    return d && d.payload ? { key: k, draft: d } : null;
+  };
+  const mine = await look(me);
+  if (mine) return { ...mine, own, legacy: false };
+  if (!me) return null;
+  const old = await look('');
+  return old ? { ...old, own, legacy: true } : null;
 }
 
 /**

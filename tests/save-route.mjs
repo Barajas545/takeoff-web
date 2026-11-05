@@ -29,9 +29,9 @@ import {
   SHARE_CAP_BYTES, SHEET_MIN_MS, downloadUrlKeepMs, saveRoute, shareErrorKind, deliverFile, afterSave,
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
   HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords, draftFate, DRAFT_DATE_SLACK_MS, planOfPortalCopy,
-  afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN,
+  afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN, findDraft,
 } from '../js/core/save-route.js';
-import { draftKey } from '../js/core/drafts.js';
+import { draftKey, draftKeyTail, draftWho } from '../js/core/drafts.js';
 import { Project } from '../js/core/project.js';
 import { HANDHELD_HINT } from '../js/core/plans-link.js';
 import { askPortalToKeep, SAVE_WAIT_MS } from '../js/core/portal-handoff.js';
@@ -417,6 +417,93 @@ function brokerCopy(planName, stamp, n = 1, room = 200) {
   eq('… nothing to go on: none', [portalCopyDraftKey(cutCopy, 0, [K(LONG)]), portalCopyDraftKey(cutCopy, N, null), portalCopyDraftKey(LONG, N, [K(LONG)]),
     portalCopyDraftKey(cutCopy, N, [42, null, `${LONG}`])], ['', '', '', '']);
   eq('… the keys are draftKey\'s own ("<name>|<size>")', draftKey(LONG, N), `${LONG}|${N}`);
+}
+
+// Review PRICE-4: two people who both see prices share an iPad. A leaves "Main Level" unsaved in the frame; B opens
+// the same version of it (B's own record in the portal, the same name and size) and was offered A's measurements —
+// to restore and Save under B's account, or to decline, which dropped A's work. Inside the portal the drafts are the
+// signed-in person's now (ptt-open's `who`: the portal's opaque word for them, never an id or an e-mail).
+{
+  const A = 'AbCdEfGhIjKl';
+  const B = 'Zz9_-0aB1cD2';
+  const PLAN = 'A000T1 - Main Level.takeoff';
+  const S = 43853;
+  eq('a person\'s key: the name, the size and their word', draftKey(PLAN, S, A), `${PLAN}|${S}|@${A}`);
+  ok('… another person\'s is another key, and neither is the key of no person',
+    new Set([draftKey(PLAN, S, A), draftKey(PLAN, S, B), draftKey(PLAN, S)]).size === 3);
+  eq('a word not of the portal\'s shape is no word (12 of A-Z a-z 0-9 - _)',
+    [draftKey(PLAN, 1, 'AbCdEfGhIjK'), draftKey(PLAN, 1, `${A}x`), draftKey(PLAN, 1, 'AbCdEfGhIj+/'), draftKey(PLAN, 1, 'AbCdEfGhIj=='),
+      draftKey(PLAN, 1, 42), draftKey(PLAN, 1, null), draftKey(PLAN, 1, '')], Array(7).fill(`${PLAN}|1`));
+  eq('draftWho: the word, or nothing', [draftWho(A), draftWho('nope'), draftWho(undefined)], [A, '', '']);
+  eq('the end of a key is the person\'s too', [draftKeyTail(S, A), draftKeyTail(S), draftKeyTail(S, 'nope')], [`|${S}|@${A}`, `|${S}`, `|${S}`]);
+  ok('a person\'s key never ends in a number, so it can never be one of no person (whatever the file is called)',
+    !/\|\d+$/.test(draftKey(`${PLAN}|${S}`, S, '123456789012')) && /\|@123456789012$/.test(draftKey(PLAN, S, '123456789012')));
+
+  // a made-up drafts store: what was asked of it, and what it holds
+  const store = entries => {
+    const m = new Map(entries.map(([k, v]) => [k, { payload: { v }, savedAt: 1, pageCount: 3 }]));
+    const log = [];
+    return { log, get: async k => { log.push('get'); return m.get(k) || null; }, keys: async () => { log.push('keys'); return [...m.keys()]; } };
+  };
+  const v = f => (f ? [f.draft.payload.v, f.legacy, f.key] : null);
+  {
+    const st = store([[draftKey(PLAN, S, A), 'A\'s work']]);
+    eq('B opens the plan A left unsaved: A\'s draft is not found — not offered, so not dropped by B\'s "no" either',
+      await findDraft({ name: PLAN, size: S, portal: true, who: B }, st), null);
+    const f = await findDraft({ name: PLAN, size: S, portal: true, who: A }, st);
+    eq('… A opens it: A\'s own, offered as ever', f && [...v(f), f.own], ['A\'s work', false, draftKey(PLAN, S, A), draftKey(PLAN, S, A)]);
+    eq('… each by its key alone: no list of keys read for a plan that is no copy', st.log, ['get', 'get', 'get']);
+  }
+  {
+    const st = store([[draftKey(PLAN, S), 'from before the word']]);
+    const f = await findDraft({ name: PLAN, size: S, portal: true, who: B }, st);
+    eq('a draft kept before the portal said who: still found, but as one of no person (offered, never dropped)',
+      f && [...v(f), f.own], ['from before the word', true, draftKey(PLAN, S), draftKey(PLAN, S, B)]);
+    const mine = store([[draftKey(PLAN, S), 'old'], [draftKey(PLAN, S, B), 'mine']]);
+    eq('… the person\'s own comes before it', v(await findDraft({ name: PLAN, size: S, portal: true, who: B }, mine)),
+      ['mine', false, draftKey(PLAN, S, B)]);
+    eq('a tab of its own (no word): the drafts of no person, as ever — never legacy there',
+      v(await findDraft({ name: PLAN, size: S }, st)), ['from before the word', false, draftKey(PLAN, S)]);
+    eq('… and a person\'s draft is never found without their word', await findDraft({ name: PLAN, size: S, portal: true },
+      store([[draftKey(PLAN, S, A), 'A']])), null);
+    eq('… nor with a word not of the portal\'s shape (that is no word)', v(await findDraft({ name: PLAN, size: S, portal: true, who: 'nope' }, st)),
+      ['from before the word', false, draftKey(PLAN, S)]);
+  }
+  {
+    // a separate copy the portal made of a save, found from the plan's draft — this person's only
+    const COPY = 'A000T1 - Main Level - iPad 2026-11-04 1415.takeoff';
+    const both = store([[draftKey(PLAN, S, A), 'A'], [draftKey(PLAN, S, B), 'B']]);
+    eq('a copy the portal made: the draft of its plan that is THIS person\'s', [
+      v(await findDraft({ name: COPY, size: S, portal: true, who: A }, both)),
+      v(await findDraft({ name: COPY, size: S, portal: true, who: B }, both)),
+    ], [['A', false, draftKey(PLAN, S, A)], ['B', false, draftKey(PLAN, S, B)]]);
+    eq('… the copy\'s own draft first', v(await findDraft({ name: COPY, size: S, portal: true, who: A },
+      store([[draftKey(PLAN, S, A), 'plan'], [draftKey(COPY, S, A), 'copy']]))), ['copy', false, draftKey(COPY, S, A)]);
+    eq('… one of no person, as legacy', v(await findDraft({ name: COPY, size: S, portal: true, who: A }, store([[draftKey(PLAN, S), 'old']]))),
+      ['old', true, draftKey(PLAN, S)]);
+    // the broker cut a long name: looked for among the keys, this person's only
+    const LONG = `A000T1 - ${'Made up plan of a long made-up job, '.repeat(6)}full set.takeoff`;
+    const cut = brokerCopy(LONG, '2026-11-04 1415');
+    const keys = [draftKey(LONG, S, A), draftKey(LONG, S, B)];
+    eq('a cut copy\'s plan, among the keys: this person\'s key only (two people\'s drafts of it are not "two plans")',
+      [portalCopyDraftKey(cut, S, keys, A), portalCopyDraftKey(cut, S, keys, B), portalCopyDraftKey(cut, S, keys)], [keys[0], keys[1], '']);
+    const st = store([[keys[0], 'A'], [keys[1], 'B']]);
+    eq('… found so by findDraft', v(await findDraft({ name: cut, size: S, portal: true, who: B }, st)), ['B', false, keys[1]]);
+    eq('… one of no person of a cut copy\'s plan, as legacy', v(await findDraft({ name: cut, size: S, portal: true, who: B },
+      store([[draftKey(LONG, S), 'old']]))), ['old', true, draftKey(LONG, S)]);
+    const none = store([]);
+    eq('… and a plan that is no copy is never looked for among the keys (its own key and the one of no person only)',
+      [await findDraft({ name: PLAN, size: S, portal: true, who: A }, none), none.log], [null, ['get', 'get']]);
+  }
+  {
+    // the whole case, out of the pieces main.js joins: A's homes drafted under A's word; B opens; A opens
+    const homes = nextDraftHomes([], { name: PLAN, size: S, pages: 3 });
+    const st = store(homes.map(h => [draftKey(h.name, h.size, A), 'A\'s hour']));
+    eq('end to end — A\'s hour of takeoff on a shared iPad: B is offered nothing, A gets it back', [
+      await findDraft({ name: PLAN, size: S, portal: true, who: B }, st),
+      v(await findDraft({ name: PLAN, size: S, portal: true, who: A }, st)),
+    ], [null, ['A\'s hour', false, draftKey(PLAN, S, A)]]);
+  }
 }
 
 // listDraftKeys reads the keys only — never a draft (a draft can be megabytes of takeoff).
@@ -851,10 +938,24 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
     && /await offerDraftRestore\(file, \{ portal: embedded \|\| fromPortal \}\);/.test(body('loadProjectFile')));
   ok('… and the hand-over says it for both kinds: a copy on the device and a link',
     /loadProjectFile\(file, null, \{ library: hold, fromPortal: true \}\)/.test(recv) && /\}\), null, \{ fromPortal: true \}\);/.test(recv));
-  ok('… a copy the portal made also finds the draft under its plan\'s name, then keeps it under its own',
-    /const plan = portal \? planOfPortalCopy\(file\.name\) : '';\s*if \(plan\) keys\.push\(draftKey\(plan, file\.size\)\);/.test(restore)
-    && /if \(key !== own && await saveDraftNow\(\)\) await dropDraft\(key\);/.test(restore)
-    && /if \(!ok\) \{ await dropDraft\(key\); return; \}/.test(restore));
+  ok('… the draft is found by findDraft (a copy\'s plan, a cut name, the person: tested above), from the drafts store',
+    /const found = await findDraft\(\{ name: file\.name, size: file\.size, portal, who: app\.draftWho \},\s*\{ get: getDraft, keys: listDraftKeys \}\);\s*if \(!found\) return;\s*const \{ key, draft, own, legacy \} = found;/.test(restore)
+    && !/planOfPortalCopy|portalCopyDraftKey|draftKey\(/.test(restore));
+  ok('… a copy the portal made keeps the draft under its own keys once restored — and one of no person is left where it was',
+    /if \(key !== own && await saveDraftNow\(\) && !legacy\) await dropDraft\(key\);/.test(restore));
+  ok('… "no" drops the draft — never one of no person, which may be someone else\'s (review PRICE-4)',
+    /if \(!ok\) \{\s*if \(!legacy\) await dropDraft\(key\);\s*return;\s*\}/.test(restore)
+    && /if \(!legacy && draftFate\(/.test(restore)
+    && (restore.match(/dropDraft\(/g) || []).length === 3
+    && /\(legacy \? `\\n\\n\$\{DRAFT_OF_ANYONE\}` : ''\)/.test(restore));
+  ok('the drafts are written under the person\'s word, for every key (review PRICE-4)',
+    /homes\.map\(h => draftKey\(h\.name, h\.size, app\.draftWho\)\)/.test(body('draftKeysNow'))
+    && /\[draftKey\(app\.fileName \|\| suggestedFileName\(\), app\.fileSize \|\| 0, app\.draftWho\)\]/.test(body('draftKeysNow'))
+    && /putDraft\(draftKey\(app\.fileName, now\.size, app\.draftWho\), work, info\)/.test(body('keepChangesAsDraft'))
+    && (main.match(/draftKey\(/g) || []).length === 3);
+  ok('… the word is the portal\'s, set inside the portal only, before the plan opens (either kind)',
+    /if \(embedded\) app\.draftWho = plan\.who \|\| '';\s*if \(plan\.kind === 'file'\) \{/.test(recv)
+    && (main.match(/app\.draftWho = /g) || []).length === 1);
   // Review fix: the portal's "copy" news makes the copy a home of the drafts.
   ok('the save tells handToPortal the sheets composed and the project it is for',
     /await handToPortal\(blob, savedName, \{ pages: pagesAtCompose, epoch: epochAtSave \}\)/.test(branch));
@@ -876,9 +977,6 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
     && (lateBody.match(/dropDraft\(/g) || []).length === 1 && /if \(next\.dropDraft\) \{[\s\S]*new Set\(draftBefore\)[\s\S]*draftKeysNow\(\)[\s\S]*dropDraft\(k\)/.test(lateBody));
   ok('… the kept file a home of the drafts, unless the save was filed as a copy (that copy is the home already)',
     /if \(next\.home && !after\.copy\) app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size, pages \}\);/.test(lateBody));
-  ok('a copy whose name the broker cut finds its plan\'s draft among the drafts\' keys (names only)',
-    /if \(!draft && plan\) \{\s*const k = portalCopyDraftKey\(file\.name, file\.size, await listDraftKeys\(\)\);\s*const d = k \? await getDraft\(k\) : null;\s*if \(d && d\.payload\) \{ key = k; draft = d; \}/.test(restore)
-    && restore.indexOf('portalCopyDraftKey(') > restore.indexOf('for (const k of keys)') && restore.indexOf('portalCopyDraftKey(') < restore.indexOf('if (!draft) return;'));
   const follow = body('followPortalCopy');
   ok('… only while that project is still the one open, and the work so far drafted there at once',
     /if \(epoch !== openEpoch\) return;\s*app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size, pages \}\);\s*void saveDraftNow\(\);/.test(follow));

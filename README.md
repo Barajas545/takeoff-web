@@ -136,7 +136,11 @@ and a draft of a plan the portal handed over is offered back, never dropped
 because the file is newer: the portal dates a plan it sent by OneDrive's
 upload, after work done since the save. A separate copy the portal made of a
 save (`<plan> - iPad <date> <time>.takeoff`) offers back the work drafted
-under the plan it was saved from. The page has no inline
+under the plan it was saved from. Drafts there are kept per person: the
+portal tells the app an opaque word for who is signed in (never an id or an
+e-mail), so on an iPad two people share, one person's unsaved work is never
+offered to the other; a draft kept before the portal said who is still
+offered, saying it may be someone else's, and never dropped. The page has no inline
 script (the portal holds its copy to a strict page policy): the layout is set
 before the first paint by `js/ui-mode-boot.js`.
 

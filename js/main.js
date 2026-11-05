@@ -21,7 +21,7 @@ import { openAfterAsking, isPhoneOrTablet, deviceWord, PORTAL_SAFARI_IF_ASKED } 
 import {
   deliverFile, afterSave, saveFileName, isStandalone, downloadUrlKeepMs, lateArrival, STILL_COMING,
   savedStill, nextDraftHomes, draftHomeFor, HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords,
-  draftFate, planOfPortalCopy, portalCopyDraftKey, afterLateKept,
+  draftFate, afterLateKept, findDraft,
 } from './core/save-route.js';
 import {
   HANDOFF_WAIT_MS, RENEW_WAIT_MS, SAVE_WAIT_MS, parsePortalHash, readyMessage, renewMessage,
@@ -29,7 +29,7 @@ import {
 } from './core/portal-handoff.js';
 import {
   detectEmbedded, plansSourceFor, EMBEDDED_IDLE, EMBEDDED_NO_KEEP, EMBEDDED_NOTHING, NO_SAVE_BACK, TO_ONEDRIVE_HINT,
-  COPY_TO_FILES,
+  COPY_TO_FILES, DRAFT_OF_ANYONE,
 } from './core/embedded.js';
 import { PlansArchive } from './ui/plans-archive.js';
 import { PLANS_SOURCE } from './site-config.js';
@@ -89,6 +89,11 @@ const app = {
   // nextDraftHomes). Empty for a takeoff started from a PDF until its first
   // confirmed save.
   draftHomes: [],
+  // Inside the portal, its word for the person signed in (ptt-open's `who`):
+  // drafts are written and found under it, so on an iPad two people share
+  // one's unsaved work is never offered to the other (js/core/drafts.js
+  // draftWho). '' everywhere else, and from a portal that sends none.
+  draftWho: '',
   // The Plans Library copy the open project reads its sheets from, and the
   // lock that keeps the portal from deleting it — null for any other file.
   // See openLibraryCopy().
@@ -3066,7 +3071,7 @@ async function keepChangesAsDraft(now) {
   const work = app.project.buildSaveMetadata();
   const info = { pageCount: app.pages.pageCount, name: app.fileName || '' };
   for (const key of draftKeysNow()) await putDraft(key, work, info);
-  if (now) await putDraft(draftKey(app.fileName, now.size), work, info);
+  if (now) await putDraft(draftKey(app.fileName, now.size, app.draftWho), work, info);
   await D.alertDialog('Changed since you opened it', now
     ? `${app.fileName} was replaced in the folder after you opened it — saved on `
       + 'another computer, or brought down by OneDrive. The drawings of the copy '
@@ -3167,8 +3172,8 @@ async function adoptIfInArchive(handle, file) {
 function draftKeysNow() {
   const homes = app.draftHomes || [];
   return homes.length
-    ? homes.map(h => draftKey(h.name, h.size))
-    : [draftKey(app.fileName || suggestedFileName(), app.fileSize || 0)];
+    ? homes.map(h => draftKey(h.name, h.size, app.draftWho))
+    : [draftKey(app.fileName || suggestedFileName(), app.fileSize || 0, app.draftWho)];
 }
 
 /** Write the draft now, under every key it may be found by. Resolves whether one was written. */
@@ -3199,32 +3204,20 @@ async function saveDraftNow() {
  * finds the work drafted under the plan it was saved from: the same bytes,
  * so the same size (planOfPortalCopy — or, when the broker cut the plan's
  * name to fit, the one draft of a plan the copy's name begins, at that size:
- * portalCopyDraftKey).
+ * portalCopyDraftKey). Inside the portal only the signed-in person's drafts
+ * are found (app.draftWho); one kept before the portal said who is offered
+ * with a word that it may be someone else's, and never dropped (`legacy`:
+ * findDraft).
  */
 async function offerDraftRestore(file, { portal = false } = {}) {
-  const own = draftKey(file.name, file.size);
-  const keys = [own];
-  const plan = portal ? planOfPortalCopy(file.name) : '';
-  if (plan) keys.push(draftKey(plan, file.size));
-  let key = '';
-  let draft = null;
-  for (const k of keys) {
-    const d = await getDraft(k);
-    if (d && d.payload) { key = k; draft = d; break; }
-  }
-  // A copy whose name does not give its plan's back: the broker cut a long
-  // name to fit (or tidied its end). Its plan is looked for among the
-  // drafts' keys — the names, no draft read (portalCopyDraftKey).
-  if (!draft && plan) {
-    const k = portalCopyDraftKey(file.name, file.size, await listDraftKeys());
-    const d = k ? await getDraft(k) : null;
-    if (d && d.payload) { key = k; draft = d; }
-  }
-  if (!draft) return;
+  const found = await findDraft({ name: file.name, size: file.size, portal, who: app.draftWho },
+    { get: getDraft, keys: listDraftKeys });
+  if (!found) return;
+  const { key, draft, own, legacy } = found;
 
   // A draft older than the file has already been saved into it — when the
   // file's date is this app's own save (draftFate).
-  if (draftFate({ savedAt: draft.savedAt, fileModified: file.lastModified, byDate: !portal }) === 'drop') {
+  if (!legacy && draftFate({ savedAt: draft.savedAt, fileModified: file.lastModified, byDate: !portal }) === 'drop') {
     await dropDraft(key);
     return;
   }
@@ -3244,9 +3237,13 @@ async function offerDraftRestore(file, { portal = false } = {}) {
     'Unsaved work found',
     `There is takeoff for "${file.name}" from ${when} that was never saved `
     + `into the file — the tab was most likely closed or reloaded first.`
+    + (legacy ? `\n\n${DRAFT_OF_ANYONE}` : '')
     + `\n\nRestore it?`,
     { okLabel: 'Restore it' });
-  if (!ok) { await dropDraft(key); return; }
+  if (!ok) {
+    if (!legacy) await dropDraft(key);
+    return;
+  }
 
   app.project.loadFrom({
     metadata: draft.payload,
@@ -3268,7 +3265,9 @@ async function offerDraftRestore(file, { portal = false } = {}) {
   setStatus('Unsaved work restored. Save it into the file to keep it.');
   // Found under the plan a copy was made from: kept under this file's own
   // keys from now on — written there first, then taken from the plan's.
-  if (key !== own && await saveDraftNow()) await dropDraft(key);
+  // One kept before the portal said who is written under this person's
+  // keys too, and left where it was.
+  if (key !== own && await saveDraftNow() && !legacy) await dropDraft(key);
 }
 
 // Hidden, not unloading: this is the event a discarded tab actually gets.
@@ -5012,6 +5011,9 @@ async function receiveFromPortal(nonce) {
   // From here on the peer is the address the plan came from, and nothing else.
   const pinned = { ...peer, origin };
   tellPortalOffline(pinned, nonce);
+  // Inside the portal the drafts are the signed-in person's: set before the
+  // plan opens, so its draft is looked for under that person's word.
+  if (embedded) app.draftWho = plan.who || '';
   if (plan.kind === 'file') {
     // Wrapped only to carry the plan's name and the version's date; no bytes
     // are copied. The copy is the portal's: Save never writes into it (Save
