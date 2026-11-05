@@ -45,9 +45,12 @@
  *      it got further (a `pct` more than before) starts the wait again: a
  *      big plan takes more than the wait to copy on an iPad. Sending to
  *      OneDrive is the portal's job after that; it may say how it goes
- *      ('sending' with a `pct`, 'sent', 'copy' with the copy's `name`), and
- *      nothing here waits for those. A 'kept' that comes after the wait has
- *      ended is still heard (the caller decides whether it is a save then).
+ *      ('sending' with a `pct`; 'checking' — OneDrive has it, and the portal
+ *      is checking it against office saves; 'sent'; 'copy' with the copy's
+ *      `name` and, optionally, its `plan` word; or 'failed', after which it
+ *      sends it again), and nothing here waits for those. A 'kept' that comes
+ *      after the wait has ended is still heard (the caller decides whether it
+ *      is a save then).
  *
  * Two windows can be the portal (the PEER, portalPeer):
  *
@@ -293,6 +296,9 @@ function plainWords(s) {
  *                                  portal's short words, '' when none
  *   + pct  for 'keeping' and 'sending': 0-100, or null when it gave no number
  *   + name for 'copy': the copy's file name ('' when it is not one)
+ *   + plan for 'copy': the portal's word for the copy (PLAN_RE) — the word it
+ *          hands that copy over with later, a plan of its own — or '' when it
+ *          gave none (a portal that does not say)
  */
 export function saveStateFromMessage(d, nonce, req) {
   if (!d || typeof d !== 'object' || d.type !== 'ptt-save-state' || d.v !== HANDOFF_VERSION) return null;
@@ -304,7 +310,10 @@ export function saveStateFromMessage(d, nonce, req) {
   if (d.state === 'keeping' || d.state === 'sending') {
     out.pct = typeof d.pct === 'number' && Number.isFinite(d.pct) ? Math.max(0, Math.min(100, Math.round(d.pct))) : null;
   }
-  if (d.state === 'copy') out.name = typeof d.name === 'string' && NAME_RE.test(d.name) ? d.name : '';
+  if (d.state === 'copy') {
+    out.name = typeof d.name === 'string' && NAME_RE.test(d.name) ? d.name : '';
+    out.plan = typeof d.plan === 'string' && PLAN_RE.test(d.plan) ? d.plan : '';
+  }
   return out;
 }
 

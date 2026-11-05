@@ -271,9 +271,18 @@ const SAVE = { nonce: NONCE, req: 's1Ab_-9xyz', name: 'A000T1 Made up plan.takeo
     saveStateFromMessage(st({ state: 'keeping', nonce: 'Another_tab_nonce_123' }), NONCE, SAVE.req),
     saveStateFromMessage(st({ state: 'keeping', v: 2 }), NONCE, SAVE.req)], [null, null, null]);
   eq('sent', saveStateFromMessage(st({ state: 'sent' }), NONCE, SAVE.req), { state: 'sent', final: false, why: '' });
-  eq('copy, with the copy\'s name', saveStateFromMessage(st({ state: 'copy', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' }), NONCE, SAVE.req),
-    { state: 'copy', final: false, why: '', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' });
+  eq('copy, with the copy\'s name (and no word for it: an older portal)', saveStateFromMessage(st({ state: 'copy', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff' }), NONCE, SAVE.req),
+    { state: 'copy', final: false, why: '', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff', plan: '' });
   eq('… a name that is not a plan\'s: none', saveStateFromMessage(st({ state: 'copy', name: '../x.takeoff' }), NONCE, SAVE.req).name, '');
+  // The portal's word for the copy (the one it hands the copy over with later: a plan of its own, PLAN_RE)
+  eq('copy, with the portal\'s word for it', saveStateFromMessage(st({ state: 'copy', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff', plan: 'cOpY_w0rd-12' }), NONCE, SAVE.req),
+    { state: 'copy', final: false, why: '', name: 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff', plan: 'cOpY_w0rd-12' });
+  eq('… a word of another shape is none (a name or a number in the clear, padding, too short or long, not a string)',
+    ['A267/Roof - iPad.takeoff', 'cOpY_w0rd-1=', 'cOpY_w0rd-1', 'cOpY_w0rd-123', 'cOpY w0rd-12', 12, null, { w: 1 }]
+      .map(plan => saveStateFromMessage(st({ state: 'copy', name: 'A - iPad 2026-11-04 1415.takeoff', plan }), NONCE, SAVE.req).plan),
+    ['', '', '', '', '', '', '', '']);
+  eq('… and only a copy carries one', [saveStateFromMessage(st({ state: 'sent', plan: 'cOpY_w0rd-12' }), NONCE, SAVE.req).plan,
+    saveStateFromMessage(st({ state: 'checking', plan: 'cOpY_w0rd-12' }), NONCE, SAVE.req).plan], [undefined, undefined]);
   eq('checking: in OneDrive, being checked against office saves — a word of news, never an answer',
     saveStateFromMessage(st({ state: 'checking' }), NONCE, SAVE.req), { state: 'checking', final: false, why: '' });
   const ignored = [
@@ -381,7 +390,7 @@ const tick = () => new Promise(r => setImmediate(r));
 {
   // Repair round 3b: the portal's check against office saves waits on OneDrive (its broker's 503 with Retry-After),
   // and a send that did not get through is sent again by the portal while this page is open. Neither ends the news:
-  // what became of the save — 'sent', or 'copy' with the copy's name — is still heard.
+  // what became of the save — 'sent', or 'copy' with the copy's name and word — is still heard.
   const COPY = 'A000T1 Made up plan - iPad 2026-11-04 1415.takeoff';
   const w = world();
   const p = keep(w);
@@ -394,10 +403,10 @@ const tick = () => new Promise(r => setImmediate(r));
   eq('… a "failed" send is news too, with its words — and the listener stays (the portal sends it again)',
     [w.news.at(-1), w.handlers.size], [{ state: 'failed', final: true, why: 'OneDrive\'s last step did not get through.' }, 1]);
   w.say('checking');
-  w.say('copy', { name: COPY });
-  eq('… so its later "copy" is heard, with the copy\'s name, and only then is it over',
-    [w.news.map(n => n.state), w.news.at(-1).name, w.handlers.size],
-    [['sending', 'checking', 'failed', 'checking', 'copy'], COPY, 0]);
+  w.say('copy', { name: COPY, plan: 'cOpY_w0rd-12' });
+  eq('… so its later "copy" is heard, with the copy\'s name and word, and only then is it over',
+    [w.news.map(n => n.state), w.news.at(-1).name, w.news.at(-1).plan, w.handlers.size],
+    [['sending', 'checking', 'failed', 'checking', 'copy'], COPY, 'cOpY_w0rd-12', 0]);
   w.say('sent');
   eq('… and nothing after that', w.news.length, 5);
   r.stop();

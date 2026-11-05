@@ -30,7 +30,7 @@ import {
   saveFileName, isStandalone, lateArrival, STILL_COMING, savedStill, nextDraftHomes, draftHomeFor,
   HANDHELD_SAVE, REPLACE_WARNING, savesToPortal, portalNewsWords, draftFate, DRAFT_DATE_SLACK_MS, planOfPortalCopy,
   afterLateKept, portalCopyKind, portalCopyDraftKey, COPY_ROOM_MIN, findDraft, draftKeptNow, portalRefusedWords, earlierDraftWords,
-  EARLIER_DRAFT_ASK, draftTwins,
+  EARLIER_DRAFT_ASK, draftTwins, draftHomeKeys, homesAfterPortalCopy,
   REMOTE_SAVE_CAP_BYTES, remoteSaveBytes, remoteSaveRefused, remoteSaveWords, handheldSaveWords, remoteSaveRefusedWords,
 } from '../js/core/save-route.js';
 import { RemoteFile } from '../js/core/remote-file.js';
@@ -370,6 +370,30 @@ eq('… from the file last saved, when that is the one with these sheets', draft
   eq('the portal\'s "copy" news while the frame is open: the copy becomes a home (followPortalCopy), the opened file stays one',
     nextDraftHomes(afterKept, COPY), [S0, COPY]);
   eq('… and a draft written now is offered back from the copy (its sheets as they are)', draftHomeFor(nextDraftHomes(afterKept, COPY), 3), S0.name);
+  // Repair round 3b: the portal names the copy in its news (its word for the copy, the one it hands the copy with).
+  const A = 'AbCdEfGhIjKl', WP = 'pLaN_A000T1-', WC = 'cOpY_A000T1-';
+  eq('homesAfterPortalCopy — the person, the plan and the copy named: the copy is the only home, under its own word; the plan\'s are left',
+    homesAfterPortalCopy(afterKept, { ...COPY, plan: WC }, { who: A, plan: WP }), { homes: [{ ...COPY, plan: WC }], leave: true });
+  eq('… no word for the copy (an older portal): the copy beside the file it was opened from, nothing left (as before)',
+    homesAfterPortalCopy(afterKept, COPY, { who: A, plan: WP }), { homes: [S0, COPY], leave: false });
+  eq('… a word of another shape is none', homesAfterPortalCopy(afterKept, { ...COPY, plan: 'A000T1/Main' }, { who: A, plan: WP }),
+    { homes: [S0, COPY], leave: false });
+  eq('… no word for the plan, or no person: the copy carries none either, and nothing is left', [
+    homesAfterPortalCopy(afterKept, { ...COPY, plan: WC }, { who: A, plan: '' }),
+    homesAfterPortalCopy(afterKept, { ...COPY, plan: WC }, { who: '', plan: WP })],
+  [{ homes: [S0, COPY], leave: false }, { homes: [S0, COPY], leave: false }]);
+  eq('nextDraftHomes keeps a home\'s own word (a valid one only), beside the first home or alone',
+    [nextDraftHomes([S0], { ...COPY, plan: WC }), nextDraftHomes([S0], { ...COPY, plan: 'no good' }),
+      nextDraftHomes([{ ...COPY, plan: WC }], S1, { pending: true })],
+    [[S0, { ...COPY, plan: WC }], [S0, COPY], [{ ...COPY, plan: WC }, { ...S1, pending: true }]]);
+  eq('… the same file under two words is two homes', nextDraftHomes([{ ...COPY, plan: WC }], COPY, { pending: true }),
+    [{ ...COPY, plan: WC }, { ...COPY, pending: true }]);
+  eq('draftHomeKeys — each home under the person\'s word and the plan\'s, a copy the portal named under its own',
+    draftHomeKeys([S0, { ...COPY, plan: WC }], A, WP), [draftKey(S0.name, S0.size, A, WP), draftKey(COPY.name, COPY.size, A, WC)]);
+  eq('… a home\'s own word only inside a portal that names its plans, and never without a person',
+    [draftHomeKeys([{ ...COPY, plan: WC }], A, ''), draftHomeKeys([{ ...COPY, plan: WC }], '', WP), draftHomeKeys([{ ...COPY, plan: 'bad' }], A, WP)],
+    [[draftKey(COPY.name, COPY.size, A)], [draftKey(COPY.name, COPY.size)], [draftKey(COPY.name, COPY.size, A, WP)]]);
+  eq('… no homes: no keys', [draftHomeKeys([], A, WP), draftHomeKeys(null, A, WP)], [[], []]);
   eq('the copy\'s plan, by the portal\'s naming: "<stem> - iPad YYYY-MM-DD HHMM.takeoff" (and " (2)" on) → "<stem>.takeoff"', [
     planOfPortalCopy(COPY.name),
     planOfPortalCopy('A000T1 - Made up plan - iPad 2026-11-04 1415 (2).takeoff'),
@@ -825,10 +849,12 @@ function brokerCopy(planName, stamp, n = 1, room = 200) {
     [draftKey(NAME, 5000000, A, P268), true]);
 }
 
-// Contract addendum 4 E4 and the portal's 'copy' news: a kept save the portal filed as a separate copy (the plan changed
-// in the office). The copy becomes a home of the drafts (followPortalCopy), keyed by THIS plan's word; the portal hands
-// the copy later with a word of its own (it is a plan of its own there), so the copy finds none of this plan's drafts —
-// and the work comes back from the plan it was saved from: its own file, or as an earlier version at the office's size.
+// Contract addendum 4 E4 and the portal's 'copy' news WITHOUT a word for the copy (an older portal): a kept save the
+// portal filed as a separate copy (the plan changed in the office). The copy becomes a home of the drafts
+// (followPortalCopy), keyed by THIS plan's word; the portal hands the copy later with a word of its own (it is a plan of
+// its own there), so the copy finds none of this plan's drafts — and the work comes back from the plan it was saved
+// from: its own file, or as an earlier version at the office's size (only at the same sheet count: main.js
+// offerDraftRestore leaves one of another alone, and says so — pinned below).
 {
   const A = 'AbCdEfGhIjKl';
   const P = 'A000T1 - Main Level.takeoff';
@@ -842,8 +868,10 @@ function brokerCopy(planName, stamp, n = 1, room = 200) {
   homes = nextDraftHomes(homes, { name: P, size: K, pages: 3 }, { pending: true });
   const next = afterSave('kept', { name: P, why: 'kept', keptIn: P, dirty: true, device: 'iPad' });
   if (next.confirmed) homes = nextDraftHomes(homes, { name: P, size: K, pages: 3 });
-  homes = nextDraftHomes(homes, { name: COPY, size: K, pages: 3 });          // followPortalCopy
-  for (const h of homes) drafts.set(draftKey(h.name, h.size, A, WP), { payload: { v: 'work after the save' }, savedAt: 50, pageCount: 3 });
+  const follow = homesAfterPortalCopy(homes, { name: COPY, size: K, pages: 3 }, { who: A, plan: WP });   // followPortalCopy
+  homes = follow.homes;
+  eq('copy, no word — nothing of the plan\'s is left (the plan\'s first file stays a home)', follow.leave, false);
+  for (const k of draftHomeKeys(homes, A, WP)) drafts.set(k, { payload: { v: 'work after the save' }, savedAt: 50, pageCount: 3 });
   eq('copy — the work is drafted under the plan\'s first file and the copy, both by the plan\'s word',
     [...drafts.keys()].sort(), [draftKey(P, S0, A, WP), draftKey(COPY, K, A, WP)].sort());
   eq('copy — opened with its own word: nothing of the plan\'s found, nor read',
@@ -853,6 +881,57 @@ function brokerCopy(planName, stamp, n = 1, room = 200) {
     office && [office.key, office.earlier, office.draft.payload.v], [draftKey(P, S0, A, WP), true, 'work after the save']);
   const same = await findDraft({ name: P, size: S0, portal: true, who: A, embedded: true, plan: WP }, st);
   eq('copy — … or as its own, handed as it was', same && [same.key, same.earlier], [draftKey(P, S0, A, WP), false]);
+}
+
+// Repair round 3b: the portal's 'copy' news names the copy (its word for it: the one it hands the copy over with). The
+// re-check's walk (a price person saves A267's Roof.takeoff, the office saved it meanwhile, the save is filed as a copy;
+// more work, Close; the copy opened; the plan opened at the office's version) out of the pieces main.js joins
+// (handToPortal, afterSave, followPortalCopy → homesAfterPortalCopy, draftKeysNow → draftHomeKeys, offerDraftRestore →
+// findDraft, draftTwins): the copy offers the work back as its own, and the plan — at the office's size, with the
+// draft's sheet count or another, or as it was opened — offers nothing of it, so it is never offered twice, and never
+// over the office's save.
+{
+  const A = 'AbCdEfGhIjKl';
+  const P = 'Roof.takeoff';
+  const COPY = 'Roof - iPad 2026-11-05 1010.takeoff';
+  const WP = 'BLthJK_pzHuR', WC = '9cfYrStBaHy3';      // made-up words for the plan and for its copy
+  const S0 = 46453, K = 46968, OFFICE = 71858;
+  const drafts = new Map();
+  const st = { get: async k => drafts.get(k) || null, keys: async () => [...drafts.keys()] };
+  const write = (homes, v, savedAt) => { for (const k of draftHomeKeys(homes, A, WP)) drafts.set(k, { payload: { v }, savedAt, pageCount: 2 }); };
+  let homes = nextDraftHomes([], { name: P, size: S0, pages: 2 });
+  write(homes, 'work up to the save', 10);
+  homes = nextDraftHomes(homes, { name: P, size: K, pages: 2 }, { pending: true });      // handToPortal posts it
+  const next = afterSave('kept', { name: P, why: 'kept', keptIn: P, dirty: true, device: 'iPad' });
+  if (next.confirmed) homes = nextDraftHomes(homes, { name: P, size: K, pages: 2 });
+  if (next.dropDraft) drafts.clear();
+  write(homes, 'work between the save and the news', 20);                                // hidden meanwhile
+  // the 'copy' news, with the copy's word: followPortalCopy
+  const before = draftHomeKeys(homes, A, WP);
+  const follow = homesAfterPortalCopy(homes, { name: COPY, size: K, pages: 2, plan: WC }, { who: A, plan: WP });
+  homes = follow.homes;
+  write(homes, 'work AFTER the save', 30);                                               // saveDraftNow (written)
+  const now = new Set(draftHomeKeys(homes, A, WP));
+  if (follow.leave) for (const k of before) if (!now.has(k)) drafts.delete(k);
+  write(homes, 'work AFTER the save, two hours', 40);                                    // Close: saveDraftNow
+  eq('named copy — the work is drafted under the copy alone, by the copy\'s word; nothing of it under the plan\'s',
+    [...drafts.keys()], [draftKey(COPY, K, A, WC)]);
+  const c = await findDraft({ name: COPY, size: K, portal: true, who: A, embedded: true, plan: WC }, st);
+  eq('named copy — opened (with its own word): the work offered back as its own draft',
+    c && [c.key, c.key === c.own, c.earlier, c.legacy, c.draft.payload.v], [draftKey(COPY, K, A, WC), true, false, false, 'work AFTER the save, two hours']);
+  for (const [size, how] of [[OFFICE, 'at the office\'s version'], [S0, 'as it was opened'], [K, 'at the size posted']]) {
+    eq(`named copy — the plan opened ${how}: nothing of that work offered`,
+      await findDraft({ name: P, size, portal: true, who: A, embedded: true, plan: WP }, st), null);
+  }
+  const twins = await draftTwins(c, st, A, WC);
+  eq('named copy — the copy\'s offer has no twins elsewhere', twins, []);
+  for (const k of [c.key, ...twins]) drafts.delete(k);                                   // "Cancel" on the copy
+  eq('… declined on the copy: nothing of it is left to offer again', [...drafts.keys()], []);
+  // The same news with no word for the plan (or no person): as an older portal's — the plan's first file stays a home.
+  const plain = homesAfterPortalCopy(nextDraftHomes([{ name: P, size: S0, pages: 2 }], { name: P, size: K, pages: 2 }),
+    { name: COPY, size: K, pages: 2, plan: WC }, { who: A, plan: '' });
+  eq('… a plan with no word: the copy beside the plan\'s first file, under no word, nothing left',
+    [plain.leave, draftHomeKeys(plain.homes, A, '')], [false, [draftKey(P, S0, A), draftKey(COPY, K, A)]]);
 }
 
 // The re-check of D7: one opening, one plan, canSave. Save is answered 'no-room' (the same for refused, failed or the
@@ -1171,6 +1250,44 @@ async function portalSave({ answer = 'kept', why = '', editWhileWaiting = false,
   const o = await portalSave({ answer: 'kept', openAnother: true });
   eq('end to end — kept, but another project opened meanwhile: the saved one\'s draft goes, the open one is not marked', [o.drafts, o.dirty], [0, true]);
 }
+// Repair round 3b, end to end: after 'kept' the portal's check waits on OneDrive ('checking'), a step does not get
+// through ('failed', sent again by the portal), then the save is filed as a copy it names. The news is heard to the
+// end, said as it comes (main.js handToPortal onNews: portalNewsWords), and the copy news moves the drafts' home to the
+// copy, under the copy's word (followPortalCopy: homesAfterPortalCopy with news.plan).
+{
+  const A = 'AbCdEfGhIjKl', WP = 'pLaN_A000T1-', WC = 'cOpY_A000T1-';
+  const COPY = 'A000T1 Made up plan - iPad 2026-11-05 1010.takeoff';
+  const file = new Blob([new Uint8Array(4321)]);
+  const c = fakeClock();
+  const win = { closed: false };
+  const handlers = new Set();
+  const said = [];
+  let homes = nextDraftHomes(nextDraftHomes([], { name: PLAN_NAME, size: 4000, pages: 2 }), { name: PLAN_NAME, size: file.size, pages: 2 }, { pending: true });
+  const peer = { via: 'frame', win, origin: 'https://portal.dcrframing.com' };
+  const waiting = askPortalToKeep({ peer, nonce: NONCE, req: 's124', name: PLAN_NAME, size: file.size, file }, {
+    ...c, waitMs: SAVE_WAIT_MS, pollMs: 2000,
+    listen: fn => { handlers.add(fn); return () => handlers.delete(fn); },
+    post: () => {},
+    peerGone: () => win.closed,
+    onNews: news => {
+      const words = portalNewsWords(news, { name: PLAN_NAME, device: 'iPad' });
+      if (words) said.push(words);
+      if (news.state === 'copy' && news.name) homes = homesAfterPortalCopy(homes, { name: news.name, size: file.size, pages: 2, plan: news.plan }, { who: A, plan: WP }).homes;
+    },
+  });
+  const say = (state, extra = {}) => { for (const h of [...handlers]) h({ source: win, origin: peer.origin, data: { type: 'ptt-save-state', v: 1, nonce: NONCE, req: 's124', state, ...extra } }); };
+  say('kept');
+  eq('end to end, after kept — the answer', (await waiting).ending, 'kept');
+  homes = nextDraftHomes(homes, { name: PLAN_NAME, size: file.size, pages: 2 });          // afterSave: confirmed
+  say('checking');
+  say('failed', { why: 'OneDrive\'s last step did not get through.' });
+  say('checking');
+  say('copy', { name: COPY, plan: WC });
+  eq('… the check said as a check (never "not sent"), the failed step as one, and the copy — each as it came', said.map(w => w.slice(0, 40)), [
+    'Your save of A000T1 Made up plan.takeoff', 'The portal could not send A000T1 Made up', 'Your save of A000T1 Made up plan.takeoff', 'Someone saved this plan in the office af']);
+  eq('… heard to the end: the copy\'s news after the failed step, and then nothing listens', handlers.size, 0);
+  eq('… and the drafts\' home is the copy, under the copy\'s word', draftHomeKeys(homes, A, WP), [draftKey(COPY, file.size, A, WC)]);
+}
 
 // A LATE "kept": no answer within the 2 minutes (told "not saved", the draft kept), then the portal's "kept" — saved
 // then only if nothing was done since the file was composed, and only for the latest save handed over.
@@ -1384,7 +1501,7 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
   ok('main.js never reaches for window.opener itself, and never posts to "*"', !/window\.opener/.test(main) && !/postMessage\([^)]*['"]\*['"]/.test(main));
   ok('a plan over the internet inside the portal is told how its work may reach OneDrive — inside the portal only (review fix)',
     /else if \(!toPortal && embedded && moved === 'same' && portalLinkOpen\(\)\) words \+= ` \$\{TO_ONEDRIVE_HINT\}`/.test(save)
-    && /if \(embedded\) \{\s*const remoteBytes = remoteSaveBytes\(app\.pages\.saveSources\(\), app\.pages\.saveRevisionSources\(\)\);\s*setStatus\(`Opened \$\{plan\.name\} from OneDrive, over the internet\. \$\{noSaveBackWords\(\{ remoteBytes, device, handheld \}\)\}`\);/.test(recv)
+    && /if \(embedded\) \{\s*const remoteBytes = remoteSaveBytes\(app\.pages\.saveSources\(\), app\.pages\.saveRevisionSources\(\)\);\s*setStatus\(withOpenDraftNote\(`Opened \$\{plan\.name\} from OneDrive, over the internet\. \$\{noSaveBackWords\(\{ remoteBytes, device, handheld \}\)\}`\)\);/.test(recv)
     && !/handheld\)? ?setStatus\(`Opened \$\{plan\.name\} from OneDrive/.test(recv) && !/NO_SAVE_BACK/.test(main));
   // Review MEM-1: a big plan opened over the internet on a phone or a tablet is never composed for Save.
   {
@@ -1409,7 +1526,27 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
     && !/draft\.savedAt <= file\.lastModified/.test(main));
   ok('… told so by loadProjectFile: inside the portal, or a plan it handed over',
     /async function loadProjectFile\(file, handle = null, \{ library = null, archive = null, fromPortal = false, plan = '' \} = \{\}\)/.test(main)
-    && /await offerDraftRestore\(file, \{ portal: embedded \|\| fromPortal \}\);/.test(body('loadProjectFile')));
+    && /openDraftNote = \(await offerDraftRestore\(file, \{ portal: embedded \|\| fromPortal \}\)\) \|\| '';/.test(body('loadProjectFile')));
+  // Repair round 3b: the line saying a draft of another sheet count was left alone is never put out by the open's own
+  // status lines (loadProjectFile's "Opened …", and inside the portal receiveFromPortal's).
+  {
+    const lf = body('loadProjectFile');
+    const at = lf.indexOf('openDraftNote = (await offerDraftRestore(');
+    ok('the open\'s status keeps what offerDraftRestore said of a draft it left alone — after it, in loadProjectFile',
+      at > 0 && /setStatus\(withOpenDraftNote\(\s*`Opened \$\{file\.name\} — /.test(lf.slice(at))
+      && !/setStatus\(\s*`Opened \$\{file\.name\}/.test(lf));
+    const left = body('offerDraftRestore');
+    ok('… offerDraftRestore resolves those words (another sheet count), and says them',
+      /const words = `Unsaved work found for this file, but it was measured against `[\s\S]*?It has been left alone rather than landing on the wrong drawings\.`;\s*setStatus\(words\);\s*return words;/.test(left));
+    const rv = body('receiveFromPortal');
+    ok('… and inside the portal, both kinds\' "Opened" lines keep them too (no bare setStatus of an opening there)',
+      (rv.match(/setStatus\(withOpenDraftNote\(/g) || []).length === 2
+      && /setStatus\(withOpenDraftNote\(plan\.updateAvailable/.test(rv)
+      && !/setStatus\(plan\.updateAvailable/.test(rv) && !/setStatus\(`Opened/.test(rv));
+    const note = main.slice(main.indexOf('let openDraftNote'), main.indexOf('let openDraftNote') + 400);
+    ok('… the note, after the line\'s own words, with a full stop between',
+      /let openDraftNote = '';\s*function withOpenDraftNote\(text\) \{\s*if \(!openDraftNote\) return text;\s*return `\$\{\/\[\.!\?\]\$\/\.test\(text\) \? text : `\$\{text\}\.`\} \$\{openDraftNote\}`;/.test(note));
+  }
   ok('… and the hand-over says it for both kinds: a copy on the device and a link — with the portal\'s word for the plan (E4)',
     /loadProjectFile\(file, null, \{ library: hold, fromPortal: true, plan: plan\.plan \}\)/.test(recv)
     && /\}\), null, \{ fromPortal: true, plan: plan\.plan \}\);/.test(recv)
@@ -1452,10 +1589,10 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
     && (restore.match(/dropDraft\(/g) || []).length === 4
     && /\(legacy \? `\\n\\n\$\{DRAFT_OF_ANYONE\}` : ''\)/.test(restore));
   ok('the drafts are written under the person\'s word and the plan\'s, for every key (review PRICE-4, contract addendum 4 E4)',
-    /homes\.map\(h => draftKey\(h\.name, h\.size, app\.draftWho, app\.draftPlan\)\)/.test(body('draftKeysNow'))
+    /\? draftHomeKeys\(homes, app\.draftWho, app\.draftPlan\)/.test(body('draftKeysNow'))
     && /\[draftKey\(app\.fileName \|\| suggestedFileName\(\), app\.fileSize \|\| 0, app\.draftWho, app\.draftPlan\)\]/.test(body('draftKeysNow'))
     && /putDraft\(draftKey\(app\.fileName, now\.size, app\.draftWho, app\.draftPlan\), work, info\)/.test(body('keepChangesAsDraft'))
-    && (main.match(/draftKey\(/g) || []).length === 3);
+    && (main.match(/draftKey\(/g) || []).length === 2 && (main.match(/draftHomeKeys\(/g) || []).length === 1);
   ok('… the word is the portal\'s, set inside the portal only, before the plan opens (either kind)',
     /if \(embedded\) app\.draftWho = plan\.who \|\| '';\s*if \(plan\.kind === 'file'\) \{/.test(recv)
     && (main.match(/app\.draftWho = /g) || []).length === 1);
@@ -1463,7 +1600,7 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
   ok('the save tells handToPortal the sheets composed and the project it is for',
     /await handToPortal\(blob, savedName, \{ pages: pagesAtCompose, epoch: epochAtSave \}\)/.test(branch));
   ok('… whose "copy" news (with its name) makes the copy a home of the drafts',
-    /if \(news\.state === 'copy' && news\.name\) \{\s*after\.copy = true;\s*followPortalCopy\(\{ name: news\.name, size: file\.size, pages, epoch \}\);/.test(hand));
+    /if \(news\.state === 'copy' && news\.name\) \{\s*after\.copy = true;\s*void followPortalCopy\(\{ name: news\.name, size: file\.size, pages, epoch, plan: news\.plan \}\)\s*\.catch\(\(\) => \{ \/\* drafts only \*\/ \}\);/.test(hand));
   ok('saveProjectOnce takes the late answer from handToPortal, and judges it only after everything else is said, never awaited',
     /\(\{ outcome, why, portalWhy, late \} = await handToPortal\(blob, savedName/.test(branch)
     && /if \(late\) \{\s*void late\.answer\.then\(word => settleLateKept\(word, \{\s*\.\.\.late, pages: pagesAtCompose, epochAtSave, changesAtCompose, draftBefore,\s*\}\)\)/.test(save)
@@ -1481,8 +1618,11 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
   ok('… the kept file a home of the drafts, unless the save was filed as a copy (that copy is the home already)',
     /if \(next\.home && !after\.copy\) app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size, pages \}\);/.test(lateBody));
   const follow = body('followPortalCopy');
-  ok('… only while that project is still the one open, and the work so far drafted there at once',
-    /if \(epoch !== openEpoch\) return;\s*app\.draftHomes = nextDraftHomes\(app\.draftHomes, \{ name, size, pages \}\);\s*void saveDraftNow\(\);/.test(follow));
+  ok('… only while that project is still the one open, and the work so far drafted there at once (homesAfterPortalCopy)',
+    /if \(epoch !== openEpoch\) return;\s*const before = draftKeysNow\(\);\s*const next = homesAfterPortalCopy\(app\.draftHomes, \{ name, size, pages, plan \}, \{ who: app\.draftWho, plan: app\.draftPlan \}\);\s*app\.draftHomes = next\.homes;\s*const unsaved = app\.project\.dirty;\s*const written = await saveDraftNow\(\);/.test(follow));
+  ok('… a copy the portal named: the drafts this opening kept under the plan\'s homes go once the work is written under the copy\'s — never when that write failed, never a key in use now',
+    /if \(!next\.leave \|\| \(unsaved && !written\)\) return;\s*const now = new Set\(draftKeysNow\(\)\);\s*for \(const k of before\) if \(!now\.has\(k\)\) await dropDraft\(k\);\n\}\n/.test(follow)
+    && (follow.match(/dropDraft\(/g) || []).length === 1);
 }
 // Found in the browser: the start screen draws its lists (and sweeps) while main.js is still being evaluated,
 // so a module-level `let` the sweep reads must come before that first top-level call, or the module throws.
