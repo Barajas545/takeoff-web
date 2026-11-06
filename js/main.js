@@ -75,6 +75,7 @@ import {
 } from './core/revisions.js';
 import { ZoomFloor, PinchHold, fitPlace, pinchPlace, wheelInOut, pictureZoom, pictureRect, zoomFloorLine, zoomOutTip, wheelHelp, pinchHelp, PICTURE_STEP } from './render/zoom-floor.js';
 import { menuPlace } from './ui/hold.js';
+import { activateOnThisSheet, activateAcrossSheets, propertiesOnThisSheet, deleteHereChoice, deletedHereWords, deleteName, shapesOnScreen } from './core/counting.js';
 
 const $ = id => document.getElementById(id);
 
@@ -184,29 +185,68 @@ const itemsPanel = new ItemsPanel({
   groupFilterEl: $('groupFilter'),
   costToggleEl: $('costToggle'),
   footEl: $('itemsFoot'),
+  // The SHEET chip and the title it words ('ITEMS ON X1.1').
+  sheetChipEl: $('sheetChip'),
+  titleEl: $('itemsTitle'),
   project: app.project,
   host: {
     pageLabel: idx => pageFinalLabel(idx),
     // The panel asks before it offers a control that writes.
     readOnly: () => controller.readOnly,
-    selectItem: (m, pageIdx, ev) => {
+    // The drawing on screen, for a list on one sheet; null with no sheet.
+    view: () => sheetView(),
+    // Where the chip is remembered: this browser's settings, never the file.
+    settings: app.settings,
+    // What a tap on the title, on '+N' or on a ⊘ tag says -- seen where
+    // the status line is not drawn, too (sayToFinger).
+    say: text => sayToFinger(text),
+    selectItem: (item, row, ev) => {
+      // The second click of a double-click (a double-tap) is Properties'
+      // (the row's dblclick): it does not step on to the next shape first.
+      if (ev && ev.detail >= 2) return;
+      // The list on one sheet: the item's shapes here, one per tap, and no
+      // page turn (stepOnThisSheet). Otherwise the shape this tap is for --
+      // the next of a multi-shape item, across sheets -- and the jump to it.
+      if (stepOnThisSheet(item, row)) return;
+      const [pageIdx, m] = stepAcrossSheets(item, row);
       // On another sheet: turned to, and zoomed on (jumpToItem). Another than
       // the one he is on with its drawing up (onSheetUp): a second click
       // while the first one's sheet decodes is the same jump again, and a
       // row on the sheet he is leaving, clicked while the next one decodes,
       // a jump back to it -- not a click on this sheet.
       if (pageIdx !== STANDALONE_PAGE && !onSheetUp(pageIdx)) { void jumpToItem(m, pageIdx); return; }
+      const show = () => {
+        controller.select([m._uid]);
+        const bb = boundingBox(m.points || []);
+        if (bb.w || bb.h) viewport.ensureVisible(bb);
+        requestDraw();
+      };
+      // A shape on a revision of this sheet -- another drawing of it, which
+      // the landing flips up, or the one up, which it takes down and puts
+      // back -- is selected once that drawing has landed: a flip drops a
+      // selection made before it (setVersionView), as the desktop's
+      // go_to_item lands before it selects. The walk across sheets reaches
+      // such a shape whenever two in a row are on two drawings of one sheet.
+      const flips = pageIdx !== STANDALONE_PAGE && !!(String(m.rev_id || '') || String(versionView.revId || ''));
       // A jump whose whole purpose is to put a piece of the user's own work
       // in front of them must land on the drawing that work was traced on.
       // Landing on the newest revision would hide the very item they clicked,
       // because an item is only painted over its own version of the sheet.
-      if (pageIdx !== STANDALONE_PAGE) goToPage(pageIdx, { version: m.rev_id || '' });
-      controller.select([m._uid]);
-      const bb = boundingBox(m.points || []);
-      if (bb.w || bb.h) viewport.ensureVisible(bb);
-      requestDraw();
+      const landing = pageIdx !== STANDALONE_PAGE ? goToPage(pageIdx, { version: m.rev_id || '' }) : null;
+      if (flips) {
+        const ticket = pageTicket;           // taken by goToPage before its first await
+        void landing.then(() => {
+          // ...unless he has gone on, or that drawing did not come up
+          if (ticket === pageTicket && onSheetUp(pageIdx)
+            && String(versionView.revId || '') === String(m.rev_id || '')) show();
+        });
+        return;
+      }
+      show();
     },
-    openProperties: item => openProperties(item),
+    // Properties… from the list: on one sheet, the shape painted here is
+    // selected and the form stays (desktop _properties_on_this_sheet).
+    openProperties: item => openPropertiesFromList(item),
     openMaterials: item => openMaterials(item),
     // From the Items list: its Delete takes the whole item, and asks first.
     showItemMenu: (item, ev) => showItemMenu(item, ev, { from: 'list' }),
@@ -338,6 +378,8 @@ function syncVersionUi({ rebuild = false } = {}) {
   // A version on screen is a look, not a place to draw — say so on the canvas
   // rather than only in the status line, which scrolls away.
   canvas.classList.toggle('on-version', on);
+  // A list on one sheet follows the drawing on screen (once it has landed).
+  itemsPanel.onSheetShown();
 }
 
 /**
@@ -391,6 +433,36 @@ let pendingTurn = null;
 // takes the drawing down and lands in that one's place, asking for the same
 // (reacquireAfterSave). { page, version, ticket, vticket, settle }
 let comingUp = null;
+// The goToPage whose drawing is not decided yet -- the sheet's own still
+// decoding, or the newest drawing of it after that -- by its pageTicket; 0
+// when none is. While it is, the Items list on one sheet does not list the
+// rows of a drawing that may not be the one that comes up (sheetView).
+let landingTicket = 0;
+// The sheet whose drawing would not decode, in the job it would not in
+// ({page, job}): nothing is coming for it, and the list lists its takeoff.
+let sheetFailed = null;
+
+/**
+ * The drawing on screen, for the Items list on one sheet (the SHEET chip):
+ * {page, revId, revPage, coming} -- `coming` while a drawing of it is still
+ * on its way: a turn's (landingTicket), a flip's decode (comingUp with the
+ * version ticket in force), or a sheet he is on whose drawing is not up in
+ * this job yet (onSheetUp, inLandedJob -- an open, before its first turn).
+ * null with no sheet open.
+ */
+function sheetView() {
+  if (!app.pages.pageCount) return null;
+  const rid = String(versionView.revId || '');
+  const flipping = !!comingUp && comingUp.vticket !== -1 && comingUp.vticket === versionTicket;
+  const up = (onSheetUp(app.currentPage) && inLandedJob())
+    || (!!sheetFailed && sheetFailed.page === app.currentPage && sheetFailed.job === jobNow());
+  return {
+    page: app.currentPage,
+    revId: rid,
+    revPage: rid ? versionView.revPage : null,
+    coming: (landingTicket !== 0 && landingTicket === pageTicket) || flipping || !up,
+  };
+}
 
 function requestDraw() {
   if (drawQueued) return;
@@ -728,6 +800,10 @@ async function goToPage(index, { version, view, chose: leftChose, from, settle: 
   if (index < 0 || index >= app.pages.pageCount) return;
   const ticket = ++pageTicket;
   comingUp = { page: index, version, ticket, vticket: -1, settle: null };
+  // Until the drawing it lands on is up (the end of this call), the Items
+  // list on one sheet waits for it: 'Opening X1.2…' on another sheet, the
+  // rows it had on this one (sheetView's `coming`).
+  landingTicket = ticket;
   const how = viewOf(index, view);
   // A re-read keeps its job: a turn made while it decodes is a turn.
   if (how === 'keep') landedJob = jobNow();
@@ -764,6 +840,9 @@ async function goToPage(index, { version, view, chose: leftChose, from, settle: 
     if (ticket === pageTicket) {
       pageImage = null;
       shownPage = -1;
+      // Nothing more is coming: the list lists the sheet as it stands.
+      landingTicket = 0;
+      sheetFailed = { page: index, job: jobNow() };
       setStatus(`Could not open sheet ${index + 1} — ${err.message}`);
       // Without this the version bar goes on claiming a revision is up on a
       // sheet that has no drawing at all, and readOnly stays stuck true with
@@ -831,6 +910,12 @@ async function goToPage(index, { version, view, chose: leftChose, from, settle: 
       zoomFloor.turnSettle(settle.chose);
       requestDraw();
     }
+  }
+  // The drawing it landed on is up (or never will be): the Items list on
+  // one sheet follows it now -- once, for both changes of the landing.
+  if (landingTicket === ticket) {
+    landingTicket = 0;
+    itemsPanel.onSheetShown();
   }
 }
 
@@ -1559,6 +1644,159 @@ async function showSheetVersion(page, revId, { announce = true, flip = true, set
 /** Land on a sheet showing ITS OWN drawing, whatever Newest says. */
 function goToPageOwnVersion(index) {
   return goToPage(index, { version: '' });
+}
+
+/**
+ * Which shape a tap on a row stepped to last (desktop _shape_cycle_gid /
+ * _shape_cycle_idx): {key, idx}. A view of the list, never saved; another
+ * job starts again.
+ */
+let shapeCycle = null;
+app.project.addEventListener('reset', () => { shapeCycle = null; });
+
+/** The gesture a row's stepping is done with, as the status line names it
+ *  (the desktop's 'double-click'). */
+function rowGesture() {
+  return document.documentElement.dataset.ui === 'touch' ? 'tap' : 'click';
+}
+
+/**
+ * A tap on a row of the Items list is the desktop's double-click
+ * (_on_item_activated). With the list on one sheet (the SHEET chip) it walks
+ * the item's shapes painted on the drawing on screen, one per tap -- 'Shape
+ * 2 of 3 on X1.1' -- zoomed to and selected, and never turns the page or
+ * drops the revision up (desktop _activate_on_this_sheet): turning would swap
+ * the list out from under the finger. True when it did; false -- the chip
+ * off, nothing of the item painted here, the sheet still opening -- and the
+ * row's tap goes on to stepAcrossSheets and the jump. An item whose main
+ * shape is filed on no sheet steps through its shapes here like any other
+ * (the desktop asks every row but a standalone or a Group); of a standalone
+ * nothing is painted anywhere, and its tap goes on.
+ */
+function stepOnThisSheet(m, pageIdx) {
+  if (!itemsPanel.sheetOnly()) return false;
+  const view = sheetView();
+  if (!view) return false;
+  if (!onSheetUp(view.page)) {
+    // A sheet whose drawing would not open has its takeoff listed (sheetFailed):
+    // a tap on a row of it stays on it -- the walk across sheets would turn
+    // the page out from under the list -- and says why nothing is shown.
+    // Any other sheet not up is still opening: the tap goes on.
+    if (view.coming || !sheetFailedOn(view.page)
+      || !shapesOnScreen(countingModel(), view, pageIdx, m).length) return false;
+    sayToFinger(`The drawing of ${pageFinalLabel(view.page)} did not open — “${deleteName(m)}” cannot be shown on it`);
+    return true;
+  }
+  const hit = activateOnThisSheet(countingModel(), view, pageIdx, m, shapeCycle, rowGesture());
+  if (!hit) return false;
+  shapeCycle = hit.cycle;
+  if (hit.said) sayToFinger(hit.said);
+  controller.select([hit.target._uid]);
+  // A settle parked for want of a canvas must not come after it.
+  if (zoomFloor.zoomToItem(hit.target.points || [], hit.target.type)) pendingTurn = null;
+  // On a phone the open drawer covers most of the drawing, and the shape
+  // zoomed to would come up under it: the drawer goes, the shape is seen --
+  // once a double-tap can no longer be one (closeItemsDrawerSoon), never
+  // inside this tap. (An iPad's portrait drawer covers well under half: it
+  // stays open.)
+  if (itemsDrawerHidesDrawing()) closeItemsDrawerSoon();
+  requestDraw();
+  return true;
+}
+
+/** How long a row's step leaves a phone's Items drawer open: the longest a
+ *  second tap still makes a double-tap by the usual defaults (a Windows
+ *  double-click, 500 ms; a finger's is shorter -- Chrome's 400, measured). */
+const STEP_CLOSE_MS = 500;
+let stepCloseTimer = 0;
+
+/**
+ * The drawer a row's step closes, closed once the tap cannot be the first
+ * of a double-tap. Closed inside the tap, the drawer bared the drawing under
+ * the finger, and the second tap of a double-tap -- Properties (the row's
+ * dblclick) -- landed on the canvas instead: its own double-click opened the
+ * form of whatever shape was there, another item's, or none, and with a
+ * drawing tool armed the tap went to the tool. A finger back on the list
+ * first keeps the drawer (keepItemsDrawer); a step after re-arms the wait.
+ */
+function closeItemsDrawerSoon() {
+  clearTimeout(stepCloseTimer);
+  stepCloseTimer = setTimeout(() => {
+    stepCloseTimer = 0;
+    // (still open, and still over most of the drawing: not shut, turned
+    // or swapped for the sheets drawer meanwhile)
+    if (itemsDrawerHidesDrawing()) closeDrawers();
+  }, STEP_CLOSE_MS);
+}
+
+/** The finger is back on the Items list -- a double-tap's second tap, a
+ *  scroll, another row -- or a drawer was opened or shut by hand: the close
+ *  a row's step was waiting to make is not made. */
+function keepItemsDrawer() {
+  clearTimeout(stepCloseTimer);
+  stepCloseTimer = 0;
+}
+
+/** Whether `page` is the sheet whose drawing would not decode, in the job
+ *  open now (sheetFailed) -- and is still not up. */
+function sheetFailedOn(page) {
+  return !!sheetFailed && sheetFailed.page === page && sheetFailed.job === jobNow() && !onSheetUp(page);
+}
+
+/** How much of the drawing the open Items drawer may cover before a row's
+ *  step closes it: a phone's (320 px of 390) does, an iPad's in portrait
+ *  (320 of 768) does not. */
+const DRAWER_HIDES_SHARE = 0.6;
+
+/** Whether the Items drawer is open over most of the drawing. */
+function itemsDrawerHidesDrawing() {
+  if (!isMobileLayout()) return false;
+  const d = $('itemsPanel');
+  if (!d || !d.classList.contains('mopen')) return false;
+  const w = viewport.width || 0;
+  return w > 0 && d.getBoundingClientRect().width >= DRAWER_HIDES_SHARE * w;
+}
+
+/**
+ * A sentence a finger asked for -- a tap on the list's title, on '+N', on a
+ * ⊘ tag, a row's step, a Delete of this sheet's shapes -- in the status
+ * line, and where that line is not drawn (a phone: max-width 720px) in a
+ * toast over everything for a few seconds as well: a tap that shows nothing
+ * reads as a tap that did nothing.
+ */
+let fingerToastTimer = 0;
+function sayToFinger(text) {
+  setStatus(text);
+  const bar = document.querySelector('.statusbar');
+  if (!text || !bar || getComputedStyle(bar).display !== 'none') return;
+  let t = $('fingerToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'fingerToast';
+    t.className = 'toast finger-toast';
+    t.setAttribute('role', 'status');
+    document.body.appendChild(t);
+  }
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(fingerToastTimer);
+  fingerToastTimer = setTimeout(() => { t.hidden = true; }, FINGER_TOAST_MS);
+}
+const FINGER_TOAST_MS = 4000;
+
+/**
+ * The shape a row's tap is for, as [page, shape], when it is not stepping
+ * on one sheet: a multi-shape item walks its shapes ACROSS sheets, master
+ * first, one per tap -- 'Shape 2 of 3' -- each landed on as the drawing it
+ * was traced on (the row's jump); anything else is the item itself (desktop
+ * _on_item_activated with the list not on one sheet).
+ */
+function stepAcrossSheets(m, pageIdx) {
+  if (pageIdx === STANDALONE_PAGE) return [pageIdx, m];
+  const step = activateAcrossSheets(countingModel(), pageIdx, m, shapeCycle, rowGesture());
+  shapeCycle = step.cycle;
+  if (step.said) sayToFinger(step.said);
+  return step.target;
 }
 
 /**
@@ -2333,6 +2571,8 @@ function closeDrawers() {
 }
 
 function toggleDrawer(which) {
+  // (a drawer opened or shut by hand is his: a row's step does not shut it later)
+  keepItemsDrawer();
   const el = which === 'thumbs' ? $('thumbsPanel') : $('itemsPanel');
   const other = which === 'thumbs' ? $('itemsPanel') : $('thumbsPanel');
   const open = !el.classList.contains('mopen');
@@ -4263,10 +4503,46 @@ function nowStamp() {
 
 // ── item editing ──────────────────────────────────────────────────────────
 
+/**
+ * Properties… from the Items list (a double-tap on a row, or its menu).
+ * With the list on one sheet (the SHEET chip) the shape painted here is
+ * selected first -- the main shape when it is one of them -- and the form
+ * stays on this sheet (desktop _properties_on_this_sheet); openProperties
+ * never turns the page, chip or not.
+ */
+function openPropertiesFromList(item) {
+  const at = app.project.findItem(item._uid)?.pageKey;
+  const view = itemsPanel.sheetOnly() ? sheetView() : null;
+  // (an item whose main shape is filed on no sheet, too: its shape here is
+  // selected -- propertiesOnThisSheet finds none of a standalone)
+  if (view && Number.isInteger(at) && onSheetUp(view.page) && !controller.readOnly) {
+    const shape = propertiesOnThisSheet(countingModel(), view, at, item);
+    if (shape) {
+      controller.select([shape._uid]);
+      requestDraw();
+    }
+  }
+  return openProperties(item);
+}
+
+/** A run of a multi-sheet item is part of its item: its form is the item's
+ *  (desktop _edit_selected_properties). */
+function itemOfShape(m) {
+  if (!m || !m.group_child || !m.group_id) return m;
+  for (const [, it] of app.project.allItems()) {
+    if (it.group_id === m.group_id && !it.group_child) return it;
+  }
+  return m;
+}
+
 async function openProperties(item) {
   // Reachable from the items panel, which never touches the canvas hit test,
   // so the pointer gates do not cover it.
   if (controller.readOnly) { setStatus(controller.readOnlyReason); return; }
+  // A run's form is its item's: the name, floor and price the desktop reads
+  // are the main shape's, and what a run was given of its own the desktop
+  // writes over (_propagate_group_props).
+  item = itemOfShape(item);
   // A reference distance has no name, floor, trade, category or unit cost —
   // not blank ones, NONE. That is the desktop's _finalize_ref_distance, and
   // its reason holds here too: a field that exists is a field some report
@@ -4367,7 +4643,7 @@ function showItemMenu(item, ev, { from = 'canvas' } = {}) {
   // not offered on one — see openProperties. Hide, Isolate, Zoom to and
   // Delete are, because it is an object on the sheet like any other.
   if (item.type !== 'ref_distance') {
-    add('Properties…', () => openProperties(item));
+    add('Properties…', () => (from === 'list' ? openPropertiesFromList(item) : openProperties(item)));
     add('Associated materials…', () => openMaterials(item));
     entries.push('-');
   }
@@ -4391,6 +4667,19 @@ function showItemMenu(item, ev, { from = 'canvas' } = {}) {
     // to where it is not painted. (From the drawing, what was pressed is on
     // the drawing up.)
     const at = app.project.findItem(item._uid)?.pageKey;
+    // The list on one sheet (the SHEET chip) is about that sheet: its row's
+    // item is zoomed to where it is painted HERE -- every shape of it on the
+    // drawing on screen -- and the page is never turned away, as a tap on
+    // the row never turns it (stepOnThisSheet). Nothing of it here: the
+    // ordinary way below.
+    const view = from === 'list' && itemsPanel.sheetOnly() ? sheetView() : null;
+    if (view && Number.isInteger(at) && onSheetUp(view.page)) {
+      const local = shapesOnScreen(countingModel(), view, at, item);
+      if (local.length) {
+        if (zoomFloor.zoomToItem(local.flatMap(s => s.points || []), local.length === 1 ? local[0].type : item.type)) requestDraw();
+        return;
+      }
+    }
     const elsewhere = !onSheetUp(at)
       || (from === 'list' && String(item.rev_id || '') !== String(versionView.revId || ''));
     if (Number.isInteger(at) && at >= 0 && elsewhere) { void jumpToItem(item, at); return; }
@@ -4404,12 +4693,54 @@ function showItemMenu(item, ev, { from = 'canvas' } = {}) {
   // shape going hands the item on. Neither asked anything before, and the
   // list's took a multi-sheet item off one sheet only.
   add('Delete', () => {
-    if (from === 'list') { void deleteWholeItem(item); return; }
+    if (from === 'list') { void deleteFromList(item); return; }
     app.project.dropShapes([item._uid]);
     forgetDeletedSelection();
     requestDraw();
   });
   return showMenu(entries, ev);
+}
+
+/**
+ * The Items list's Delete (desktop _on_item_delete). With the list on one
+ * sheet, an item that also has shapes elsewhere asks which first -- 'Delete
+ * the 2 shapes on X1.1', 'Delete the whole item (4 shapes on X1.0, X1.1,
+ * X2.0)', or Cancel, the default -- because there 'Delete' reads as 'take it
+ * off this sheet', and an item never loses its other sheets in silence
+ * (_ask_delete_here). This sheet's shapes go the way the drawing's Delete
+ * takes a shape (dropShapes: a run re-adds its item, a main shape hands it
+ * on), in one undo level. Otherwise -- the chip off, one shape, or every
+ * shape on screen -- the plain question (deleteWholeItem).
+ */
+async function deleteFromList(item) {
+  const at = app.project.findItem(item._uid)?.pageKey;
+  const view = itemsPanel.sheetOnly() ? sheetView() : null;
+  const name = deleteName(item);
+  // On the sheet the list shows: its drawing up, or a sheet whose drawing
+  // would not open, whose takeoff is listed all the same (sheetFailed).
+  const ch = view && Number.isInteger(at) && (onSheetUp(view.page) || (!view.coming && sheetFailedOn(view.page)))
+    ? deleteHereChoice(countingModel(), view, at, item, name) : null;
+  if (!ch) { await deleteWholeItem(item); return; }
+  const pick = await D.choiceDialog(ch.title, ch.text, ch.info, [
+    { key: 'here', label: ch.buttons[0], danger: true },
+    { key: 'whole', label: ch.buttons[1], danger: true },
+    { key: 'cancel', label: ch.buttons[2] },
+  ], { defaultKey: 'cancel' });
+  if (pick !== 'here' && pick !== 'whole') return;
+  // The question was a pause: delete only what is still there to delete.
+  if (controller.readOnly) { setStatus(controller.readOnlyReason); return; }
+  if (!app.project.findItem(item._uid)) return;
+  if (pick === 'whole') {
+    app.project.removeItems([item._uid]);
+    forgetDeletedSelection();
+    setStatus(`Deleted “${name}”.`);
+    requestDraw();
+    return;
+  }
+  const n = app.project.dropShapes(ch.local.map(s => s._uid).filter(u => app.project.findItem(u)));
+  forgetDeletedSelection();
+  if (n) sayToFinger(deletedHereWords(n, name, ch.where, ch.rest));
+  requestDraw();
 }
 
 /**
@@ -5664,6 +5995,9 @@ syncChrome();
 requestAnimationFrame(() => appEl.classList.remove('chrome-still'));
 MOBILE_Q.addEventListener('change', () => { syncMobileBar(); requestDraw(); });
 $('scrim').addEventListener('click', closeDrawers);
+// A finger back on the Items list keeps the drawer a row's step was about to
+// close (closeItemsDrawerSoon): the second tap of a double-tap lands on the row.
+$('itemsPanel').addEventListener('pointerdown', keepItemsDrawer, true);
 syncMobileBar();
 syncHistoryButtons();
 syncTitle();

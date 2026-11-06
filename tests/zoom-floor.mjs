@@ -219,9 +219,11 @@ const ITEM_FN = (() => {
   if (a < 0) return null;
   return MAIN.slice(MAIN.indexOf('() =>', a), MAIN.indexOf('\n  });', a) + 4);
 })();
-// The Items list's row click, word for word (the ItemsPanel host's selectItem).
+// The Items list's row click, word for word (the ItemsPanel host's selectItem;
+// since Round 6 its arguments are the row's item and page, and the shape it
+// jumps to is the step's).
 const SELECT_ITEM = (() => {
-  const a = MAIN.indexOf('    selectItem: (m, pageIdx, ev) => {');
+  const a = MAIN.indexOf('    selectItem: (item, row, ev) => {');
   const b = MAIN.indexOf('\n    },\n', a);
   return a < 0 || b < 0 ? null : MAIN.slice(a, b + 6);
 })();
@@ -323,7 +325,11 @@ function rig({ canvas: [w, h], pages, settings: s0 = {}, revs = null, newest = t
       { revId: '~flip', revPage: page, rev: { _setIndex: -1 }, label: 'Flip', date: '' }],
     newestOf: i => (newest === false ? '' : (versOf.get(i) || []).at(-1)?.revId || ''),
     syncVersionUi() {}, clearOverlay() {}, thumbs: { setCurrent() {} }, syncPageOf() {},
-    syncScaleSelect() {}, itemsPanel: { refresh() {} },
+    // (Round 6: the Items list on one sheet waits for a landing and follows
+    // it -- tests/revision-counting.mjs holds that; here the list is off, and
+    // a row's tap is the jump: no stepping on one sheet, the item itself)
+    syncScaleSelect() {}, itemsPanel: { refresh() {}, onSheetShown() {}, sheetOnly: () => false }, landingTicket: 0, sheetFailed: null,
+    stepOnThisSheet: () => false, stepAcrossSheets: (m, pageIdx) => [pageIdx, m],
     revPageLabel: () => '', sizesMatch: () => true, sizeRefusal: () => '',
     get pageImage() { return img; }, set pageImage(v) { img = v; },
     browsingOtherVersion: () => !!env.versionView.revId,

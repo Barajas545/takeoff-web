@@ -396,7 +396,7 @@
 
     <aside class="items" id="itemsPanel">
       <div class="panel-head">
-        <span class="panel-title">PROJECT ITEMS</span>
+        <span class="panel-title" id="itemsTitle">PROJECT ITEMS</span>
         <div class="cost-toggle" id="costToggle">
           <button data-cost="all" class="on" title="Show labor and material items">ALL</button>
           <button data-cost="labor" title="Labor estimate — labor items only">LAB</button>
@@ -408,6 +408,8 @@
       <div class="filter-bar">
         <select id="floorFilter" class="tb-select sm"><option value="">All Floors</option></select>
         <select id="groupFilter" class="tb-select sm"><option value="">All Groups</option></select>
+        <button id="sheetChip" class="sheet-chip" type="button" aria-pressed="false"
+                title="Show only the items on the sheet you are looking at">SHEET</button>
       </div>
       <div class="item-list" id="itemList"></div>
       <div class="items-foot" id="itemsFoot"></div>

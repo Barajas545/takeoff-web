@@ -1448,7 +1448,8 @@ log('\n-- 5. the menu: off the finger, on screen, a mouse\'s at the pointer --')
     openMaterials: m => calls.push(['materials', m.name]),
     app: { project: { setVisible: () => calls.push(['hide']), isolate: () => calls.push(['isolate']),
       dropShapes: () => calls.push(['dropShapes']), findItem: () => ({ pageKey: 0 }) } },
-    itemsPanel: { refresh() {} },
+    // (the list not on one sheet: the SHEET chip's way is tests/revision-counting.mjs's)
+    itemsPanel: { refresh() {}, sheetOnly: () => false },
     onSheetUp: () => true,
     versionView: { revId: '' },
     jumpToItem: () => calls.push(['jump']),
@@ -1736,8 +1737,8 @@ log('\n-- 8. the wiring --');
     && main.split("addEventListener('selection-changed'").length - 1 === 1);
   eq('the forms read the open job: once, at start-up',
     main.split('D.setClassSource(() => app.project.measurements);').length - 1, 1);
-  ok('the hold\'s import is a line of its own after the import list',
-    /\nimport \{ ZoomFloor[^\n]*\} from '\.\/render\/zoom-floor\.js';\nimport \{ menuPlace \} from '\.\/ui\/hold\.js';\n\nconst \$ = /.test(main));
+  ok('the hold\'s import is a line of its own after the import list (later rounds\' own lines after it)',
+    /\nimport \{ ZoomFloor[^\n]*\} from '\.\/render\/zoom-floor\.js';\nimport \{ menuPlace \} from '\.\/ui\/hold\.js';\n(?:import \{[^}]*\} from '[^']+';\n)*\nconst \$ = /.test(main));
   const fnText = name => { const i = main.indexOf(`\nfunction ${name}(`); return i < 0 ? '' : main.slice(i + 1, main.indexOf('\n}\n', i) + 2); };
   ok('a switch of layout rewords the headings', /itemsPanel\.refresh\(\);/.test(fnText('setUiMode')));
   ok('the hint is asked whenever the list may have come on screen',

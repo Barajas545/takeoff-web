@@ -632,6 +632,31 @@ button { font-family: inherit; }
   background: var(--filter-bg); flex-shrink: 0;
 }
 .filter-bar select { flex: 1; min-width: 0; }
+/* The SHEET chip: the list shows only what is drawn on the drawing on
+   screen. A toggle styled like the ALL / LAB / MAT chips, and a finger's
+   size in the touch layout (--rowact-h). */
+.sheet-chip {
+  flex-shrink: 0;
+  background: #232323; color: var(--text-faint);
+  border: 1px solid #2e2e2e; border-radius: 4px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .5px;
+  padding: var(--cost-pad); min-height: var(--rowact-h); min-width: var(--rowact-h);
+  cursor: pointer;
+}
+.sheet-chip.on { background: var(--accent); color: #fff; border-color: transparent; }
+/* 'ITEMS ON X1.1' shares the bar with ALL / LAB / MAT and two buttons: cut
+   with an ellipsis if it must be; a tap on it says the sheet in full. */
+#itemsTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#itemsTitle.sheet { cursor: pointer; color: var(--text-2); }
+/* What the SHEET chip leaves out, said in the list. */
+.sheet-note { color: var(--text-faint); font-size: 10px; padding: 6px 10px; line-height: 1.4; }
+.sheet-note.empty {
+  text-align: center; color: var(--text-ghost);
+  font-size: 11.5px; padding: 30px 10px; line-height: 1.6;
+}
+/* 'X1.0 +2': a tap says the other sheets. */
+.row .pg.also { cursor: pointer; text-decoration: underline dotted; }
+:root[data-ui="touch"] .row .pg.also { padding: 8px 0 8px 10px; margin: -8px 0; }
 
 .grp {
   display: flex; align-items: center; gap: 6px;
@@ -1040,6 +1065,11 @@ button.es-lib-manage { background: none; border: 0; cursor: pointer; font-family
   padding: 12px 18px; border-top: 1px solid #333;
 }
 .dlg-foot .spacer { margin-right: auto; }
+/* Answers named in full (choiceDialog): one per line, each the width of the
+   box, so a long one is never cut and every one is a finger's size. */
+.dlg-foot.stack { flex-direction: column; align-items: stretch; }
+.dlg-foot.stack .btn { text-align: left; min-height: var(--ctl-h); white-space: normal; }
+.choice-info { margin-top: 8px; color: var(--text-dim); }
 
 .form { display: grid; grid-template-columns: var(--form-cols); gap: 9px 12px; align-items: center; }
 .form > label { font-size: 12px; color: var(--text-dim); text-align: right; }
@@ -1107,6 +1137,12 @@ table.grid td.indent { padding-left: 26px; color: var(--text-dim); }
   box-shadow: 0 10px 30px rgba(0,0,0,.5); font-size: 12.5px;
 }
 .toast.err { border-color: #6a3030; color: #ffbdbd; }
+/* What a finger's tap answered, where the status line is not drawn (a
+   phone): a line of text, wrapped inside the screen, never in the way. */
+.finger-toast {
+  width: max-content; max-width: calc(100vw - 32px);
+  text-align: center; line-height: 1.4; pointer-events: none;
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    Phones and tablets

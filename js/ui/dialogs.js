@@ -831,6 +831,31 @@ export function yesNoDialog(title, message, { defaultButton = 'No', danger = fal
   }).then(v => v === true);
 }
 
+/**
+ * A question whose answers are named in full, one button each, in the order
+ * given (the desktop's QMessageBox with buttons of its own: text, the
+ * informative text under it). `choices` are {key, label, danger}; the one
+ * whose key is `defaultKey` has the focus, so Enter answers it, and Escape
+ * and a click outside answer null -- as the desktop's Cancel. The answers
+ * stack one per line: they are sentences. Resolves to the key pressed, or
+ * null.
+ */
+export function choiceDialog(title, text, info, choices, { defaultKey = null } = {}) {
+  return showDialog(close => {
+    const body = el('div');
+    body.style.cssText = 'font-size:12.5px;line-height:1.6;white-space:pre-line';
+    body.appendChild(el('div', 'choice-text', text));
+    if (info) body.appendChild(el('div', 'choice-info', info));
+    const d = dlg({
+      title, body,
+      buttons: choices.map(c => button(c.label,
+        c.key === defaultKey ? 'primary' : (c.danger ? 'danger' : ''), () => close(c.key))),
+    });
+    d.querySelector('.dlg-foot')?.classList.add('stack');
+    return d;
+  }).then(v => (v === undefined ? null : v));
+}
+
 export function promptDialog(title, label, value = '', hint = '') {
   return showDialog(close => {
     const form = el('div', 'form');

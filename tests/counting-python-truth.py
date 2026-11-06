@@ -85,11 +85,17 @@ WIN_METHODS = [
     "_watch_counted_takeoff", "_retract_stale_watch",
     # Delete from the Items list: the question, word for word, and what a
     # Yes deletes. _ask_delete_here is the SHEET chip's three-way question;
-    # with the list not on one sheet (always, in the browser: it has no
-    # chip yet) it answers None and the plain question is asked.
-    "_on_item_delete", "_ask_delete_here",
+    # with the list not on one sheet, or every shape of the item on screen,
+    # it answers None and the plain question is asked.
+    "_on_item_delete", "_ask_delete_here", "_shapes_on_screen",
     # A job switch: the count held for the last job is put down.
     "_drop_per_project_reads",
+    # A double-click on a row (a tap in the browser) and Properties... from
+    # it: with the SHEET chip on, the item's shapes on the drawing on
+    # screen, one per activation, and the form opened on one of them --
+    # never a page turn; with it off, the item's shapes across sheets.
+    "_on_item_activated", "_activate_on_this_sheet",
+    "_on_item_properties", "_properties_on_this_sheet",
 ]
 # The stand-in window's DATA and the side effects that move no number.
 WIN_STUBS = {
@@ -105,15 +111,18 @@ WIN_STUBS = {
     # about totals that have moved since is never appended to): a record
     # of the line, no number
     "_note_money_line",
-    # Only the SHEET chip's three-way question reads the shapes on screen;
-    # with the list not on one sheet it is never reached (the stand-in
-    # raises if it is).
-    "_shapes_on_screen",
     # What a job switch forgets that is not the count: a marking run, the
     # source PDF, the vision readings. None of it moves a number, and the
     # stand-ins record nothing. The Item box is the window's.
     "_detail_next", "_end_manual_details", "_source_pdf_path",
     "_vision_callouts", "tool_name_box",
+    # A row's activation: the cycle it remembers (which item, which shape),
+    # and where it goes -- recorded, never moving anything: the page turn
+    # (go_to_item), the forms of a Group and an item on no sheet, and the
+    # labels it refreshes.
+    "_shape_cycle_gid", "_shape_cycle_idx", "go_to_item",
+    "_edit_group_item", "_edit_standalone_item", "_update_page_label",
+    "update_zoom_label",
 }
 
 # GLPageWidget: the item's drawing, and the multi-shape arithmetic.
@@ -126,11 +135,19 @@ GL_METHODS = ["item_rev_id", "_measurement_group", "_sync_group",
               "delete_item", "delete_shapes", "delete_selected_measurement",
               "_drop_shape", "_promote_child", "_group_master",
               # the count tool's held count, put down on a job switch
-              "forget_armed_count", "_pending_name"]
+              "forget_armed_count", "_pending_name",
+              # What is painted on the drawing on screen: the SHEET chip's
+              # one question, asked of the revision up (_preview_key) --
+              # and of the drawing a pin or a note is shown on.
+              "on_this_version", "viewing_rev_id", "_mark_drawing",
+              "preview_key"]
 # Class-level names lifted with the methods (assignments, not defs).
 GL_ATTRS = ["_PROMOTE_KEYS"]
 GL_STUBS = {"_measurements", "_current_page", "_main_window", "_undo_stack",
-            "current_page", "viewing_rev_id",
+            "current_page", "_preview_key", "_images",
+            # what a row's activation does on the canvas: recorded
+            "zoom_to_measurement", "select_measurement",
+            "_edit_selected_properties",
             "recompute_framing", "tag_undo_top", "update",
             # Delete's bookkeeping: an undo level counted, the selection and
             # isolation it clears, the signals it emits -- no number.
@@ -149,6 +166,80 @@ GL_STUBS = {"_measurements", "_current_page", "_main_window", "_undo_stack",
             "_count_category", "_count_named", "_count_left",
             "_last_floor", "_last_category", "_last_sub", "_last_cost_type"}
 
+# TakeoffItemsPanel: the SHEET chip (3.06) -- which rows a list on one sheet
+# shows, what it says is left out, its title, a row's words (this sheet's
+# quantity, the whole item's, the other sheets), the chip remembered and
+# folding NOT ON A SHEET, and following a page turn once.
+PANEL_METHODS = ["_page_disp", "_counts", "_waiting_why", "_rev_disp",
+                 "sheet_only", "_sheet_on", "_sheet_now", "_on_sheet_chip",
+                 "set_settings", "on_sheet_shown", "_sheet_turned",
+                 "_sheet_rows", "_hidden_words", "_note_meta", "_title_for",
+                 "_open_solo_on_add", "_counts_here", "_total_of",
+                 "_qty_words", "_sheet_value_str", "_also_on", "_value_str",
+                 "_n"]
+PANEL_ATTRS = ["_SOLO", "_NOT_ROWS"]
+# The panel's data, the window's functions it is handed (set_*_fn), the
+# chip's button and Settings, the 80 ms timer, and the widgets refresh
+# makes -- recorded, no number.
+PANEL_STUBS = {"_gl_widget", "_page_label_fn", "_counted_fn", "_waiting_fn",
+               "_rev_label_fn", "_run_counted_fn", "_total_fn", "_settings",
+               "_sheet_btn", "_sheet_only", "_collapsed", "_solo_count",
+               "_here", "_sheet_pages", "_sheet_shapes", "_sheet_key",
+               "_sheet_timer", "_dragging", "refresh", "_sheet_note", "_ttl",
+               "_cost_filter", "_floor_filter", "_group_filter"}
+# Pieces of two methods that build widgets (refresh, _item_row), lifted BY
+# TEXT as a run of their own statements -- from the first matching statement
+# to the last -- and run as a function of the names they read. Everything
+# around them is a Qt widget; these are the decisions and the words:
+#   all_m      refresh's walk: the rows the cost, floor and group filters leave
+#   title      refresh: the title, its tooltip, the (page, drawing) remembered
+#   notes      refresh: what the chip leaves out, on top or as 'Not shown:'
+#   row_value  _item_row: the shapes here, counted here, the row's quantity
+#   row_page   _item_row: the sheet label, '+N', the tooltip, the ⊘ chip
+def _is_assign(*names):
+    return lambda s: isinstance(s, ast.Assign) and any(
+        isinstance(t, ast.Name) and t.id in names
+        or isinstance(t, ast.Tuple) and any(isinstance(e, ast.Name)
+                                            and e.id in names for e in t.elts)
+        for t in s.targets)
+
+
+def _is_self_assign(attr):
+    return lambda s: isinstance(s, ast.Assign) and any(
+        isinstance(t, ast.Attribute) and t.attr == attr for t in s.targets)
+
+
+def _is_for_over(attr):
+    return lambda s: isinstance(s, ast.For) and attr in ast.dump(s.iter)
+
+
+def _is_if(text):
+    return lambda s: isinstance(s, ast.If) and ast.unparse(s.test) == text
+
+
+def _is_call(text):
+    return lambda s: isinstance(s, ast.Expr) and \
+        ast.unparse(s.value).startswith(text)
+
+
+PANEL_SLICES = {
+    "_lift_all_m": ("refresh", _is_assign("all_m"),
+                    _is_for_over("_measurements"), [], ["all_m"]),
+    "_lift_title": ("refresh", _is_assign("sheet_lbl"),
+                    _is_self_assign("_sheet_key"), [], ["sheet_lbl"]),
+    "_lift_notes": ("refresh", _is_assign("footer"),
+                    _is_if("sheet is not None"),
+                    ["sheet", "sheet_lbl", "tree", "emit"], ["footer"]),
+    "_lift_row_value": ("_item_row", _is_assign("here"), _is_assign("val"),
+                        ["page_idx", "m", "solo"],
+                        ["here", "counted_here", "val"]),
+    "_lift_row_page": ("_item_row", _is_assign("pg_txt"),
+                       _is_if("rev_txt or not counts"),
+                       ["page_idx", "m", "solo", "here", "counted_here"],
+                       ["pg_txt", "also", "also_tip", "page_hint", "rev_txt",
+                        "counts", "chip", "_why"]),
+}
+
 # Module-level names the TEST itself calls. Everything they and the methods
 # reach is found by the closure walk below, not listed by hand.
 MODULE_SEED = ["is_takeoff_item", "takeoff_qty", "takeoff_quantity_words",
@@ -159,17 +250,58 @@ MODULE_SEED = ["is_takeoff_item", "takeoff_qty", "takeoff_quantity_words",
                "PIN_TYPES"]
 
 # Classes a lifted body names, and the stand-in each one becomes.
-CLASS_ALIASES = {"GLPageWidget": "GL"}
+CLASS_ALIASES = {"GLPageWidget": "GL", "TakeoffItemsPanel": "PanelBase"}
 
 # Module-level imports a lifted body may reach, and what provides them.
 class _QMessageBox:
     """The one Qt name the questions reach: what was asked is recorded --
     title, text, the buttons and the default one -- and the answer is
     whatever the scenario says. Qt's own values, so `Yes | No` is a set of
-    two buttons that can be told from `Yes` alone."""
+    two buttons that can be told from `Yes` alone.
+
+    Made as a box of its own (the SHEET chip's three-way question,
+    _ask_delete_here): its title, text, informative text, buttons in order
+    and the default one are recorded in `boxes`, and the button at index
+    `pick` is the one clicked."""
     Yes, No = 0x4000, 0x10000
+    Question, AcceptRole, DestructiveRole, RejectRole = 4, 0, 2, 1
     asked = []
     answer = No
+    boxes = []
+    pick = 2
+
+    def __init__(self, parent=None):
+        self.said = {"title": "", "text": "", "info": "", "buttons": [],
+                     "default": None}
+        self._btns = []
+        _QMessageBox.boxes.append(self.said)
+
+    def setWindowTitle(self, t):
+        self.said["title"] = str(t)
+
+    def setIcon(self, icon):
+        pass
+
+    def setText(self, t):
+        self.said["text"] = str(t)
+
+    def setInformativeText(self, t):
+        self.said["info"] = str(t)
+
+    def addButton(self, label, role):
+        b = object()
+        self._btns.append(b)
+        self.said["buttons"].append(str(label))
+        return b
+
+    def setDefaultButton(self, b):
+        self.said["default"] = self._btns.index(b)
+
+    def exec_(self):
+        pass
+
+    def clickedButton(self):
+        return self._btns[_QMessageBox.pick]
 
     @staticmethod
     def _names(flags):
@@ -202,8 +334,22 @@ def _log_exception(where=""):
 # Module-level DEFS a lifted body reaches that are stood in for, not lifted.
 MODULE_STUBS = {"_log_exception": _log_exception}
 
+class _QLabel:
+    """The sheet label a row slice makes: its text and tooltip, as set."""
+    def __init__(self, text=""):
+        self.text = str(text)
+        self.first = self.text
+        self.tip = ""
+
+    def setText(self, t):
+        self.text = str(t)
+
+    def setToolTip(self, t):
+        self.tip = str(t)
+
+
 PROVIDED_IMPORTS = {"re": re, "math": math, "json": json, "os": os,
-                    "QMessageBox": _QMessageBox,
+                    "QMessageBox": _QMessageBox, "QLabel": _QLabel,
                     # the framing engine, absent: as on a desktop where
                     # framing.py did not import -- and as in the browser
                     "_framing": None}
@@ -309,9 +455,13 @@ def _free_names(node):
     return out
 
 
+CANVAS_ATTRS = ("gl_widget", "_gl_widget")   # the window's, the panel's
+
+
 def _self_attrs(fn):
     """{'win': {...}, 'gl': {...}} -- what a method reads off `self`, and off
-    the canvas it reaches through `self.gl_widget` (or a local alias of it)."""
+    the canvas it reaches through `self.gl_widget` (the panel's
+    `self._gl_widget`), or a local alias of it."""
     gl_alias = set()
     for s in ast.walk(fn):
         if isinstance(s, ast.Assign) and len(s.targets) == 1 \
@@ -319,7 +469,7 @@ def _self_attrs(fn):
                 and isinstance(s.value, ast.Attribute) \
                 and isinstance(s.value.value, ast.Name) \
                 and s.value.value.id == "self" \
-                and s.value.attr == "gl_widget":
+                and s.value.attr in CANVAS_ATTRS:
             gl_alias.add(s.targets[0].id)
     win, gl = set(), set()
     for s in ast.walk(fn):
@@ -331,7 +481,7 @@ def _self_attrs(fn):
         elif isinstance(v, ast.Name) and v.id in gl_alias:
             gl.add(s.attr)
         elif isinstance(v, ast.Attribute) and isinstance(v.value, ast.Name) \
-                and v.value.id == "self" and v.attr == "gl_widget":
+                and v.value.id == "self" and v.attr in CANVAS_ATTRS:
             gl.add(s.attr)
     # getattr(self, "name", ...) is a read too
     for s in ast.walk(fn):
@@ -344,17 +494,56 @@ def _self_attrs(fn):
     return win, gl
 
 
+def _slice_source(name):
+    """The def a PANEL_SLICES entry becomes: the method's own statements,
+    from the first that matches to the last, as a function of the names
+    they read, returning the ones asked for (those it set)."""
+    meth, first, last, params, returns = PANEL_SLICES[name]
+    fn = _method(_class("TakeoffItemsPanel"), meth)
+    body = fn.body
+    i = next((k for k, s in enumerate(body) if first(s)), None)
+    j = None if i is None else next(
+        (k for k in range(i, len(body)) if last(body[k])), None)
+    if i is None or j is None:
+        raise SystemExit("could not find the %s statements of "
+                         "TakeoffItemsPanel.%s in %s -- the desktop source "
+                         "has moved" % (name, meth, SRC))
+    text = textwrap.dedent("".join(
+        LINES[body[i].lineno - 1:body[j].end_lineno]))
+    want = ", ".join(repr(r) for r in returns)
+    return ("def %s(self%s):\n" % (name, "".join(", " + p for p in params))
+            + textwrap.indent(text, "    ")
+            + "    return {k: v for k, v in locals().items() if k in (%s,)}\n"
+            % want)
+
+
+def _slice_fn(name):
+    return ast.parse(_slice_source(name)).body[0]
+
+
 def closure_problems():
     """Everything the lifted set reaches and does not carry. [] is a
     closure; anything else is said by name before a line is executed."""
     win_cls, gl_cls = _class("PDFCacheViewer"), _class("GLPageWidget")
+    panel_cls = _class("TakeoffItemsPanel")
     methods = [("win", _method(win_cls, n)) for n in WIN_METHODS] \
-        + [("gl", _method(gl_cls, n)) for n in GL_METHODS]
+        + [("gl", _method(gl_cls, n)) for n in GL_METHODS] \
+        + [("panel", _method(panel_cls, n)) for n in PANEL_METHODS] \
+        + [("panel", _slice_fn(n)) for n in PANEL_SLICES]
     problems = []
     want = set(MODULE_SEED)
     for kind, fn in methods:
         win, gl = _self_attrs(fn)
-        if kind == "win":
+        if kind == "panel":
+            # the panel's own `self`, and the canvas it holds
+            gl_self = set()
+            for a in sorted(win - set(PANEL_METHODS) - set(PANEL_ATTRS)
+                            - set(PANEL_SLICES) - PANEL_STUBS):
+                problems.append("TakeoffItemsPanel.%s reads self.%s, which "
+                                "is neither lifted nor a declared stub"
+                                % (fn.name, a))
+            win = set()
+        elif kind == "win":
             gl_self = set()
         else:
             # a GLPageWidget method's own `self` is the canvas
@@ -367,11 +556,14 @@ def closure_problems():
                         - GL_STUBS):
             problems.append("%s.%s reads the canvas's .%s, which is neither "
                             "lifted nor a declared stub"
-                            % ("PDFCacheViewer" if kind == "win"
-                               else "GLPageWidget", fn.name, a))
+                            % ({"win": "PDFCacheViewer",
+                                "panel": "TakeoffItemsPanel"}.get(
+                                    kind, "GLPageWidget"), fn.name, a))
         want |= _free_names(fn)
     for n in GL_ATTRS:
         want |= _free_names(_attr(gl_cls, n))
+    for n in PANEL_ATTRS:
+        want |= _free_names(_attr(panel_cls, n))
     seen, queue, lifted = set(), sorted(want), []
     while queue:
         nm = queue.pop(0)
@@ -423,6 +615,14 @@ def _class_source(name, cls, methods, stubs_doc, attrs=()):
 NS = dict(PROVIDED_IMPORTS)
 NS.update(MODULE_STUBS)
 exec(compile(_module_source(), "<extracted module names>", "exec"), NS)
+exec(compile(_class_source("PanelBase", _class("TakeoffItemsPanel"),
+                           PANEL_METHODS,
+                           "the Items list: lifted methods + declared stubs",
+                           attrs=PANEL_ATTRS)
+             + "\n" + "\n".join(textwrap.indent(_slice_source(n), "    ")
+                                for n in PANEL_SLICES),
+             "<extracted TakeoffItemsPanel>", "exec"), NS)
+NS["TakeoffItemsPanel"] = NS["PanelBase"]
 exec(compile(_class_source("GL", _class("GLPageWidget"), GL_METHODS,
                            "the canvas: lifted methods + declared stubs",
                            attrs=GL_ATTRS),
@@ -452,14 +652,86 @@ class Recorder:
         return self.said[-1] if self.said else ""
 
 
-class _Panel:
-    def refresh(self):
+class _Button:
+    """The SHEET chip's QPushButton: checked or not."""
+    def __init__(self):
+        self.checked = False
+
+    def isChecked(self):
+        return self.checked
+
+    def setChecked(self, on):
+        self.checked = bool(on)
+
+    def blockSignals(self, on):
         pass
 
-    def sheet_only(self):
-        # The Items list is not on one sheet: the browser has no SHEET chip
-        # yet, so the desktop's three-way question is never its question.
-        return False
+
+class _Timer:
+    """The panel's 80 ms single-shot timer: how often it was (re)started."""
+    def __init__(self):
+        self.starts = 0
+
+    def start(self):
+        self.starts += 1
+
+
+class _Settings:
+    """The window's Settings, as the chip reads and writes them."""
+    def __init__(self, values=None):
+        self.values = dict(values or {})
+        self.saves = 0
+
+    def get(self, key):
+        return self.values.get(key)
+
+    def set(self, key, value):
+        self.values[key] = value
+
+    def save(self):
+        self.saves += 1
+
+
+class Panel(NS["PanelBase"]):
+    """The Items list, wired to the window the way PDFCacheViewer wires it
+    (set_page_label_fn / set_rev_label_fn / set_counted_fn / set_waiting_fn
+    / set_run_counted_fn / set_total_fn: the window's own lifted methods).
+    The chip starts off, as it does on the desktop. refresh() is the widget
+    rebuild: here it only counts, and remembers the (page, drawing) it was
+    built for, as refresh does (_lift_title runs those very lines)."""
+    def __init__(self, win):
+        self._gl_widget = win.gl_widget
+        self._page_label_fn = win._page_final_label
+        self._rev_label_fn = win.revision_label
+        self._counted_fn = win.item_counts_towards
+        self._waiting_fn = win.waiting_reason
+        self._run_counted_fn = win.run_counts_towards
+        self._total_fn = win._counted_qty
+        self._sheet_only = False
+        self._settings = None
+        self._sheet_btn = _Button()
+        self._sheet_timer = _Timer()
+        self._dragging = False
+        self._collapsed = set()
+        self._solo_count = None
+        self._here, self._sheet_pages, self._sheet_shapes = {}, {}, {}
+        self._sheet_key = None
+        self._ttl = _QLabel("PROJECT ITEMS")
+        self._cost_filter, self._floor_filter, self._group_filter = \
+            "all", None, None
+        self.rebuilds = 0
+
+    def refresh(self):
+        self.rebuilds += 1
+        self._lift_title()
+
+    @staticmethod
+    def _sheet_note(text, empty=False):
+        return [str(text), bool(empty)]
+
+    def __getattr__(self, name):
+        raise AttributeError("TakeoffItemsPanel stand-in has no %r -- "
+                             "declare it or lift it" % name)
 
 
 class _Sig:
@@ -508,6 +780,26 @@ class Canvas(NS["GL"]):
         self._count_left = []
         self._last_floor = self._last_category = self._last_sub = ""
         self._last_cost_type = "material"
+        # The drawing on screen: None is the sheet's own, (rev_id, rev_page)
+        # a revision of it (set_preview_texture's key); and the sheets.
+        self._preview_key = None
+        self._images = win.images
+        # what a row's activation did on the canvas
+        self.zoomed = []
+        self.selected = []
+        self.edited = []
+
+    def zoom_to_measurement(self, m, max_zoom=8.0):
+        self.zoomed.append(m)
+
+    def select_measurement(self, m):
+        # The desktop selects only what is painted on the drawing on screen
+        # (on_this_version); recorded as asked, the guard is the canvas's.
+        self.selected.append(m)
+        self._sel_meas = m
+
+    def _edit_selected_properties(self):
+        self.edited.append(self._sel_meas)
 
     def _push_undo(self):
         self.undo_levels += 1
@@ -548,9 +840,6 @@ class Canvas(NS["GL"]):
     def current_page(self):          # the questions are always asked of
         return self._current_page    # a page and a drawing, given
 
-    def viewing_rev_id(self):
-        return ""
-
     def update(self):
         pass
 
@@ -588,7 +877,7 @@ class Win(NS["WinBase"]):
         self._price_queue = []
         self.settings = {"latest_set_order": scn.get("order") or "date"}
         self.status_label = Recorder()
-        self.items_panel = _Panel()
+        self.items_panel = Panel(self)
         self._unsaved = False
         self.announced = []
         # what a job switch forgets besides the count
@@ -596,10 +885,24 @@ class Win(NS["WinBase"]):
         self._source_pdf_path = "last-job.pdf"
         self._vision_callouts = {"0": []}
         self.tool_name_box = None
+        self.went = []
 
-    def _shapes_on_screen(self, page_idx, m):
-        raise AssertionError("reached only while the Items list shows one "
-                             "sheet (the SHEET chip)")
+    # Where a row's activation goes, recorded and never moving: the page
+    # turn, a Group's form and an item on no sheet's form, the labels.
+    def go_to_item(self, page_idx, m):
+        self.went.append((page_idx, m))
+
+    def _edit_group_item(self, m):
+        self.went.append(("group", m))
+
+    def _edit_standalone_item(self, m):
+        self.went.append(("standalone", m))
+
+    def _update_page_label(self):
+        pass
+
+    def update_zoom_label(self):
+        pass
 
     def _end_manual_details(self, msg):
         pass
@@ -655,7 +958,7 @@ def _said(lst):
     return out
 
 
-def truth(scn):
+def truth(scn, sheet="full"):
     win = Win(scn)
     n = len(win.images)
     out = {"name": scn.get("name", "")}
@@ -865,6 +1168,374 @@ def truth(scn):
             "notes": notes}
     out["latest"] = latest
     out["deletes"] = deletes(scn)
+    if sheet:
+        out["sheet"] = sheet_truth(scn, filters=(sheet == "full"))
+        if sheet == "full":
+            out["sheetActs"] = sheet_acts(scn)
+    return out
+
+
+# ── the SHEET chip: one sheet's list, its words, and what a row does ──────
+
+def _pos_of(win):
+    return {id(m): [pg, i] for pg, i, m in _items(win)}
+
+
+def _views(win, p):
+    """The drawings of sheet p: its own, then each version of it, as
+    (rev_id, rev_page) -- what the canvas's _preview_key holds for it."""
+    out = [("", None)]
+    for v in win.sheet_versions(p):
+        if v[0]:
+            out.append((v[0], v[5]))
+    return out
+
+
+def _set_view(win, p, rid, rp):
+    win.gl_widget._current_page = p
+    win.gl_widget._preview_key = (rid, rp) if rid else None
+
+
+def _list_rows(panel):
+    """The rows refresh lists before the chip (the desktop's own walk,
+    _lift_all_m) -- without Group containers: the browser lists no Group
+    (items-panel.js EXCLUDED), and its list on one sheet has none either."""
+    return [(pg, m) for pg, m in panel._lift_all_m()["all_m"]
+            if not NS["is_group"](m)]
+
+
+def _filters(win, full):
+    """The cost filters, and one floor and one category: what the chip is
+    asked under."""
+    if not full:
+        return [("all", None, None)]
+    out = [("all", None, None), ("labor", None, None),
+           ("material", None, None)]
+    floors = [str(m.get("floor_level") or "").strip() for _p, _i, m in _items(win)]
+    cats = [str(m.get("category") or "").strip() for _p, _i, m in _items(win)]
+    fl = next((f for f in floors if f), None)
+    cat = next((c for c in cats if c), None)
+    if fl:
+        out.append(("all", fl, None))
+    if cat:
+        out.append(("all", None, cat))
+    return out
+
+
+def sheet_truth(scn, filters=True):
+    """Every sheet x every drawing of it x every filter, the chip on: the
+    title and its tooltip, the rows (by place), the items on no sheet, what
+    is left out (by item) and the sentence it is said in, and each row's
+    words -- this sheet's quantity, the whole item's, the sheet label with
+    '+N', its tooltip, whether what is painted here counts, the desktop's
+    red chip."""
+    win = Win(scn)
+    pos = _pos_of(win)
+    panel = win.items_panel
+    out = []
+    for p in range(len(win.images)):
+        for rid, rp in _views(win, p):
+            for cost, floor, group in _filters(win, filters):
+                _set_view(win, p, rid, rp)
+                panel._sheet_only = True
+                panel._cost_filter, panel._floor_filter, panel._group_filter \
+                    = cost, floor, group
+                panel._here, panel._sheet_pages, panel._sheet_shapes = {}, {}, {}
+                all_m = _list_rows(panel)
+                lbl = panel._lift_title()["sheet_lbl"]
+                rec = {"page": p, "rev": rid, "revPage": rp, "cost": cost,
+                       "floor": floor, "group": group, "label": lbl,
+                       "title": panel._ttl.text, "tip": panel._ttl.tip}
+                if not all_m:
+                    rec["empty"] = True     # refresh says "No items yet" first
+                    out.append(rec)
+                    continue
+                sheet = panel._sheet_rows(all_m)
+                panel._here = sheet["here"]
+                panel._sheet_pages = sheet["pages"]
+                panel._sheet_shapes = sheet["shapes"]
+                said = []
+                footer = panel._lift_notes(
+                    sheet, lbl, None, lambda w, meta: said.append(w))["footer"]
+                rows = []
+                for pg, m in sheet["rows"]:
+                    solo = m.get("type") == "standalone" or NS["is_group"](m)
+                    v = panel._lift_row_value(pg, m, solo)
+                    pw = panel._lift_row_page(pg, m, solo, v["here"],
+                                              v["counted_here"])
+                    rows.append({
+                        "at": pos[id(m)],
+                        "here": [pos[id(s)] for s in v["here"] or []],
+                        "countedHere": v["counted_here"],
+                        "value": v["val"],
+                        "text": pw["pg_txt"],
+                        "tip": pw["page_hint"].tip,
+                        "also": [panel._page_disp(q) for q in pw["also"]],
+                        "counts": bool(pw["counts"]),
+                        "chip": pw.get("chip", "")})
+                rows.sort(key=lambda r: r["at"])
+                rec.update({
+                    "rows": rows,
+                    "solo": sorted(pos[id(m)] for _pg, m in sheet["solo"]),
+                    "hidden": sheet["hidden"], "filtered": sheet["filtered"],
+                    "words": panel._hidden_words(sheet["hidden"]),
+                    "top": said, "footer": footer})
+                out.append(rec)
+    return out
+
+
+def _act_record(win, pos, n_said):
+    g = win.gl_widget
+    return {"said": win.status_label.said[n_said:],
+            "sel": [pos[id(m)] for m in g.selected],
+            "zoom": [pos[id(m)] for m in g.zoomed],
+            "edit": [pos[id(m)] for m in g.edited],
+            "went": [[x[0], pos[id(x[1])]] for x in win.went]}
+
+
+def _act_reset(win):
+    g = win.gl_widget
+    g.selected[:], g.zoomed[:], g.edited[:], win.went[:] = [], [], [], []
+    return len(win.status_label.said)
+
+
+def sheet_acts(scn):
+    """What a row does, the chip on, for every item with a shape on a sheet
+    x every drawing of that sheet: a double-click (a tap in the browser)
+    over and over -- the shape it selects and zooms to, the line it says,
+    any page turn; Properties... -- the shape selected for the form; and
+    Delete -- the question, word for word, and what each of its three
+    answers does. And with the chip off, the double-click's walk across
+    sheets. An item whose MAIN shape is filed on no sheet is a row like any
+    other when its runs are drawn on sheets (the desktop's _on_item_activated
+    asks _activate_on_this_sheet of every row but a standalone or a Group):
+    it is walked on each sheet its runs are on, too."""
+    base = Win(scn)
+    not_rows = NS["PanelBase"]._NOT_ROWS
+    listed = [(pg, i, m) for pg, i, m in _items(base)
+              if not m.get("group_child") and m.get("type") not in not_rows
+              and not NS["is_group"](m) and not NS["is_standalone"](m)
+              and isinstance(pg, int)]
+    out = {"activate": [], "across": [], "properties": [], "delete": [],
+           "flips": []}
+    for pg, i, m in listed:
+        gid = m.get("group_id")
+        on = sorted({p for p, s in (base.gl_widget._measurement_group(gid)
+                                    if gid else [(pg, m)])
+                     if isinstance(p, int) and p >= 0})
+        # the chip off: the walk across sheets
+        w = Win(scn)
+        pos = _pos_of(w)
+        mm = w.gl_widget._measurements[pg][i]
+        n = len(w.gl_widget._measurement_group(gid)) if gid else 1
+        seq = []
+        for _k in range(max(2, n + 1)):
+            k0 = _act_reset(w)
+            w._on_item_activated(pg, mm)
+            seq.append(_act_record(w, pos, k0))
+        out["across"].append({"at": [pg, i], "seq": seq})
+        for p in on:
+            for rid, rp in _views(base, p):
+                # a double-click, over and over
+                w = Win(scn)
+                pos = _pos_of(w)
+                _set_view(w, p, rid, rp)
+                w.items_panel._sheet_only = True
+                mm = w.gl_widget._measurements[pg][i]
+                local = w._shapes_on_screen(pg, mm)
+                seq = []
+                for _k in range(max(3, len(local) + 1)):
+                    k0 = _act_reset(w)
+                    w._on_item_activated(pg, mm)
+                    seq.append(_act_record(w, pos, k0))
+                where = {"at": [pg, i], "page": p, "rev": rid, "revPage": rp}
+                out["activate"].append(dict(where, local=[pos[id(s)] for s in local],
+                                            seq=seq))
+                # Properties...
+                k0 = _act_reset(w)
+                w._on_item_properties(pg, mm)
+                out["properties"].append(dict(where, **_act_record(w, pos, k0)))
+                # Delete: the question, and each answer
+                if not gid:
+                    continue
+                for pick in (0, 1, 2):
+                    b = _Before(scn)
+                    _set_view(b.win, p, rid, rp)
+                    b.win.items_panel._sheet_only = True
+                    _QMessageBox.boxes[:] = []
+                    _QMessageBox.asked[:] = []
+                    _QMessageBox.pick = pick
+                    _QMessageBox.answer = _QMessageBox.No
+                    b.win._on_item_delete(pg, b.at(pg, i))
+                    rec = dict(where, pick=pick,
+                               boxes=[dict(x) for x in _QMessageBox.boxes],
+                               asked=[list(x) for x in _QMessageBox.asked],
+                               said=list(b.win.status_label.said),
+                               undo=b.gl.undo_levels)
+                    rec.update(b.delta())
+                    out["delete"].append(rec)
+                    if not _QMessageBox.boxes:
+                        break       # the plain question: one answer will do
+        # One drawing of a sheet, then another, then back: the walk starts
+        # again on each -- its key is the drawing (preview_key).
+        for p in on:
+            vs = _views(base, p)
+            if len(vs) < 2:
+                continue
+            w = Win(scn)
+            pos = _pos_of(w)
+            w.items_panel._sheet_only = True
+            mm = w.gl_widget._measurements[pg][i]
+            seq = []
+            for rid, rp in (vs[0], vs[1], vs[1], vs[0], vs[0]):
+                _set_view(w, p, rid, rp)
+                k0 = _act_reset(w)
+                w._on_item_activated(pg, mm)
+                seq.append(dict(_act_record(w, pos, k0), rev=rid, revPage=rp))
+            out["flips"].append({"at": [pg, i], "page": p, "seq": seq})
+    return out
+
+
+def chip_truth():
+    """The chip as a setting and a view: remembered in Settings, NOT ON A
+    SHEET folded when it is turned on (and on a start with it on) and opened
+    by an item added on no sheet -- never by a rebuild or a filter -- and a
+    page turn or a drawing flip followed by ONE rebuild, only when the
+    (page, drawing) on screen is not the one the list was built for, never
+    under a drag, never with the chip off."""
+    scn = {"name": "the chip", "pageCount": 2,
+           "metadata": {"page_labels": ["X1.0", "X1.1"],
+                        "revisions": [_rev("r-c", "11/02/2026", "ASI 6", 1,
+                                           match={"1": 0})]},
+           "measurements": {
+               "0": [_area("Wall", 10)],
+               "1": [_area("Deck", 20), _area("Deck rev", 21, rev_id="r-c",
+                                              rev_page=0)],
+               "-1000": [{"type": "standalone", "name": "Nails", "qty": 5,
+                          "unit": "box", "visible": True}]}}
+    w = Win(scn)
+    p = w.items_panel
+    g = w.gl_widget
+    settings = _Settings({"items_panel_sheet_only": False})
+    SOLO = NS["PanelBase"]._SOLO
+    steps = []
+
+    def snap(what):
+        steps.append({"what": what, "on": bool(p._sheet_only),
+                      "checked": p._sheet_btn.isChecked(),
+                      "soloFolded": ("fl", SOLO) in p._collapsed,
+                      "soloCount": p._solo_count, "rebuilds": p.rebuilds,
+                      "timer": p._sheet_timer.starts,
+                      "setting": settings.values.get("items_panel_sheet_only"),
+                      "saves": settings.saves})
+    p.set_settings(settings)
+    snap("a start with the setting off")
+    p._sheet_btn.setChecked(True)
+    p._on_sheet_chip()
+    snap("the chip on")
+    p._open_solo_on_add()
+    snap("the rebuild it makes")
+    p._open_solo_on_add()
+    snap("another rebuild, nothing added")
+    g._measurements[-1000].append({"type": "standalone", "name": "Glue",
+                                   "qty": 1, "unit": "each", "visible": True})
+    p._open_solo_on_add()
+    snap("an item added on no sheet")
+    p._collapsed.add(("fl", SOLO))
+    p._open_solo_on_add()
+    snap("folded again by hand, nothing added")
+    g._measurements[-1000].pop()
+    p._open_solo_on_add()
+    snap("one on no sheet deleted")
+    p.on_sheet_shown()
+    p._sheet_turned()
+    snap("shown again, the same sheet and drawing")
+    g._current_page = 1
+    p.on_sheet_shown()
+    p.on_sheet_shown()
+    p._sheet_turned()
+    snap("a page turn: the newest drawing, then the timer")
+    g._preview_key = ("r-c", 0)
+    p.on_sheet_shown()
+    p._sheet_turned()
+    snap("a flip to the revision")
+    g._preview_key = None
+    p._dragging = True
+    p.on_sheet_shown()
+    p._sheet_turned()
+    snap("a flip back under a drag")
+    p._dragging = False
+    p._sheet_turned()
+    snap("the drag over")
+    p._sheet_btn.setChecked(False)
+    p._on_sheet_chip()
+    snap("the chip off")
+    g._current_page = 0
+    p.on_sheet_shown()
+    snap("a page turn, the chip off")
+    p._sheet_btn.setChecked(True)
+    p._on_sheet_chip()
+    snap("the chip on again")
+    w2 = Win(scn)
+    s2 = _Settings({"items_panel_sheet_only": True})
+    w2.items_panel.set_settings(s2)
+    restart = {"on": bool(w2.items_panel._sheet_only),
+               "checked": w2.items_panel._sheet_btn.isChecked(),
+               "soloFolded": ("fl", SOLO) in w2.items_panel._collapsed}
+    return {"input": scn, "steps": steps, "restart": restart,
+            "SOLO": SOLO, "NOT_ROWS": list(NS["PanelBase"]._NOT_ROWS),
+            "titles": {s: NS["PanelBase"]._title_for(s) for s in
+                       ("", "X1.0", "X12345678901", "X123456789012",
+                        "Floor plan level 2", "ÄÖ1.2-über")},
+            "words": [[h, NS["PanelBase"]._hidden_words(h)] for h in (
+                {"drawings": 0, "waiting": 0, "sheets": 0},
+                {"drawings": 1, "waiting": 0, "sheets": 1},
+                {"drawings": 2, "waiting": 1, "sheets": 0},
+                {"drawings": 0, "waiting": 3, "sheets": 240})],
+            "qty": _qty_cases()}
+
+
+def _qty_cases():
+    """_qty_words and _value_str at Python's ties and Python's %d: 12.25 and
+    0.125 (exact in binary, so half to EVEN), 2.675 (just below its tie),
+    a count at .5, a linear count, a pin, an unknown kind."""
+    P = NS["PanelBase"]
+    out = []
+    kinds = [{"type": t} for t in ("count", "distance", "polyline",
+                                   "linear_count", "area", "slope_area",
+                                   "grid", "tile", "window", "standalone",
+                                   "mystery")]
+    for m in kinds:
+        for q in (12.25, 0.125, 2.675, 0.5, 1.5, 2.5, 1318.65, 999.95, 0.0,
+                  -0.25, 7.999):
+            out.append(["qty", m, q, P._qty_words(m, q)])
+    vals = [
+        {"type": "area", "value": 12.25}, {"type": "area", "value": 0.125},
+        {"type": "area", "value": 12.25, "group_count": 3, "scale": '1/4"'},
+        {"type": "grid", "value": 1318.65},
+        {"type": "slope_area", "value": 150.25, "pitch": 6.5},
+        {"type": "tile", "value": 80.25, "tiles_needed": 1234,
+         "pattern": "half", "boxes": 4},
+        {"type": "tile", "value": 10, "tiles_needed": 9, "pattern": "odd"},
+        {"type": "polyline", "value": 0.125},
+        {"type": "distance", "value": 12.345},
+        {"type": "count", "points": [[0, 0], [1, 1]]},
+        {"type": "count", "points": []},
+        {"type": "linear_count", "value": 6.9, "spacing_in": 16},
+        {"type": "linear_count", "value": 4},
+        {"type": "standalone", "qty": 2.5, "unit": " box "},
+        {"type": "standalone", "qty": 0},
+        {"type": "window", "win_number": "W1", "win_width": "3'-0\"",
+         "win_height": "4'-0\""},
+        {"type": "door", "door_number": "D2"},
+        {"type": "door"},
+        {"type": "partition"}, {"type": "partition", "part_number": "P1"},
+        {"type": "header", "hdr_number": "H1", "hdr_size": "auto",
+         "hdr_width": "6'"},
+        {"type": "header"},
+        {"type": "area", "value": 0}, {"type": "mystery", "value": 3}]
+    for m in vals:
+        out.append(["value", m, None, P._value_str(m)])
     return out
 
 
@@ -1419,6 +2090,104 @@ def scenarios():
         },
     })
 
+    # 12. The SHEET chip at its edges (3.06, round 6 of the browser port):
+    #     a run on a revision nothing counts whose item's total happens to
+    #     equal it ('9.0 sq ft · 9.0 sq ft in all' -- not counted HERE is a
+    #     difference); an item on seven sheets ('... and 3 more') with shapes
+    #     on two drawings of one sheet; Python's ties in a row's words (12.25,
+    #     0.125, a count across sheets); and a run filed on no sheet, which is
+    #     no sheet the item is 'also on'.
+    def _cnt(name, pts, **kw):
+        m = {"type": "count", "name": name, "label": name,
+             "points": [[float(k), float(k)] for k in range(pts)],
+             "value": pts, "visible": True, "category": "Framing"}
+        m.update(kw)
+        return m
+    def _run(k, **kw):
+        # each run its own line: two runs with the same points are one dict
+        # to Python's list.remove, and the desktop's delete takes the first
+        return _line("Long Wall", 10.0, group_id="g-l", group_child=True,
+                     points=[[0.0, float(k)], [40.0, float(k)]], **kw)
+    long_runs = {str(p): [_run(p)] for p in range(2, 7)}
+    # ...and one on exactly five sheets: the first that is cut ('and 1 more')
+    five = {str(p): _line("Five Wall", 4.0, group_id="g-5", group_child=True,
+                          points=[[5.0, float(p)], [9.0, float(p)]])
+            for p in range(1, 5)}
+    S.append({
+        "name": "the SHEET chip at its edges", "pageCount": 7,
+        "metadata": {
+            "page_labels": ["X1.0", "X1.1", "X1.2", "X1.3", "X1.4", "X1.5",
+                            "X1.6"],
+            "revisions": [_rev("r-e", "11/04/2026", "ASI 9", 1,
+                               match={"1": 0})],
+        },
+        "measurements": dict(long_runs, **{
+            "0": [_area("Edge Wall", 9.0, own_value=0.0, group_id="g-e",
+                        group_count=3),
+                  _area("Edge Wall", 9.0, group_id="g-e", group_child=True),
+                  _line("Long Wall", 110.0, own_value=10.0, group_id="g-l",
+                        group_count=11),
+                  _area("Tie", 12.25), _area("Tie Wall", 15.25,
+                                             own_value=12.25, group_id="g-t",
+                                             group_count=2),
+                  _line("Tie Line", 0.375, own_value=0.125, group_id="g-tl",
+                        group_count=2),
+                  _cnt("Tie Count", 3, own_value=3, group_id="g-c",
+                       group_count=2)],
+            "1": [_area("Edge Wall", 9.0, group_id="g-e", group_child=True,
+                        rev_id="r-e", rev_page=0),
+                  _run(11), _run(12),
+                  _run(13, rev_id="r-e", rev_page=0),
+                  _run(14, rev_id="r-e", rev_page=0),
+                  _run(15, rev_id="r-e", rev_page=0),
+                  _cnt("Tie Count", 2, group_id="g-c", group_child=True)],
+            "2": [_area("Tie Wall", 3.0, group_id="g-t", group_child=True),
+                  _line("Tie Line", 0.25, group_id="g-tl", group_child=True),
+                  _run(2)],
+            "3": [_area("Stray", 5.0, own_value=5.0, group_id="g-s",
+                        group_count=2),
+                  _run(3)],
+            "-1000": [{"type": "standalone", "name": "Nails", "qty": 5,
+                       "unit": "box", "visible": True, "sort_order": 1},
+                      _area("Stray", 2.0, group_id="g-s", group_child=True)],
+        }),
+    })
+    edge = S[-1]["measurements"]
+    edge["0"].append(_line("Five Wall", 20.0, own_value=4.0, group_id="g-5",
+                           group_count=5))
+    for p, run in five.items():
+        edge[p].append(run)
+
+    # 13. An item whose MAIN shape is filed on no sheet, its runs drawn on
+    #     sheets (round 6's review): listed under NOT ON A SHEET with its
+    #     sheet words, and a row like any other -- a double-click (a tap)
+    #     walks its two runs on X1.1, Properties... selects the run here, and
+    #     Delete asks which. One more run on X1.2's reissue; a plain item
+    #     beside it; nails on no sheet.
+    def _sq(k):
+        return [[float(k), 0.0], [k + 4.0, 0.0], [k + 4.0, 3.0]]
+    S.append({
+        "name": "a main shape on no sheet, its runs on sheets", "pageCount": 3,
+        "metadata": {
+            "page_labels": ["X1.0", "X1.1", "X1.2"],
+            "revisions": [_rev("r-c", "11/05/2026", "ASI 4", 1,
+                               match={"2": 0})],
+        },
+        "measurements": {
+            "0": [_area("Post Pad", 2.0, points=_sq(0))],
+            "1": [_area("Cap", 1.25, group_id="g-cap", group_child=True,
+                        points=_sq(10)),
+                  _area("Cap", 2.0, group_id="g-cap", group_child=True,
+                        points=_sq(20))],
+            "2": [_area("Cap", 0.75, group_id="g-cap", group_child=True,
+                        rev_id="r-c", rev_page=0, points=_sq(30))],
+            "-1000": [{"type": "standalone", "name": "Nails", "qty": 5,
+                       "unit": "box", "visible": True, "sort_order": 1},
+                      _area("Cap", 7.0, own_value=3.0, group_id="g-cap",
+                            group_count=4, points=_sq(40))],
+        },
+    })
+
     # Every scenario in both orders: the order setting changes which drawing
     # is newest, never what counts.
     out = []
@@ -1520,10 +2289,14 @@ if __name__ == "__main__":
         print(json.dumps({"lifted": sorted(MODULE_NAMES),
                           "scenarios": [{"input": s, "truth": truth(s)}
                                         for s in scns],
-                          "jobSwitch": job_switch()}, indent=1))
+                          "jobSwitch": job_switch(),
+                          "sheetChip": chip_truth()}, indent=1))
     else:
         res = []
         for i, p in enumerate(args):
             s = scenario_from_file(p, i)
-            res.append({"input": s, "truth": truth(s)})
+            # a real job's list on every sheet and drawing, under no filter;
+            # what a row does is the scenarios' (a real job is too big to
+            # walk item by item, sheet by sheet)
+            res.append({"input": s, "truth": truth(s, sheet="rows")})
         print(json.dumps({"lifted": sorted(MODULE_NAMES), "scenarios": res}))

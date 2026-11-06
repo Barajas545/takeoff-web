@@ -666,8 +666,12 @@ function apartJob() {
   const menu = body('function showItemMenu(');
   ok('the item menu knows where it was opened',
     menu.startsWith("function showItemMenu(item, ev, { from = 'canvas' } = {})"));
+  // (since Round 6 the list's Delete asks the SHEET chip's three-way question
+  // first when the list is on one sheet -- deleteFromList -- and otherwise
+  // hands over to the whole-item question, unchanged)
   ok('from the list it asks and deletes the whole item; from the drawing, the shape',
-    /if \(from === 'list'\) \{ void deleteWholeItem\(item\); return; \}\s*app\.project\.dropShapes\(\[item\._uid\]\)/.test(menu));
+    /if \(from === 'list'\) \{ void deleteFromList\(item\); return; \}\s*app\.project\.dropShapes\(\[item\._uid\]\)/.test(menu)
+    && /if \(!ch\) \{ await deleteWholeItem\(item\); return; \}/.test(body('async function deleteFromList(')));
   ok('the drawing opens it as the drawing',
     src.includes("showItemMenu: (item, ev) => showItemMenu(item, ev, { from: 'canvas' })"));
   ok('the Items list opens it as the list',
@@ -722,8 +726,20 @@ function apartJob() {
       setVisible: ids => calls.push(['hide', ids]),
       isolate: ids => calls.push(['isolate', ids]),
       dropShapes: ids => calls.push(['dropShapes', ids]),
+      findItem: id => (id === item._uid ? { pageKey: 0, item } : null),
     } },
-    itemsPanel: { refresh() {} },
+    // The list not on one sheet (the SHEET chip off): its Delete is the
+    // whole item's question (deleteFromList, lifted with the menu, hands
+    // over to deleteWholeItem); tests/revision-counting.mjs holds the chip's.
+    itemsPanel: { refresh() {}, sheetOnly: () => false },
+    sheetView: () => null,
+    onSheetUp: () => true,
+    countingModel: () => null,
+    deleteName: m => String(m.name || m.label || 'this item').trim(),
+    deleteHereChoice: () => { throw new Error('asked only while the list is on one sheet'); },
+    deletedHereWords: () => '',
+    D: {},
+    openPropertiesFromList: () => calls.push(['properties']),
     boundingBox: () => ({ x: 0, y: 0, w: 10, h: 10 }),
     viewport: { fit: () => calls.push(['zoom']) },
     requestDraw() {},
@@ -735,7 +751,7 @@ function apartJob() {
   };
   const names = Object.keys(env);
   const showItemMenu = new Function(...names,
-    `${fn('closeMenu')}\n${fn('showMenu')}\n${fn('showItemMenu')}\nreturn showItemMenu;`)(
+    `${fn('closeMenu')}\n${fn('showMenu')}\n${fn('showItemMenu')}\n${fn('deleteFromList')}\nreturn showItemMenu;`)(
     ...names.map(k => env[k]));
   const press = async (label, from, how = 'mouse') => {
     calls.length = 0;
