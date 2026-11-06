@@ -385,6 +385,12 @@ let pendingFit = false;
 // ...and a page turn's settle, for the same reason: { chose }. Dropped by the
 // next goToPage that is not a 'keep' of the same sheet.
 let pendingTurn = null;
+// What the landing in force is still bringing up: the sheet and the drawing
+// of it a goToPage was asked for, then the drawing a flip of it is decoding
+// (vticket) and how the landing settles once that is up. A save's re-read
+// takes the drawing down and lands in that one's place, asking for the same
+// (reacquireAfterSave). { page, version, ticket, vticket, settle }
+let comingUp = null;
 
 function requestDraw() {
   if (drawQueued) return;
@@ -592,6 +598,12 @@ app.project.addEventListener('pages-changed', ev => {
 // home-indicator inset) changes the canvas size, which drawFrame's
 // viewport.resize() hears like an iPad turned: a view at Fit goes to the
 // new Fit, any other view keeps its centre.
+// The cut is written on the body, the stage's parent, whose bottom is the
+// stage's: the start card inside the stage stops at the bar too, and so do
+// the Sheets and Items drawers and the Revisions panel, which the phone and
+// tablet layout lays over the stage beside it (css: .thumbs, .items,
+// .revpanel, .empty-state) -- under the bar their last card or row, and the
+// list's count and totals, were out of reach.
 function fitCanvasAboveFootBar() {
   const stage = $('stage');
   const bar = $('mobileBar');
@@ -603,8 +615,9 @@ function fitCanvasAboveFootBar() {
       cover = Math.max(0, Math.min(s.height, Math.round(s.bottom - b.top)));
     }
   }
+  const body = stage.parentElement;
   const want = `${cover}px`;
-  if (stage.style.getPropertyValue('--mbar-h') !== want) stage.style.setProperty('--mbar-h', want);
+  if (body.style.getPropertyValue('--mbar-h') !== want) body.style.setProperty('--mbar-h', want);
 }
 {
   const ro = new ResizeObserver(() => { fitCanvasAboveFootBar(); requestDraw(); });
@@ -707,17 +720,22 @@ function leftByChoice() {
  * as the desktop's go_to_page re-centres a card clicked again. 'keep':
  * nothing moves. See viewOf for what is asked and what it is when omitted.
  * A caller that took the drawing down first passes `chose`, asked of the
- * sheet being left before it went (below_fit_by_choice).
+ * sheet being left before it went (below_fit_by_choice), and for a 'keep'
+ * `from`, the size of the drawing that was up, and `settle`, how a landing
+ * it replaced would have settled once its drawing was up (comingUp).
  */
-async function goToPage(index, { version, view, chose: leftChose } = {}) {
+async function goToPage(index, { version, view, chose: leftChose, from, settle: carried } = {}) {
   if (index < 0 || index >= app.pages.pageCount) return;
   const ticket = ++pageTicket;
+  comingUp = { page: index, version, ticket, vticket: -1, settle: null };
   const how = viewOf(index, view);
   // A re-read keeps its job: a turn made while it decodes is a turn.
   if (how === 'keep') landedJob = jobNow();
   // Kept with its drawing taken down first: the view is carried from the
-  // drawing that was up to the one that comes back, as a flip carries it.
-  const keptFrom = how === 'keep' && !pageImage ? shownDrawingSize() : null;
+  // drawing that was up to the one that comes back, as a flip carries it --
+  // from the size the caller took before it went (`from`): the page store
+  // closes the bitmaps it drops, and a closed one has no size to read.
+  const keptFrom = how === 'keep' && !pageImage ? from || shownDrawingSize() : null;
   // A settle parked for want of a canvas belonged to the sheet being left.
   if (how !== 'keep') pendingTurn = null;
   const movedSheet = app.currentPage !== index;
@@ -803,11 +821,14 @@ async function goToPage(index, { version, view, chose: leftChose } = {}) {
     // desktop's held turn settles once its revision is on screen: a reissue
     // on smaller paper raised to its Fit, Fit as Fit -- unless he zoomed or
     // moved the sheet while it was being decoded (ZoomFloor.unmoved: the
-    // flip itself is no move). The settle is idempotent from his base.
+    // flip itself is no move). The settle is idempotent from his base. A
+    // 'keep' that replaced a landing whose drawing was still coming settles
+    // as that landing would have (`settle`).
     const framed = landed ? zoomFloor.mark() : null;
-    const up = await showSheetVersion(index, want, { announce: false, flip: false });
-    if (up && framed && ticket === pageTicket && zoomFloor.unmoved(framed)) {
-      zoomFloor.turnSettle(how === 'turn' && chose);
+    const settle = framed ? { framed, chose: how === 'turn' && chose } : (how === 'keep' && carried) || null;
+    const up = await showSheetVersion(index, want, { announce: false, flip: false, settle });
+    if (up && settle && ticket === pageTicket && zoomFloor.unmoved(settle.framed)) {
+      zoomFloor.turnSettle(settle.chose);
       requestDraw();
     }
   }
@@ -1453,7 +1474,7 @@ const MAIN_LRU_COMPARING = 2;
  * on screen flips back to the original — that back-and-forth is what makes a
  * change jump out, and it is how the desktop behaves.
  */
-async function showSheetVersion(page, revId, { announce = true, flip = true } = {}) {
+async function showSheetVersion(page, revId, { announce = true, flip = true, settle = null } = {}) {
   if (!(page >= 0 && page < app.pages.pageCount)) return false;
   const revs = allRevisions();
 
@@ -1492,6 +1513,9 @@ async function showSheetVersion(page, revId, { announce = true, flip = true } = 
     return false;
   }
 
+  // Coming up, while it decodes (comingUp): the drawing a save's re-read
+  // brings up in its place, and how the landing that asked for it settles.
+  comingUp = { page, version: want, ticket: pageTicket, vticket: ticket, settle };
   let bmp;
   try {
     bmp = await app.pages.getRevisionPage(set, hit.revPage);
@@ -1500,6 +1524,8 @@ async function showSheetVersion(page, revId, { announce = true, flip = true } = 
       setStatus(`Could not open that revision sheet — ${err.message}`);
     }
     return false;
+  } finally {
+    if (comingUp && comingUp.vticket === ticket) comingUp = null;   // it came, or it never will
   }
   if (ticket !== versionTicket) return false;            // the user moved on
 
@@ -3442,7 +3468,30 @@ async function reacquireAfterSave(handle) {
     const file = await handle.getFile();
     const reopened = await openProject(file);
     if (reopened.pageCount === app.pages.pageCount) {
+      // How the sheet comes back up, asked before the store is re-pointed
+      // and the drawing taken down: kept as it is when he is on the sheet
+      // with its drawing up (onSheetUp). Otherwise a turn he made is still
+      // decoding (or the job's first sheet is still opening), and the
+      // re-read lands it as that turn would have: at his zoom, centred,
+      // with the choice asked of the drawing still up (leftByChoice). The
+      // re-read is the same job -- setFromProject re-points app.pages, so
+      // the job a sheet landed in is carried over (landedJob), or viewOf
+      // would take the turn for a job opening.
+      // The drawing it brings up is the one the landing in force was still
+      // bringing up (comingUp): the one a turn or a jump asked for (his own
+      // drawing, for a jump to his work), or the one a flip of the sheet up
+      // still decodes, settled as that landing would have been. And the size
+      // of the drawing on screen is taken now: setFromProject closes every
+      // bitmap the store holds, the ones on screen included.
+      const up = onSheetUp(app.currentPage);
+      const chose = leftByChoice();
+      const sameJob = inLandedJob();
+      const coming = comingUp && comingUp.page === app.currentPage && comingUp.ticket === pageTicket
+        ? comingUp : null;
+      const decoding = up && coming && coming.vticket === versionTicket ? coming : null;
+      const from = up ? shownDrawingSize() : null;
       app.pages.setFromProject(reopened);
+      if (sameJob) landedJob = jobNow();
       // Every sheet now comes from the file just written, so a Plans Library
       // copy the project was opened from is free to go — and the save check
       // must not keep holding this project to it.
@@ -3453,8 +3502,10 @@ async function reacquireAfterSave(handle) {
       // NEWEST — so saving while working on a sheet's own drawing swapped the
       // drawing underneath the estimator and hid every item they had just
       // taken off. Re-pointing the blob slices at the re-written file is
-      // bookkeeping; it must not move anybody.
-      await goToPage(app.currentPage, { version: versionView.revId });
+      // bookkeeping; it must not move anybody -- the view included.
+      await goToPage(app.currentPage, up
+        ? { version: decoding ? decoding.version : versionView.revId, view: 'keep', from, settle: decoding && decoding.settle }
+        : { version: coming ? coming.version : undefined, view: 'turn', chose });
       thumbs.refresh(app.currentPage);
     }
   } catch (err) {

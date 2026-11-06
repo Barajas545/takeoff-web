@@ -62,7 +62,20 @@
 //     a decode he turned past settles nothing; a settle parked for want of a
 //     canvas runs on the first frame that has one, and never over a zoom to
 //     an item; the doors (import, delete, the Items list, Zoom to item, the
-//     Fit Width menu) and 'keep' (the save's re-read, handed to the peer).
+//     Fit Width menu) and 'keep'. A save through a file handle (main.js's
+//     own reacquireAfterSave, lifted with stand-ins for the handle and the
+//     re-read, which closes the drawings on screen as the page store does):
+//     with no turn, zoom and pan exactly as they were (a reissue on other
+//     paper up, the sheet's own drawing, past Fit; three saves running);
+//     Page Down then a save while the next sheet decodes lands exactly as
+//     the same turn with no save; a save while the job's first sheet opens
+//     is an opening; a save while a landing's drawing is still coming lands
+//     on THAT drawing (his own for a jump to his work, the Revisions panel's
+//     own drawing, a reissue picked, the Newest still decoding on the sheet
+//     up), settled as with no save. The foot bar: the cut written on the
+//     body, which the drawers, the Revisions panel and the start card read
+//     too -- and no other rule in the file takes their cut back, however it
+//     names them (aside.items, .mopen.items, aside.revpanel).
 //     And WHILE THE NEXT SHEET DECODES, the drawing up is the last sheet's
 //     (goToPage's shownPage): a card tapped twice, Next and then the card, a
 //     row double-clicked, a turn made with nothing up (a deleted sheet's
@@ -72,6 +85,16 @@
 //     to item whose item is on the sheet being left -- 'this sheet' asked of
 //     the drawing up AND app.currentPage (onSheetUp), neither alone -- and a
 //     mark is refused there, while a pinch, which is looking, says nothing.
+//     A finger already down when he turns does nothing on the sheet turned
+//     to: a tap in Count or a chain tool, a hold in Pan, a callout bubble
+//     (while it opens and once it is up), a mouse's right press (no item
+//     menu -- nor for one pressed while the sheet opened and released once
+//     it was up), and an eraser sweep the turn cut short is its own undo
+//     level -- through the controller's own handlers. So is a sweep a pinch
+//     or a pointercancel ends, once, with nothing of it left for the next
+//     turn or the next job opened to file; and one the history moves under
+//     (Ctrl+Z held, Ctrl+Y, the history cleared) is over there, its own
+//     level filed at its first deletion, so the Ctrl+Z takes back the sweep.
 //
 // The only differences from the desktop are the documented ones: the web's
 // Fit keeps its 16 px margin, and Zoom to item fits the desktop's box inside
@@ -261,7 +284,7 @@ function rig({ canvas: [w, h], pages, settings: s0 = {}, revs = null, newest = t
   let img = pages[0] ? { width: pages[0][0], height: pages[0][1] } : null;
   const env = {
     ZoomFloor: ZF.ZoomFloor, zoomFloorLine: ZF.zoomFloorLine, boundingBox,
-    viewport: vp, controller: c, zoomFloor: null, pendingFit: false, pendingTurn: null,
+    viewport: vp, controller: c, zoomFloor: null, pendingFit: false, pendingTurn: null, comingUp: null,
     zoomFloorSaid: false, pageTicket: 0, STANDALONE_PAGE: -1000,
     // Whose drawing is up (the first sheet's, to begin with), and the job a
     // sheet landed in: none, so the first goToPage is the job's opening.
@@ -1586,19 +1609,102 @@ log('\n-- 6. a change of size: Fit stays Fit, anything else keeps its centre --'
   ok('main.js: one observer hears the stage AND the bar, measures, then draws',
     !!fitText && /const ro = new ResizeObserver\(\(\) => \{ fitCanvasAboveFootBar\(\); requestDraw\(\); \}\);\n\s*ro\.observe\(\$\('stage'\)\);\n\s*ro\.observe\(\$\('mobileBar'\)\);/.test(MAIN)
     && !/new ResizeObserver\(\(\) => requestDraw\(\)\)\.observe\(\$\('stage'\)\)/.test(MAIN));
+  // The cut is written on the body, the stage's parent (index.html), so the
+  // drawers laid over the stage and the start card inside it read it too;
+  // nothing is written on the stage itself.
   const cover = (stage, bar, hidden = false) => {
     const set = [];
     const props = {};
+    const onStage = [];
     const el = {
       stage: { getBoundingClientRect: () => stage,
-        style: { getPropertyValue: k => props[k] || '', setProperty: (k, v) => { props[k] = v; set.push(v); } } },
+        style: { getPropertyValue: () => '', setProperty: (k, v) => { onStage.push([k, v]); } },
+        parentElement: { style: { getPropertyValue: k => props[k] || '', setProperty: (k, v) => { props[k] = v; set.push(v); } } } },
       mobileBar: { hidden, getBoundingClientRect: () => bar },
     };
     const env = liftMain(['fitCanvasAboveFootBar'], { $: id => el[id] });
     env.fitCanvasAboveFootBar();
     env.fitCanvasAboveFootBar();
-    return [props['--mbar-h'], set.length];
+    return onStage.length ? ['written on the stage', onStage] : [props['--mbar-h'], set.length];
   };
+  const HTML = (await readFile(new URL('../index.html', import.meta.url), 'utf-8')).replace(/\r\n/g, '\n');
+  const body = (() => {
+    const a = HTML.indexOf('<div class="body">');
+    const b = HTML.indexOf('<!-- ── status bar', a);
+    return a < 0 || b < 0 ? '' : HTML.slice(a, b);
+  })();
+  const stageHtml = /<main class="stage" id="stage">[\s\S]*?<\/main>/.exec(body)?.[0] || '';
+  ok('index.html: the stage, both drawers and the foot bar are all in the body, and the start card in the stage',
+    ['id="thumbsPanel"', 'id="stage"', 'id="mobileBar"', 'id="itemsPanel"'].every(s => body.includes(s))
+    && stageHtml.includes('id="emptyState"') && !stageHtml.includes('id="itemsPanel"'));
+  const narrow = (() => {
+    const a = CSS.indexOf('@media (max-width: 1023px) {\n  /* The seven menus');
+    return a < 0 ? '' : CSS.slice(a, CSS.indexOf('\n}\n', a));
+  })();
+  const drawers = /\n {2}\.thumbs, \.items \{([^}]*)\}/.exec(narrow)?.[1] || '';
+  ok('css: on a phone or tablet both drawers stop at the foot bar (bottom: --mbar-h)',
+    /position:\s*absolute;\s*top:\s*0;\s*bottom:\s*var\(--mbar-h, 0px\);/.test(drawers) && !/bottom:\s*0\s*;/.test(drawers), drawers);
+  const es = /\n\.empty-state \{([^}]*)\}/.exec(CSS)?.[1] || '';
+  const card = /\n\.es-card \{([^}]*)\}/.exec(CSS)?.[1] || '';
+  ok('css: the start card stops at the foot bar and scrolls, centred by its own margins',
+    /bottom:\s*var\(--mbar-h, 0px\)/.test(es) && /overflow-y:\s*auto/.test(es) && !/inset:\s*0/.test(es)
+    && !/place-items:\s*center/.test(es) && /(^|\n)\s*margin:\s*auto;/.test(card), es + ' | ' + card);
+  // The Revisions panel too: on a phone it is the whole screen, laid over
+  // the stage, and under the bar were its last sheet row and its legend.
+  const revNarrow = /\n@media \(max-width: 1023px\) \{\n {2}\.revpanel \{([^}]*)\}/.exec(CSS)?.[1] || '';
+  ok('css: on a phone or tablet the Revisions panel stops at the foot bar (bottom: --mbar-h)',
+    /bottom:\s*var\(--mbar-h, 0px\)/.test(revNarrow), revNarrow);
+  // ...and nothing else in the file takes any of it back. Each check above
+  // reads the one rule it names, so a later '.items { bottom: 0 }' put the
+  // list's count and totals under the bar again with every check passing.
+  // Every rule in the file, comments out; the box a selector styles is its
+  // last compound ('.items.mopen' styles the drawer, '.items .row' a row),
+  // wherever the name is in it: 'aside.items', '.mopen.items' and
+  // 'aside#revPanel' style the box as '.items' does (the dot or the hash
+  // starts the name, and what follows it must end it, so '.items-foot' and
+  // '.no-items' are other boxes).
+  const rules = [...CSS.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .map(m => ({ sel: m[1].trim(), body: m[2] }));
+  const styles = (re, sel) => sel.split(',').some(s => re.test(s.trim().split(/[\s>+~]+/).at(-1)));
+  ok('(the guards below see a box named with its element or another class: aside.items, .mopen.items, aside#revPanel; not .items-foot, .no-items, .items .row)',
+    [['aside.items', true], ['.mopen.items', true], ['.items.mopen', true], ['aside#itemsPanel', true],
+      ['div.thumbs:not([hidden])', true], ['.items-foot', false], ['.no-items', false], ['.items .row', false],
+      ['.thumbs > .thumb', false]].every(([sel, want]) => styles(/(\.thumbs|\.items|#thumbsPanel|#itemsPanel)(?![\w-])/, sel) === want)
+    && styles(/(\.revpanel|#revPanel)(?![\w-])/, 'aside#revPanel') && styles(/(\.revpanel|#revPanel)(?![\w-])/, 'aside.revpanel'));
+  const setting = props => new RegExp(`(^|[;\\s])(${props})\\s*:`);
+  const BOX_PROPS = setting('position|top|bottom|inset(-[a-z-]+)?|height|max-height');
+  /** The rules for one box, in file order, and the ones that cut it at the bar. */
+  const named = re => {
+    const all = rules.filter(({ sel }) => styles(re, sel));
+    return { all, at: all.filter(({ body }) => /bottom:\s*var\(--mbar-h, 0px\)/.test(body)) };
+  };
+  const drawersAll = named(/(\.thumbs|\.items|#thumbsPanel|#itemsPanel)(?![\w-])/);
+  ok('css: one rule cuts the drawers at the bar, and no other rule for a drawer sets its position, its top or bottom, or its height',
+    drawersAll.at.length === 1 && drawersAll.at[0].sel === '.thumbs, .items'
+    && drawersAll.all.filter(r => r !== drawersAll.at[0]).every(r => !BOX_PROPS.test(r.body)),
+    JSON.stringify(drawersAll.all.filter(r => r !== drawersAll.at[0] && BOX_PROPS.test(r.body))));
+  const startAll = named(/(\.empty-state|#emptyState)(?![\w-])/);
+  const cardAll = rules.filter(({ sel }) => styles(/\.es-card(?![\w-])/, sel));
+  const centredBy = cardAll.filter(({ body }) => /(^|[;\s])margin:\s*auto;/.test(body));
+  ok('css: ...nor for the start card: no other rule sets where it ends, how it overflows or how it places the card, nor the card\'s margin',
+    startAll.at.length === 1 && startAll.at[0].sel === '.empty-state'
+    && startAll.all.filter(r => r !== startAll.at[0])
+      .every(r => !setting('position|top|bottom|inset(-[a-z-]+)?|height|max-height|overflow(-[xy])?|place-items|place-content|align-items|align-content').test(r.body))
+    && centredBy.length === 1 && cardAll.filter(r => r !== centredBy[0])
+      .every(r => !setting('margin(-[a-z]+)?|align-self|place-self|position').test(r.body)),
+    JSON.stringify([startAll.all.map(r => r.sel), cardAll.map(r => r.sel)]));
+  // The panel's own rule (the first, the desktop's: top: 0; bottom: 0) sets
+  // where it is; only the cut may set any of that again. A rule BEFORE the
+  // cut that names the panel more closely ('aside.revpanel') outranks it
+  // there as one after it does, and an !important on its own rule would too.
+  const revAll = named(/(\.revpanel|#revPanel)(?![\w-])/);
+  const revOwn = revAll.all[0];
+  ok('css: ...nor for the Revisions panel: only its own rule (first) and its cut set where it is or how tall, neither !important',
+    revAll.at.length === 1 && revAll.at[0].sel === '.revpanel' && !!revOwn && revOwn !== revAll.at[0]
+    && revOwn.sel === '.revpanel' && BOX_PROPS.test(revOwn.body)
+    && revAll.all.filter(r => r !== revOwn && r !== revAll.at[0]).every(r => !BOX_PROPS.test(r.body))
+    && ![revOwn, revAll.at[0]].some(r => /!important/.test(r.body)),
+    JSON.stringify(revAll.all.map(r => r.sel)));
   const R = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height });
   eq('844x390: the bar covers 53 px of the stage, written once', cover(R(0, 24, 844, 366), R(0, 337, 844, 53)), ['53px', 1]);
   eq('820x1180 portrait: the same 53 px', cover(R(0, 24, 820, 1156), R(0, 1127, 820, 53)), ['53px', 1]);
@@ -2175,10 +2281,9 @@ log('\n-- 8. the app\'s wiring --');
     /const view = intoOpen && startAt > 0 \? 'turn' : 'open';\n\s*const chose = view === 'turn' && leftByChoice\(\);\n\s*pageImage = null;\n\s*await goToPage\(startAt, \{ view, chose \}\);/.test(imp));
 }
 {
-  // 'keep': the drawing taken down and read back (the save's re-read --
-  // reacquireAfterSave is the peer's this round; the one-line change it
-  // needs is handed over): the view exactly as it was, a reissue on other
-  // paper up too.
+  // 'keep': the drawing taken down and read back (the save's re-read,
+  // reacquireAfterSave, driven below): the view exactly as it was, a
+  // reissue on other paper up too.
   const r = rig({ canvas: IPAD, pages: [SHEET], revs: { 0: [['r1', [3400, 2200]]] } }, { touch: true });
   r.env.pageImage = null;
   await r.env.goToPage(0);
@@ -2194,7 +2299,7 @@ log('\n-- 8. the app\'s wiring --');
   r.env.app.pages.file = { reread: true };   // the re-read re-points the store (setFromProject)
   r.env.pageImage = null;
   await r.env.goToPage(0, { version: 'r1' });
-  ok('...which the re-read without it does not do: it opens again (the save re-fit, handed to the peer)',
+  ok('...which the re-read without it does not do: it opens again (the save re-fit before this round)',
     r.zf.showsFit());
   // ...and with it, a Page Down while the re-read decodes is a turn, not
   // another opening: the job is the one he was in.
@@ -2214,8 +2319,243 @@ log('\n-- 8. the app\'s wiring --');
   await kept;
   eq('a Page Down while a kept re-read decodes: a turn at his zoom past Fit, not the default zoom',
     [r.st.page, r.vp.zoom === past, r.zf.pastFit, centred(r)], [1, true, true, true]);
-  ok('reacquireAfterSave is untouched this round (the peer\'s save rework)',
-    /pageImage = null;\n[\s\S]{0,600}?await goToPage\(app\.currentPage, \{ version: versionView\.revId \}\);/.test(fnText('reacquireAfterSave') || ''));
+}
+{
+  // A save through a file handle: main.js's own reacquireAfterSave, lifted
+  // by text onto the rig -- the handle, the re-read (openProject) and the
+  // store's re-point (setFromProject) are stand-ins; the decodes are the
+  // rig's, held when a step says so. The re-read re-points the page store,
+  // so to jobNow it is another file: before, the sheet came back as a job
+  // opening, at the default zoom -- every save re-fitted the view. And a
+  // re-read that kept the view while a turn still decoded cancelled the
+  // turn: the sheet turned to came up at the last sheet's origin and zoom,
+  // off the sheet. Each save below is diffed against the same steps with
+  // no save at all.
+  const saving = r => {
+    const env = r.env;
+    let n = 0;
+    r.st.warned = [];
+    Object.assign(env, {
+      openProject: async file => ({ pageCount: env.app.pages.pageCount, file, pages: [] }),
+      releaseLibraryCopy() {},
+      // reacquireAfterSave swallows what throws, with a warning: a stand-in
+      // missing would otherwise pass as 'the view did not move'.
+      console: { warn: (...a) => r.st.warned.push(a.map(String).join(' ')) },
+    });
+    env.thumbs.refresh = () => {};
+    env.app.pages.setFromProject = ({ file }) => {
+      // As PageStore.clearCaches does, every drawing the store held is
+      // closed, the ones on screen included: they read 0 x 0 from here on
+      // (a closed ImageBitmap), so nothing after this can ask their size.
+      for (const b of [env.pageImage, env.versionView.bitmap]) if (b) { b.width = 0; b.height = 0; }
+      env.app.pages.file = file;
+    };
+    liftMain(['reacquireAfterSave'], env);
+    return () => env.reacquireAfterSave({ name: 'job.takeoff', getFile: async () => ({ written: ++n }) });
+  };
+  // The zoom exactly; the origin to a millionth of a drawing pixel (a
+  // reissue on other paper is carried there and back, as a flip carries it).
+  const um = v => Math.round(v * 1e6) / 1e6;
+  const state = r => ({ page: r.st.page, up: r.env.sheetUp(), rev: r.env.versionView.revId,
+    view: { zoom: r.vp.zoom, x: um(r.vp.origin.x), y: um(r.vp.origin.y) },
+    base: r.zf.base, baseFit: r.zf.baseFit, raise: r.zf.raise, pastFit: r.zf.pastFit, landed: r.env.inLandedJob() });
+  /** Hold every sheet decode until `count` are asked for (a save asks after two awaits); returns them, oldest first. */
+  const heldUntil = async (r, count) => {
+    for (let k = 0; k < 50 && r.st.held.length < count; k += 1) await tick();
+    r.env.holdPage = false;
+    return r.st.held.splice(0);
+  };
+  const OTHER = [6000, 4400], SMALL = [3400, 2200];
+  const flipped = r => r.env.showSheetVersion(0, '', { announce: false });
+
+  // A save with no turn: zoom and pan exactly as they were, on the newest
+  // drawing (a reissue on other paper), on the sheet's own drawing, and past
+  // Fit by Shift.
+  for (const [what, before] of [
+    ['on a reissue on other paper', async r => { await r.act('zoom-in'); r.vp.panBy(50, 30); }],
+    ['on the sheet\'s own drawing (not swapped for the newest)', async r => { await flipped(r); await r.act('zoom-in'); r.vp.panBy(-70, 40); }],
+    ['past Fit by Shift, dragged', async r => { r.wheel(512, 352, -120, 0, true); r.vp.panBy(20, -15); }],
+  ]) {
+    const r = rig({ canvas: IPAD, pages: [SHEET, SHEET], revs: { 0: [['r1', [3400, 2200]]] } }, { touch: true });
+    const save = saving(r);
+    r.env.pageImage = null;
+    await r.env.goToPage(0);
+    await before(r);
+    const was = state(r);
+    await save();
+    eq(`a save with no turn, ${what}: the view exactly as it was`, state(r), was);
+    eq('...the re-read went through (nothing swallowed)', [r.st.warned, r.env.app.pages.file], [[], { written: 1 }]);
+  }
+
+  // Page Down, then a save while the next sheet decodes: it lands exactly as
+  // the same turn with no save -- his zoom, centred (onto paper of another
+  // size), a small sheet raised to its own Fit, Shift past Fit kept, the box
+  // off as 3.05 -- whichever decode finishes first.
+  async function turnThenSave(next, { save, before, box = true, saveFirst = false }) {
+    const r = rig({ canvas: IPAD, pages: [SHEET, next], settings: { zoom_out_stops_at_fit: box } }, { touch: true });
+    const saveNow = saving(r);
+    r.env.pageImage = null;
+    await r.env.goToPage(0);
+    before(r);
+    r.vp.panBy(-300, -150);
+    r.env.holdPage = true;
+    r.st.held = [];
+    const turn = r.env.stepSheet(1);
+    const saved = save ? saveNow() : null;
+    const held = await heldUntil(r, save ? 2 : 1);
+    const asked = [held.length, r.st.page, r.env.sheetUp()];
+    for (const f of saveFirst ? held.reverse() : held) { f(); await tick(); }
+    await Promise.all([turn, saved]);
+    return { r, asked, got: state(r) };
+  }
+  for (const [what, next, before, box] of [
+    ['onto other paper at his zoom', OTHER, r => r.wheel(512, 352, 120), true],
+    ['onto a small sheet his zoom would show smaller than the screen', SMALL, r => r.wheel(512, 352, 120), true],
+    ['past Fit by Shift', OTHER, r => r.wheel(512, 352, -120, 0, true), true],
+    ['the box off', OTHER, r => r.wheel(512, 352, 120), false],
+  ]) {
+    const plain = await turnThenSave(next, { save: false, before, box });
+    for (const saveFirst of [false, true]) {
+      const { r, asked, got } = await turnThenSave(next, { save: true, before, box, saveFirst });
+      eq(`(Page Down, then the save's re-read, both decodes held, ${what})`, asked, [2, 1, -1]);
+      eq(`Page Down then a save while the next sheet decodes, ${what}${saveFirst ? ' (the re-read decoded first)' : ''}: `
+        + 'it lands exactly as the turn with no save', got, plain.got);
+      ok('...on the sheet, centred', got.up === 1 && centred(r) && r.st.warned.length === 0, JSON.stringify(r.st.warned));
+    }
+  }
+
+  // A save while the job's first sheet is still opening: it opens, at the
+  // default zoom -- not at the zoom of the job before it, nor as a turn.
+  async function openThenSave(save) {
+    const r = rig({ canvas: IPAD, pages: [SHEET, SHEET], settings: { default_zoom_mode: '100' } }, { touch: true });
+    const saveNow = saving(r);
+    r.env.pageImage = null;
+    await r.env.goToPage(0);
+    r.wheel(512, 352, -120);
+    r.wheel(512, 352, -120);
+    r.vp.panBy(80, 60);
+    r.env.app.pages.file = { anotherJob: true };   // the next job: its own file, nothing landed in it yet
+    r.env.pageImage = null;
+    r.env.holdPage = true;
+    r.st.held = [];
+    const opening = r.env.goToPage(0);
+    const saved = save ? saveNow() : null;
+    const held = await heldUntil(r, save ? 2 : 1);
+    for (const f of held) { f(); await tick(); }
+    await Promise.all([opening, saved]);
+    return { r, got: state(r) };
+  }
+  const opened0 = await openThenSave(false);
+  const { r: o, got } = await openThenSave(true);
+  eq('a save while the job\'s first sheet is still opening: it opens as with no save', got, opened0.got);
+  eq('...at the default zoom (100%), centred', [o.vp.zoom, centred(o), o.st.warned], [1, true, []]);
+
+  // Every save, again and again: on a reissue on other paper the view is
+  // where it was after each (the store closes the drawing on screen; its
+  // size, read once it was closed, was none, and each save threw the view
+  // further off the sheet -- off it entirely after two).
+  {
+    const r = rig({ canvas: IPAD, pages: [SHEET, SHEET], revs: { 0: [['r1', [3400, 2200]]] } }, { touch: true });
+    const save = saving(r);
+    r.env.pageImage = null;
+    await r.env.goToPage(0);
+    await r.act('zoom-in');
+    r.vp.panBy(-90, 50);
+    const was = state(r);
+    const after = [];
+    for (let k = 0; k < 3; k += 1) { await save(); after.push(state(r)); }
+    eq('three saves on a reissue on other paper, zoomed and dragged: the view exactly as it was after each',
+      after, [was, was, was]);
+  }
+
+  // ...and the drawing a landing still on its way was bringing up. A turn
+  // or a jump asks for a drawing of the sheet it turns to: his own drawing
+  // for a jump to his work (the Items list, Zoom to item), the Revisions
+  // panel's own drawing, an older reissue picked for another sheet. A save
+  // while that sheet decodes lands on THAT drawing, as the landing would
+  // have -- not on the Newest, which for his own work hid the item (work
+  // is painted only over the drawing it was traced on). And with the sheet
+  // up and the drawing still decoding -- the Newest after Page Down, a
+  // reissue picked for the sheet up -- the re-read brings that drawing up,
+  // settled as the landing would have been, not the sheet's own drawing.
+  const REVS = { 1: [['r1', OTHER], ['r2', SMALL]] };   // sheet 1: two reissues, the Newest on small paper
+  /** Hold every revision decode (each its own release, oldest first) until `stop`. */
+  const holdRevs = r => {
+    const real = r.env.app.pages.getRevisionPage;
+    const held = [];
+    r.env.app.pages.getRevisionPage = set => new Promise(res => held.push(() => res(real(set))));
+    return { held, stop() { r.env.app.pages.getRevisionPage = real; } };
+  };
+  const until = async f => { for (let k = 0; k < 60 && !f(); k += 1) await tick(); };
+  async function landThenSave(door, { save, saveFirst = false, revs = false, onSheet1 = false }) {
+    const r = rig({ canvas: IPAD, pages: [SHEET, SHEET], revs: REVS }, { touch: true });
+    const saveNow = saving(r);
+    r.env.pageImage = null;
+    await r.env.goToPage(0);
+    if (onSheet1) await r.env.stepSheet(1);
+    r.wheel(512, 352, 120);
+    r.vp.panBy(-300, -150);
+    let held;
+    let saved = null;
+    let landing;
+    if (revs) {
+      // The sheet's own drawing lands at once; the drawing asked of it decodes.
+      const h = holdRevs(r);
+      landing = door(r);
+      await until(() => h.held.length >= 1);
+      if (save) { saved = saveNow(); await until(() => h.held.length >= 2); }
+      h.stop();
+      held = h.held;
+    } else {
+      r.env.holdPage = true;
+      r.st.held = [];
+      landing = door(r);
+      if (save) saved = saveNow();
+      held = await heldUntil(r, save ? 2 : 1);
+    }
+    const asked = [held.length, r.st.page, r.env.sheetUp()];
+    for (const f of saveFirst ? held.reverse() : held) { f(); await tick(); }
+    await Promise.all([landing, saved]);
+    for (let k = 0; k < 5; k += 1) await tick();
+    return { r, asked, got: state(r) };
+  }
+  for (const [what, door, opts, drawing] of [
+    ['the Revisions panel\'s own drawing of another sheet', r => r.env.goToPageOwnVersion(1), {}, ''],
+    ['an older reissue picked for another sheet', r => r.env.showSheetVersion(1, 'r1', { announce: false }), {}, 'r1'],
+    ['Page Down onto a sheet up at once, its Newest (small paper) still decoding', r => r.env.stepSheet(1), { revs: true }, 'r2'],
+    ['an older reissue picked for another sheet, its own drawing up, the reissue still decoding',
+      r => r.env.showSheetVersion(1, 'r1', { announce: false }), { revs: true }, 'r1'],
+    ['an older reissue picked for the sheet up, still decoding (its Newest up)',
+      r => r.env.showSheetVersion(1, 'r1', { announce: false }), { revs: true, onSheet1: true }, 'r1'],
+  ]) {
+    const plain = await landThenSave(door, { save: false, ...opts });
+    eq(`(${what}, no save: the drawing it asked for)`, [plain.got.page, plain.got.up, plain.got.rev], [1, 1, drawing]);
+    for (const saveFirst of [false, true]) {
+      const { r, asked, got } = await landThenSave(door, { save: true, saveFirst, ...opts });
+      eq(`(${what}, then the save's re-read: both decodes held)`, asked, [2, 1, opts.revs ? 1 : -1]);
+      eq(`${what}, a save while it decodes${saveFirst ? ' (the re-read decoded first)' : ''}: `
+        + 'it lands exactly as with no save, on the drawing asked for', got, plain.got);
+      ok('...nothing swallowed', r.st.warned.length === 0, JSON.stringify(r.st.warned));
+    }
+  }
+  {
+    // A jump to his own work on a sheet whose Newest is a reissue: a save
+    // while the sheet decodes lands on his own drawing, where the item is
+    // painted -- his zoom, centred (the jump's own zoom on the item and its
+    // selection are given up to the re-read, as before this round).
+    const item = { _uid: 'own', type: 'count', points: [[3000, 2000], [3100, 2050]], rev_id: '' };
+    const jump = r => { r.st.jumped = null; r.env.selectItem(item, 1); return r.st.jumped; };
+    const plain = await landThenSave(jump, { save: false });
+    eq('(a jump to his own work on a sheet whose Newest is a reissue, no save: his own drawing, zoomed on the item, selected)',
+      [plain.got.page, plain.got.rev, [...plain.r.c.selected], close(plain.r.vp.toPage(512, 352)[0], 3050, 1e-9, 1e-6)],
+      [1, '', ['own'], true]);
+    for (const saveFirst of [false, true]) {
+      const { r, got } = await landThenSave(jump, { save: true, saveFirst });
+      eq(`a jump to his own work, a save while its sheet decodes${saveFirst ? ' (the re-read decoded first)' : ''}: `
+        + 'his own drawing up (the item painted), not the Newest', [got.page, got.up, got.rev], [1, 1, '']);
+      ok('...at his zoom, centred, nothing swallowed', centred(r) && r.st.warned.length === 0, JSON.stringify(r.st.warned));
+    }
+  }
 }
 {
   // The wiring, by text: the doors.
@@ -2748,6 +3088,302 @@ function holding(r, fn) {
   r.finger('pointerdown', 10, 300, 300);
   r.finger('pointerup', 10, 300, 300);
   eq('...and a tap in Count is a tap', taps.length, 1);
+}
+{
+  // A finger already down on the sheet when he turns (the foot bar's Next
+  // with the other hand, Page Down), lifted after: nothing it began is done
+  // on the sheet turned to. The press refusal covers only a press made while
+  // the next sheet opens; a finger that was down before the turn got its
+  // point on the lift -- on the sheet turned to, from the last sheet's view
+  // while it opened, under the finger once it was up -- and the job turned
+  // dirty. Through the controller's own pointer handlers, touch events; the
+  // turn is stepSheet's (Page Down), its decode held or let through.
+  const { LONG_PRESS_MS } = await import('../js/tools/controller.js');
+  const WHY = 'X1 is still opening — draw on it once it is on screen';
+  const make = async () => {
+    const r = await opened([SHEET, SMALL_PAPER]);
+    r.c.addEventListener('status', e => r.st.said.push(e.detail.text));
+    r.c.readOnly = false;
+    return r;
+  };
+  /** Page Down with the finger down: the next sheet still opening, or (landed) up. */
+  const turnUnder = async (r, landed) => {
+    const h = holding(r, () => r.env.stepSheet(1));
+    if (landed) { h.release(); await h.out; }
+    return async () => { if (!landed) { h.release(); await h.out; } };
+  };
+  const counted = p => Object.fromEntries(Object.entries(p.measurements).filter(([, v]) => v.length)
+    .map(([k, v]) => [k, v.length]));
+  for (const landed of [false, true]) {
+    // A tap in Count, the count named: the real tool, so what it would file is filed.
+    const r = await make();
+    await r.c.setMode('count', { ask: false });
+    r.c.options.pendingName = 'Outlet';
+    r.c.project.markSaved();
+    r.st.said.length = 0;
+    r.finger('pointerdown', 31, 300, 300);
+    const done = await turnUnder(r, landed);
+    r.finger('pointerup', 31, 303, 302);
+    eq(`a finger down in Count, Page Down, the lift a tap ${landed ? 'once the next sheet is up' : 'while it opens'}: `
+      + `nothing counted, the job not dirty, ${landed ? 'nothing said' : 'and he is told why'}`,
+    [counted(r.c.project), r.c.project.dirty, r.st.said], [{}, false, landed ? [] : [WHY]]);
+    await done();
+    r.st.said.length = 0;
+    r.finger('pointerdown', 32, 300, 300);
+    r.finger('pointerup', 32, 300, 300);
+    eq('...and the next tap, on the sheet up, counts there, nothing said', [counted(r.c.project), r.st.said], [{ 1: 1 }, []]);
+  }
+  for (const landed of [false, true]) {
+    // An area being traced: the turn put it down (controller.cancel); the
+    // lift does not begin another on the sheet turned to.
+    const r = await make();
+    await r.c.setMode('area', { ask: false });
+    for (const [x, y] of [[200, 200], [400, 200]]) { r.finger('pointerdown', 40, x, y); r.finger('pointerup', 40, x, y); }
+    const had = r.c.current.length;
+    r.finger('pointerdown', 41, 400, 400);
+    const done = await turnUnder(r, landed);
+    r.finger('pointerup', 41, 400, 400);
+    eq(`an area with 2 points, a finger down, Page Down, the lift ${landed ? 'once the next sheet is up' : 'while it opens'}: `
+      + 'no point begins a chain there', [had, r.c.current.length, r.c.chainLive], [2, 0, false]);
+    await done();
+  }
+  {
+    // A finger held in Pan is the item menu (the long press): held across a
+    // turn it opens none -- not on the sheet turned to, under the finger,
+    // and it is not refused out loud either: the finger is panning.
+    const fire = [];
+    const realSetTimeout = globalThis.setTimeout;
+    globalThis.setTimeout = (f, ms, ...a) => (ms === LONG_PRESS_MS ? (fire.push(f), 0) : realSetTimeout(f, ms, ...a));
+    try {
+      for (const when of ['no turn', 'while the next sheet opens', 'once it is up']) {
+        const r = await make();
+        await r.c.setMode('pan');
+        const menus = [];
+        r.c._onRightClick = at => { menus.push([at.clientX, at.clientY]); };
+        r.st.said.length = 0;
+        fire.length = 0;
+        r.finger('pointerdown', 50, 300, 300);
+        const done = when === 'no turn' ? async () => {} : await turnUnder(r, when === 'once it is up');
+        const timers = fire.splice(0);
+        for (const f of timers) f();          // the hold's time is up, the finger still down
+        r.finger('pointerup', 50, 300, 300);
+        await done();
+        eq(`a finger held in Pan, ${when}: ${when === 'no turn' ? 'the menu' : 'no menu, nothing said'}`,
+          [timers.length, menus, r.st.said], [1, when === 'no turn' ? [[300, 300]] : [], []]);
+      }
+    } finally {
+      globalThis.setTimeout = realSetTimeout;
+    }
+  }
+  for (const turned of [false, true]) {
+    // A callout bubble pressed in Pan: read on the lift -- not once he has
+    // turned from its sheet.
+    const r = await make();
+    await r.c.setMode('pan');
+    const bubble = { _uid: 'cb', type: 'page_ref', points: [[100, 100]] };
+    r.c.hitTest = () => ({ item: bubble, vertexIndex: -1 });
+    const read = [];
+    r.c.addEventListener('callout-activated', e => read.push(e.detail.item._uid));
+    r.finger('pointerdown', 60, 300, 300);
+    const done = turned ? await turnUnder(r, false) : async () => {};
+    r.finger('pointerup', 60, 300, 300);
+    await done();
+    eq(`a callout bubble pressed in Pan, ${turned ? 'Page Down, then' : 'then'} the lift: ${turned ? 'nothing opens' : 'its preview opens'}`,
+      read, turned ? [] : ['cb']);
+  }
+  {
+    // An eraser sweep cut short by the turn: what it took off is gone, and
+    // is its own undo level -- its lift found nothing drawing, so it had
+    // none, and the next Ctrl+Z took the edit before it as well.
+    const r = await make();
+    const p = r.c.project;
+    const at = r.vp.toPage(300, 300);
+    p.addAnnotation(0, { points: [[at[0] - 400, at[1]], [at[0] + 400, at[1]]], color: [1, 0, 0], width: 4 }, { label: 'Draw' });
+    await r.c.setMode('erase');
+    r.finger('pointerdown', 70, 300, 300);
+    const gone = (p.annotations[0] || []).length === 0;
+    const done = await turnUnder(r, false);
+    r.finger('pointermove', 70, 330, 300);
+    r.finger('pointerup', 70, 330, 300);
+    await done();
+    eq('an eraser sweep, Page Down while the finger is down: the stroke it took is its own undo level',
+      [gone, p._undo.map(s => s.label)], [true, ['Draw', 'Erase']]);
+    p.undo();
+    eq('...and one Ctrl+Z puts that stroke back, and only that', [(p.annotations[0] || []).length, p._undo.map(s => s.label)],
+      [1, ['Draw']]);
+  }
+  // An eraser sweep that ends without its lift -- a second finger lands
+  // (the sweep becomes a pinch), the browser takes the gesture
+  // (pointercancel) -- is its own undo level there, once, and leaves no
+  // picture of the project behind: kept, the next turn filed it again, out
+  // of order, and turned a saved job dirty; and the next job opened filed
+  // it in THAT job, where one Ctrl+Z put this job's takeoff into it. A
+  // sweep still going when another job comes in files nothing there.
+  const sweep = async (end, then) => {
+    const r = await make();
+    const p = r.c.project;
+    const at = r.vp.toPage(300, 300);
+    p.addAnnotation(0, { points: [[at[0] - 400, at[1]], [at[0] + 400, at[1]]], color: [1, 0, 0], width: 4 }, { label: 'Draw' });
+    await r.c.setMode('erase');
+    r.finger('pointerdown', 80, 300, 300);
+    r.finger('pointermove', 80, 306, 300);
+    if (end === 'pinch') {
+      r.finger('pointerdown', 81, 460, 420);
+      r.finger('pointermove', 80, 280, 280);
+      r.finger('pointermove', 81, 500, 460);
+      r.finger('pointerup', 80, 280, 280);
+      r.finger('pointerup', 81, 500, 460);
+    } else if (end === 'cancel') {
+      r.finger('pointercancel', 80, 306, 300);
+    }
+    const mid = [(p.annotations[0] || []).length, p._undo.map(s => s.label)];
+    if (then === 'turn') {
+      p.markSaved();
+      await r.env.stepSheet(1);
+    } else {
+      // Another job: an open, a draft restore, the portal's hand-over --
+      // loadFrom, then its first sheet (goToPage, which puts down whatever
+      // is in progress: controller.cancel).
+      p.loadFrom({ metadata: { project_name: 'Another' }, annotations: {}, measurements: {}, pageCount: 2 });
+      await r.env.goToPage(0, { view: 'open' });
+      if (end === 'held') r.finger('pointerup', 80, 306, 300);
+    }
+    return { mid, undo: p._undo.map(s => s.label), dirty: p.dirty, canUndo: p.canUndo };
+  };
+  for (const [end, what] of [['pinch', 'a second finger (a pinch)'], ['cancel', 'the browser taking it (pointercancel)']]) {
+    const t = await sweep(end, 'turn');
+    eq(`an eraser sweep ended by ${what}: what it took off is gone, and its own undo level at once`,
+      t.mid, [0, ['Draw', 'Erase']]);
+    eq('...the job saved, then Page Down: nothing more filed, the job still saved', [t.undo, t.dirty], [['Draw', 'Erase'], false]);
+    const j = await sweep(end, 'job');
+    eq(`...ended by ${what}, then another job opened: nothing to undo there, nothing changed`,
+      [j.undo, j.canUndo, j.dirty], [[], false, false]);
+  }
+  {
+    const j = await sweep('held', 'job');
+    eq('an eraser sweep still going when another job comes in (its first sheet up, then the lift): nothing filed there',
+      [j.undo, j.canUndo, j.dirty], [[], false, false]);
+  }
+  // An eraser sweep with the history moved under it -- Ctrl+Z, or the
+  // toolbar's Undo (runAction: app.project.undo()), with the finger or the
+  // button still down; on an iPad a second finger on the toolbar, which is
+  // no canvas pointer and makes no pinch -- then Ctrl+Y, or the history
+  // cleared (a sheet added). The sweep is over there: its first deletion
+  // filed its undo level, so the Ctrl+Z takes back exactly what it took off,
+  // with its redo kept, and the rest of the sweep takes nothing off the
+  // store put back. Filed at the lift, its picture from before the step he
+  // took back went over that step: the next Ctrl+Z brought back the stroke
+  // he had undone, under 'Erase', and its redo was gone.
+  const underSweep = async moved => {
+    const r = await make();
+    const p = r.c.project;
+    const a = r.vp.toPage(300, 300);
+    const b = r.vp.toPage(300, 450);
+    const line = q => ({ points: [[q[0] - 400, q[1]], [q[0] + 400, q[1]]], color: [1, 0, 0], width: 4 });
+    p.addAnnotation(0, line(a), { label: 'Draw' });
+    p.addAnnotation(0, line(b), { label: 'Draw' });
+    const on = () => (p.annotations[0] || []).map(s => (Math.abs(s.points[0][1] - a[1]) < 1e-6 ? 'A' : 'B')).sort();
+    const now = () => [on(), p._undo.map(s => s.label), p._redo.map(s => s.label)];
+    await r.c.setMode('erase');
+    r.finger('pointerdown', 85, 300, 300);
+    r.finger('pointermove', 85, 306, 300);
+    const mid = now();
+    moved(p);
+    const after = now();
+    r.finger('pointermove', 85, 330, 300);   // on along A, where the store put back has it
+    r.finger('pointermove', 85, 300, 452);   // and across B
+    r.finger('pointerup', 85, 300, 452);
+    return { p, now, mid, after, lifted: now() };
+  };
+  {
+    const { p, now, mid, after, lifted } = await underSweep(q => q.undo());
+    eq('an eraser sweep takes stroke A off: its undo level is filed then, not at the lift', mid, [['B'], ['Draw', 'Draw', 'Erase'], []]);
+    eq('...Ctrl+Z with the finger still down takes back the sweep: A back, B kept, its redo kept', after,
+      [['A', 'B'], ['Draw', 'Draw'], ['Erase']]);
+    eq('...the rest of the sweep, on along A and across B, takes nothing off, and the lift files nothing', lifted, after);
+    p.undo();
+    eq('...one more Ctrl+Z takes back B, as it would have with no sweep: not A and B back under "Erase", the redo kept',
+      now(), [['A'], ['Draw'], ['Erase', 'Draw']]);
+    p.redo();
+    p.redo();
+    eq('...and Ctrl+Y twice: B, then the sweep again', now(), [['B'], ['Draw', 'Draw', 'Erase'], []]);
+  }
+  {
+    const { p, now, lifted } = await underSweep(q => { q.undo(); q.redo(); });
+    eq('an eraser sweep, Ctrl+Z then Ctrl+Y with the finger still down: the sweep redone, nothing more taken off or filed',
+      lifted, [['B'], ['Draw', 'Draw', 'Erase'], []]);
+    p.undo();
+    eq('...and one Ctrl+Z puts A back, and only A', now(), [['A', 'B'], ['Draw', 'Draw'], ['Erase']]);
+  }
+  {
+    const { lifted } = await underSweep(q => q.clearHistory('a sheet was added'));
+    eq('an eraser sweep, the history cleared under it (a sheet added): nothing filed after it, nothing more taken off',
+      lifted, [['B'], [], []]);
+  }
+  // A RIGHT press with a mouse held across a turn (Page Down with the other
+  // hand), released after: no item menu, nothing selected, on the sheet
+  // turned to -- the shape under the pointer there was never pressed. While
+  // that sheet still opens he is told why, as for a press made then.
+  for (const when of ['no turn', 'while the next sheet opens', 'once it is up']) {
+    const r = await make();
+    await r.c.setMode('pan');
+    const wall = { _uid: 'wall', type: 'area', points: [[0, 0], [10, 10]] };
+    r.c.hitTest = () => ({ item: wall, vertexIndex: -1 });
+    const menus = [];
+    r.c.host.showItemMenu = item => { menus.push(item._uid); };
+    const mouse = (type, buttons) => ({ pointerId: 90, pointerType: 'mouse', button: 2, buttons, clientX: 300, clientY: 300,
+      type, preventDefault() {}, stopPropagation() {}, shiftKey: false, ctrlKey: false, metaKey: false, altKey: false, detail: 1 });
+    r.st.said.length = 0;
+    r.on.pointerdown(mouse('pointerdown', 2));
+    const done = when === 'no turn' ? async () => {} : await turnUnder(r, when === 'once it is up');
+    r.on.pointerup(mouse('pointerup', 0));
+    await done();
+    eq(`a right press held, ${when}, then released: ${when === 'no turn' ? 'the item menu' : 'no menu, nothing selected'}`,
+      [menus, [...r.c.selected], r.st.said],
+      when === 'no turn' ? [['wall'], ['wall'], []] : [[], [], when === 'once it is up' ? [] : [WHY]]);
+  }
+  // ...and a right press MADE while the sheet turned to is still opening
+  // (the last sheet's drawing up, the Wall under the pointer not yet on
+  // screen), released once it is up: no item menu there, nothing selected
+  // -- the press armed itself before the opening was asked, on the sheet
+  // being turned to, so once that was up it opened the menu for a shape he
+  // never saw. He is told why, in the words of the moment he pressed, as a
+  // finger pressed then is told on its lift; released while it still
+  // opens, refused in the same words. A right-drag made then is looking:
+  // it pans, and nothing is said.
+  for (const [when, drag, landFirst] of [['released once it is up', false, true],
+    ['released while it still opens', false, false], ['dragged, released once it is up', true, true]]) {
+    const r = await make();
+    await r.c.setMode('pan');
+    const wall = { _uid: 'wall', type: 'area', points: [[0, 0], [10, 10]] };
+    r.c.hitTest = () => ({ item: wall, vertexIndex: -1 });
+    const menus = [];
+    r.c.host.showItemMenu = item => { menus.push(item._uid); };
+    const mouse = (type, buttons, x = 300, y = 300) => ({ pointerId: 91, pointerType: 'mouse', button: type === 'pointermove' ? -1 : 2,
+      buttons, clientX: x, clientY: y, type, preventDefault() {}, stopPropagation() {},
+      shiftKey: false, ctrlKey: false, metaKey: false, altKey: false, detail: 1 });
+    const h = holding(r, () => r.env.stepSheet(1));
+    const atPress = [r.st.page, r.c.host.sheetOpening()];
+    r.st.said.length = 0;
+    r.on.pointerdown(mouse('pointerdown', 2));
+    const origin = { ...r.vp.origin };
+    if (drag) r.on.pointermove(mouse('pointermove', 2, 360, 330));
+    const panned = r.vp.origin.x !== origin.x || r.vp.origin.y !== origin.y;
+    if (landFirst) { h.release(); await h.out; }
+    const atRelease = r.c.host.sheetOpening();
+    r.on.pointerup(mouse('pointerup', 0, drag ? 360 : 300, drag ? 330 : 300));
+    if (!landFirst) { h.release(); await h.out; }
+    eq(`(Page Down, the right press made while X1 opens; ${landFirst ? 'it is up' : 'it still opens'} at the release)`,
+      [atPress, atRelease], [[1, WHY], landFirst ? '' : WHY]);
+    eq(`a right press made while the next sheet opens, ${when}: no menu, nothing selected, ${drag ? 'nothing said' : 'told why'}`,
+      [menus, [...r.c.selected], r.st.said], [[], [], drag ? [] : [WHY]]);
+    eq('...a right-drag made then pans the drawing up, as it would on any sheet', panned, drag);
+    // The next right click, on the sheet up, is a right click there.
+    r.st.said.length = 0;
+    r.on.pointerdown(mouse('pointerdown', 2));
+    r.on.pointerup(mouse('pointerup', 0));
+    eq('...and the next right click, on the sheet up, opens its menu, nothing said', [menus, r.st.said], [['wall'], []]);
+  }
 }
 
 // ═══ 9. the live differential ═══════════════════════════════════════════

@@ -340,8 +340,9 @@ export class ToolController extends EventTarget {
     // Anything that moves the history while a press on a shape is held -- a
     // Ctrl+Z, a Ctrl+Y -- ends that press: its release must not then keep,
     // or put back, a picture of the job from before that edit (the
-    // desktop's _restore_state ends a drag the same way).
-    this.project.addEventListener('history-changed', () => this._dropPress());
+    // desktop's _restore_state ends a drag the same way). An eraser sweep
+    // too (_putDownSweep).
+    this.project.addEventListener('history-changed', () => { this._dropPress(); this._putDownSweep(); });
 
     this._panning = false;
     this._panLast = null;
@@ -366,6 +367,12 @@ export class ToolController extends EventTarget {
     this._rmbPanned = false;
     this._moveDrag = null;
     this._suppressClick = false;
+    // An eraser sweep going on: the picture taken at its press (none: no
+    // sweep, or one put down), whether its first deletion has filed that
+    // picture as its undo level, and that filing under way (_eraseAt).
+    this._eraseSnapshot = null;
+    this._erasedAny = false;
+    this._filingSweep = false;
 
     this._bind();
   }
@@ -558,11 +565,15 @@ export class ToolController extends EventTarget {
    *
    * A form still up from the last job answers nothing now (_ask), and a
    * press on one of its shapes still held is over: its release would have
-   * put the last job's picture back over this one.
+   * put the last job's picture back over this one. So is an eraser sweep's
+   * picture (_endEraseSweep): filed in the next job, one Ctrl+Z there put
+   * the last job's takeoff into it -- and a sweep still held takes nothing
+   * off the next job's sheet (_eraseAt).
    */
   _dropPerProject() {
     this._job += 1;
     this._dropPress();
+    this._endEraseSweep();
     const shown = String(this.options.pendingName || '').trim();
     if (this.mode === 'count' && shown && shown === String(this.countNamed || '').trim()) {
       this._syncToolName('');
@@ -639,9 +650,13 @@ export class ToolController extends EventTarget {
    * Abandon whatever is in progress. Never touches saved work -- and a drag
    * cut short (a page turn with the button still down) keeps what it moved
    * as an undo level, as its release would have, instead of leaving an edit
-   * that no Ctrl+Z can take back.
+   * that no Ctrl+Z can take back. So does an eraser sweep in progress: what
+   * it took off is already gone, its undo level filed at its first
+   * deletion (_eraseAt), and its lift (_markupRelease) finds nothing
+   * drawing.
    */
   cancel() {
+    if (this.markup.drawing) this._endEraseSweep();
     this.markup.clear();
     this.current = [];
     this.constrainedPt = null;
@@ -765,9 +780,14 @@ export class ToolController extends EventTarget {
     }
 
     // Right-drag pans from any tool. The press only arms it; a click that
-    // never moves falls through to the context menu on release.
+    // never moves falls through to the context menu on release -- on the
+    // sheet it was pressed on (page; see _onPointerUp). Pressed while the
+    // sheet turned to is still opening, it was pressed on no sheet of its
+    // own (the drawing up was the last one's): `why` keeps the words of
+    // that moment, as a finger's refusal does (_openingPress).
     if (ev.button === 2) {
-      this._rmbCandidate = { x: ev.clientX, y: ev.clientY };
+      const why = this.host.sheetOpening?.() || '';
+      this._rmbCandidate = { x: ev.clientX, y: ev.clientY, page: why ? null : this.getCurrentPage(), why };
       this._rmbPanned = false;
       return;
     }
@@ -807,9 +827,10 @@ export class ToolController extends EventTarget {
     // one finger down, and committing here dropped a stray vertex into the
     // polygon being traced each time the estimator zoomed in to find a
     // corner — with no way to remove just that one. The point is earned on
-    // the lift instead, once it is known no second finger arrived.
+    // the lift instead, once it is known no second finger arrived -- on the
+    // sheet it was pressed on (page; see _onPointerUp).
     if (ev.pointerType === 'touch') {
-      this._pendingTap = { x: ev.clientX, y: ev.clientY };
+      this._pendingTap = { x: ev.clientX, y: ev.clientY, page: this.getCurrentPage() };
       return;
     }
     this._collectPoint(ev, pt, usePt);
@@ -876,7 +897,7 @@ export class ToolController extends EventTarget {
   _panModePress(ev, pt) {
     const hit = this.hitTest(pt);
     if (hit && hit.item.type === 'page_ref') {
-      this._calloutPress = { item: hit.item, x: ev.clientX, y: ev.clientY };
+      this._calloutPress = { item: hit.item, x: ev.clientX, y: ev.clientY, page: this.getCurrentPage() };
     }
     // Read-only: select it so it can be read, but arm NO drag. This is the
     // single place a move or a reshape begins, which is why the gate is here
@@ -936,8 +957,10 @@ export class ToolController extends EventTarget {
       this.canvas.style.cursor = CURSORS[this.mode] || 'default';
     }
     // A stroke cannot survive: you cannot draw and pinch with the same hand.
-    // Say so rather than letting it vanish without a word.
+    // Say so rather than letting it vanish without a word. An eraser sweep
+    // ends here too: what it took off is its undo level.
     if (this.markup.drawing) {
+      this._endEraseSweep();
       this.markup.clear();
       this.emit('status', { text: 'Stroke discarded — two fingers zoom.' });
     }
@@ -1008,10 +1031,17 @@ export class ToolController extends EventTarget {
     // finger, as the Items list's is -- js/ui/hold.js menuPlace.)
     const at = { x: ev.clientX, y: ev.clientY,
                  clientX: ev.clientX, clientY: ev.clientY, pointerType: ev.pointerType };
+    const page = this.getCurrentPage();
     this._lpStart = at;
     this._lpTimer = setTimeout(() => {
       this._lpTimer = null;
       if (this._pinch) return;
+      // Held across a turn (the foot bar's Next, Page Down): the hold was on
+      // a sheet that is no longer up, and the menu would open on what is
+      // under the finger on the sheet turned to, or be refused while it
+      // opens. Nothing: the finger goes on panning, as one pressed while a
+      // sheet opens does.
+      if (this._turnedFrom(page)) return;
       this._lpFired = true;
       // The press was the hold -- the right-click, which selects without a
       // word to the Items list (_pressSelect): what it selected is lit there
@@ -1101,7 +1131,7 @@ export class ToolController extends EventTarget {
       if (Math.abs(dx) + Math.abs(dy) > RMB_PAN_THRESHOLD) {
         this._rmbPanned = true;
         this.viewport.panBy(dx, dy);
-        this._rmbCandidate = { x: ev.clientX, y: ev.clientY };
+        this._rmbCandidate = { ...this._rmbCandidate, x: ev.clientX, y: ev.clientY };
         this.emit('changed');
       }
       return;
@@ -1216,21 +1246,35 @@ export class ToolController extends EventTarget {
       if (ev.type === 'pointerup') this.emit('status', { text: refused.why });
     }
 
-    // A tap earns its point here, once no second finger has arrived.
+    // A tap earns its point here, once no second finger has arrived -- and
+    // only on the sheet it was pressed on. A turn made while the finger was
+    // down (the foot bar's Next, Page Down) took that sheet away: while the
+    // sheet turned to opens, the drawing under the finger is still the last
+    // one's, and once it is up it is another sheet's, so the point would go
+    // on a sheet he never pressed, at a place he pressed on another. It is
+    // dropped; while the sheet still opens he is told why, in the words a
+    // finger pressed then is told on its lift (_openingPress).
     const tap = this._pendingTap;
     this._pendingTap = null;
     if (tap && !this._pinch && !this._lpFired && ev.type === 'pointerup'
         && Math.hypot(ev.clientX - tap.x, ev.clientY - tap.y) <= TAP_SLOP) {
-      const pt = this.viewport.eventToPage(ev);
-      this._collectPoint(ev, pt, pt);   // no Shift constraint from a finger
+      const opening = this.host.sheetOpening?.();
+      if (opening) {
+        this.emit('status', { text: opening });
+      } else if (!this._turnedFrom(tap.page)) {
+        const pt = this.viewport.eventToPage(ev);
+        this._collectPoint(ev, pt, pt);   // no Shift constraint from a finger
+      }
     }
 
     // Decided here rather than on press, because the same gesture also
     // moves the pin. Captured before the drag teardown below clears the flag.
+    // A bubble pressed on a sheet he has turned from since is not on screen
+    // (or soon will not be): it opens nothing.
     const bubble = this._calloutPress;
     this._calloutPress = null;
     if (bubble && !this._dragMoved && !this._lpFired
-        && ev.type === 'pointerup'
+        && ev.type === 'pointerup' && !this._turnedFrom(bubble.page)
         && Math.hypot(ev.clientX - bubble.x, ev.clientY - bubble.y) <= CLICK_SLOP) {
       this.emit('callout-activated', {
         item: bubble.item, x: ev.clientX, y: ev.clientY,
@@ -1274,15 +1318,31 @@ export class ToolController extends EventTarget {
     if (isMarkupTool(this.mode) && ev.button === 0 && ev.type === 'pointerup') {
       this._markupRelease(ev);
     } else if (isMarkupTool(this.mode) && ev.type === 'pointercancel') {
-      this.markup.clear();     // the browser took the gesture; leave no ghost
+      // The browser took the gesture; leave no ghost -- and an eraser sweep
+      // it cut short keeps what it took off as its undo level.
+      if (this.markup.drawing) this._endEraseSweep();
+      this.markup.clear();
       this.emit('changed');
     }
 
     if (ev.button === 2 && this._rmbCandidate) {
+      const { page, why } = this._rmbCandidate;
       const panned = this._rmbPanned;
       this._rmbCandidate = null;
       this._rmbPanned = false;
-      if (!panned) this._onRightClick(ev);
+      // A right press on a sheet he has turned from since (Page Down with
+      // the other hand) opens nothing: the item menu would be for what is
+      // under the pointer on the sheet turned to, a shape he never pressed.
+      // While that sheet still opens _onRightClick says why -- the words a
+      // tap is told (_onPointerUp's tap). A press made while it was opening
+      // was on no sheet at all: released once it is up, it opens nothing
+      // there either, and is told why in the words of the moment it was
+      // pressed, as a finger pressed then is told on its lift.
+      if (!panned) {
+        if (this.host.sheetOpening?.()) this._onRightClick(ev);   // refused, and said why
+        else if (why) this.emit('status', { text: why });
+        else if (!this._turnedFrom(page)) this._onRightClick(ev);
+      }
     }
   }
 
@@ -1299,6 +1359,15 @@ export class ToolController extends EventTarget {
     if (!why) return false;
     this.emit('status', { text: why });
     return true;
+  }
+
+  /**
+   * Whether he has turned away from sheet `page`, the one a press still
+   * held was made on: the sheet turned to is still opening (the drawing up
+   * is the one he left), or it is up -- another sheet under the finger.
+   */
+  _turnedFrom(page) {
+    return !!this.host.sheetOpening?.() || this.getCurrentPage() !== page;
   }
 
   _onDoubleClick(ev) {
@@ -1646,12 +1715,7 @@ export class ToolController extends EventTarget {
       }
       case 'erase': {
         st.eraserPos = null;
-        // Only an erase that removed something is an undo step.
-        if (this._erasedAny && this._eraseSnapshot) {
-          this.project.pushUndo('Erase', this._eraseSnapshot);
-        }
-        this._eraseSnapshot = null;
-        this._erasedAny = false;
+        this._endEraseSweep();
         break;
       }
       case 'textnote': {
@@ -1667,7 +1731,47 @@ export class ToolController extends EventTarget {
     this.emit('changed');
   }
 
+  /**
+   * An eraser sweep is over -- lifted, or cut short: a second finger, the
+   * browser taking the gesture, a page turn (cancel), another job, the
+   * history moving under it (_putDownSweep). One snapshot was taken for the
+   * whole sweep, at its press, and its first deletion filed it as the
+   * sweep's undo level (_eraseAt); only a sweep that took something off has
+   * one. Nothing is filed here, and none of it is left behind: a picture of
+   * the project kept past its sweep was filed by whatever ended things next
+   * -- a turn, out of order, and an open in the NEXT job, where one Ctrl+Z
+   * put this job's takeoff back.
+   */
+  _endEraseSweep() {
+    this._eraseSnapshot = null;
+    this._erasedAny = false;
+  }
+
+  /**
+   * The history moved while an eraser sweep goes on -- Ctrl+Z, or the
+   * toolbar's Undo, with the button or the finger still down; Ctrl+Y;
+   * another edit filed; the history cleared. The sweep is over there, as a
+   * press on a shape is (_dropPress). What it took off so far is its own
+   * undo level, filed at its first deletion, so a Ctrl+Z takes back exactly
+   * that, with its redo kept. Filed at the lift instead, its picture from
+   * before the step he took back went over that step: the next Ctrl+Z
+   * brought back what he had undone, and its redo was gone. And the rest of
+   * the sweep takes nothing off the store put back (the stroke he just
+   * brought back is under the eraser). Not the sweep's own filing.
+   */
+  _putDownSweep() {
+    if (this._filingSweep || !this._eraseSnapshot) return;
+    this._endEraseSweep();
+    if (this.mode === 'erase' && this.markup.drawing) {
+      this.markup.clear();
+      this.emit('changed');
+    }
+  }
+
   _eraseAt(pt) {
+    // A sweep put down -- the history moved under it, another job came in
+    // -- takes nothing more off: no deletion without its undo level.
+    if (!this._eraseSnapshot) return;
     const page = this.getCurrentPage();
     const list = this.project.annotations[page] || [];
     if (!list.length) return;
@@ -1676,8 +1780,19 @@ export class ToolController extends EventTarget {
     if (!hits.length) return;
     const gone = new Set(hits);
     this.project.annotations[page] = list.filter(a => !gone.has(a));
-    this._erasedAny = true;
     this.project.markDirty();
+    if (!this._erasedAny) {
+      // The sweep's first deletion files its undo level, the picture from
+      // its press -- as a drag's first move files its own (desktop
+      // _commit_pre_drag) -- and every later one in the sweep joins it.
+      this._erasedAny = true;
+      this._filingSweep = true;
+      try {
+        this.project.pushUndo('Erase', this._eraseSnapshot);
+      } finally {
+        this._filingSweep = false;
+      }
+    }
     this.project.emit('annotations-changed', { pageKey: page });
   }
 

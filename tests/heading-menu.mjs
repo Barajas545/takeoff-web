@@ -1835,6 +1835,44 @@ log('\n-- 8. the wiring --');
     [grpH(block(':root[data-ui="touch"] {')), grpH(block(':root:not([data-ui]) {')),
       grpH(block(':root[data-ui="standard"] {')), grpH(block(':root {\n  --ctl-h: 0px;'))], [36, 36, 0, 0]);
   {
+    // A row is as tall as its text, and a heading as its text or the
+    // layout's --grp-h. The tree lines are an <svg height="100%"> in the
+    // gutter (items-panel.js gutterEl); in flow, that 100% had no definite
+    // height to be taken of -- a row's height is its content's -- so it fell
+    // back to the 150 px default of a replaced element with no size, and in
+    // Chromium every heading and row was 150 px tall (headless Chrome 156:
+    // 150 for every category, sub-category and row, both layouts, 1024x768
+    // and 390x844; after: 21/18/38 standard, 36/36/38 touch). Out of flow
+    // (absolute, pinned to the gutter, which the row stretches to its own
+    // height), it adds nothing to the row, and an absolutely positioned
+    // box's percentage height is taken of its containing block's padding
+    // box -- always known by then -- so no engine needs the indefinite
+    // height resolved.
+    const g = rule('.gutter'), gs = rule('.gutter svg');
+    ok('.gutter: the box the lines are laid over, stretched to its row (a flex item)',
+      /position: relative;/.test(g) && /align-self: stretch;/.test(g), g);
+    ok('.gutter svg: out of flow, pinned to the gutter\'s box, as tall as it',
+      /position: absolute;/.test(gs) && /top: 0;/.test(gs) && /left: 0;/.test(gs) && /height: 100%;/.test(gs), gs);
+    ok('...and no other rule gives the gutter or its svg a position or a height of its own',
+      [...css.matchAll(/\n([^{}\n]*\.gutter[^{}\n]*)\{([^}]*)\}/g)]
+        .filter(([, sel]) => !['.gutter ', '.gutter svg '].includes(sel))
+        .every(([, , body]) => !/(^|[;\s])(position|height|top|bottom)\s*:/.test(body)));
+    // ...and the lines are drawn in the row's own terms (percentages), so at
+    // any height they join from row to row and elbow at its middle.
+    const r = panelRig({ project: itemJob() });
+    try {
+      r.panel.refresh();
+      const drawn = [...r.headings(), ...r.rows()]
+        .map(e => e.children.find(c => c.classList.contains('gutter'))?.children.find(c => c.tagName === 'SVG'))
+        .filter(Boolean);
+      const lines = drawn.flatMap(svg => svg.children.map(l => ['y1', 'y2'].map(k => l.getAttribute(k))));
+      ok('every gutter\'s svg is 100% of the gutter, every line runs on percentages (0, 50%, 100%)',
+        drawn.length > 10 && drawn.every(svg => svg.getAttribute('height') === '100%')
+        && lines.length > drawn.length && lines.every(([a, b]) => ['0', '50%', '100%'].includes(a) && ['50%', '100%'].includes(b)),
+        JSON.stringify(lines.slice(0, 6)));
+    } finally { r.restore(); }
+  }
+  {
     // The list still scrolls with a finger. touch-action is decided for the
     // element pressed and every ancestor up to the scrolling list, so NO
     // rule that can match the list or anything in it -- whatever its

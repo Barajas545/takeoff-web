@@ -699,8 +699,19 @@ button { font-family: inherit; }
 .row .eye { color: var(--eye-on); font-size: 13px; }
 .row.hidden .eye { color: var(--eye-off); }
 
-.gutter { width: 12px; position: relative; }
-.gutter svg { display: block; height: 100%; }
+/* The tree's lines are laid over the gutter, not in it. The gutter is
+   stretched to its row's height (a flex item), and the svg is taken out of
+   flow and pinned to the gutter's box. In flow, its height of 100% had no
+   definite height to resolve against -- a row is as tall as its text -- so
+   it fell back to the 150px default of a replaced element with no size of
+   its own, and every heading and row of the list was 150px tall
+   (Chromium). Out of flow it adds nothing to the row's height, and an
+   absolutely positioned box's percentage height is taken of its containing
+   block's padding box, which is laid out by then however its own height
+   was found: the lines are exactly the row's height in every engine, so
+   they still join from row to row, the elbow at each row's middle. */
+.gutter { width: 12px; position: relative; align-self: stretch; }
+.gutter svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
 
 .items-foot {
   padding: 6px 8px; border-top: 1px solid var(--border-soft);
@@ -747,12 +758,23 @@ button { font-family: inherit; }
   -webkit-tap-highlight-color: transparent;
 }
 
+/* The start card stops at the foot bar (--mbar-h, as the canvas does) and
+   scrolls when it is taller than the room above it: at 844x390 it is, and
+   its last line was under the bar with no way to reach it. Centred by its
+   auto margins, not by place-items: an
+   auto margin takes only free space and is nothing when there is none, so a
+   card that fits sits in the middle and one that does not starts at the top
+   and overflows downwards, where scrolling reaches it -- centred alignment
+   would push the top of the card out of reach above the scroll origin. */
 .empty-state[hidden] { display: none; }
 .empty-state {
-  position: absolute; inset: 0; display: grid; place-items: center;
+  position: absolute; top: 0; left: 0; right: 0; bottom: var(--mbar-h, 0px);
+  display: grid; padding: 12px;
+  overflow-x: hidden; overflow-y: auto;
   pointer-events: none;
 }
 .es-card {
+  margin: auto;
   pointer-events: auto; text-align: center; max-width: 460px; padding: 32px 36px;
   background: #1a1a1a; border: 1px solid var(--border);
   border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
@@ -1155,9 +1177,13 @@ table.grid td.indent { padding-left: 26px; color: var(--text-dim); }
   .stage { grid-column: 1; }
   .grip { display: none; }
 
+  /* Each drawer stops at the foot bar's top edge (--mbar-h, written on the
+     body by fitCanvasAboveFootBar): the bar is drawn over them, and under
+     it were the Items list's count and totals (#itemsFoot) and the last
+     sheet card, which no scroll could bring clear. */
   .thumbs, .items {
     grid-column: 1;
-    position: absolute; top: 0; bottom: 0; z-index: 60;
+    position: absolute; top: 0; bottom: var(--mbar-h, 0px); z-index: 60;
     width: min(320px, 84vw);
     box-shadow: 0 0 44px rgba(0, 0, 0, .65);
     transition: transform .18s ease-out;
@@ -1508,9 +1534,12 @@ input, select, textarea { font-size: max(var(--field-fs), 12px); }
 }
 
 /* On a phone the panel is the whole screen — a 12-column grid next to a
-   drawing neither of which fits is worse than one of them at a time. */
+   drawing neither of which fits is worse than one of them at a time. Down
+   to the foot bar's top edge (--mbar-h, on the body, as the drawers read
+   it): the bar is drawn over the panel, and under it were the last sheet
+   row and the legend, which no scroll could bring clear. */
 @media (max-width: 1023px) {
-  .revpanel { width: 100%; border-left: none; }
+  .revpanel { width: 100%; border-left: none; bottom: var(--mbar-h, 0px); }
 }
 
 /* One dot per revision that re-issued this sheet. An empty span on a job with
