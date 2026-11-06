@@ -2213,8 +2213,8 @@ log('\n-- 8. the app\'s wiring --');
   await kept;
   eq('a Page Down while a kept re-read decodes: a turn at his zoom past Fit, not the default zoom',
     [r.st.page, r.vp.zoom === past, r.zf.pastFit, centred(r)], [1, true, true, true]);
-  ok('reacquireAfterSave keeps the view: its re-read is a \'keep\' (the save no longer re-fits)',
-    /pageImage = null;\n[\s\S]{0,800}?await goToPage\(app\.currentPage, \{ version: versionView\.revId, view: 'keep' \}\);/.test(fnText('reacquireAfterSave') || ''));
+  ok('reacquireAfterSave is untouched this round (the peer\'s save rework)',
+    /pageImage = null;\n[\s\S]{0,600}?await goToPage\(app\.currentPage, \{ version: versionView\.revId \}\);/.test(fnText('reacquireAfterSave') || ''));
 }
 {
   // The wiring, by text: the doors.
