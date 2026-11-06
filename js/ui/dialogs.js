@@ -9,8 +9,35 @@ import { TAKEOFF_PALETTE, rgba, hex, fromHex } from '../render/theme.js';
 import { FLOOR_LEVEL_PRESETS, CATEGORY_PRESETS } from './items-panel.js';
 import { UNIT_CODES, UNITS, parseFeet, formatFtIn, DISTANCE_PRECISIONS } from '../core/units.js';
 import { TILE_PATTERNS, TILE_SIZE_PRESETS, tilePatternWaste } from '../tools/controller.js';
+import { classChoicesFrom } from '../core/classify.js';
 
 const host = () => document.getElementById('modal');
+
+// ── this job's names first ────────────────────────────────────────────────
+//
+// Every Floor and Trade box offers THIS job's own floor levels and trades
+// first -- each once, Level 2 before Level 10 -- and then the stock list
+// without the look-alikes of names the job already has (desktop
+// _fill_class_combo). A name he renamed to is what he picks next time, and
+// the old stock spelling does not sit one tap away making a near-twin
+// heading. The store is the open project's, handed in once at start-up
+// (main.js) and read each time a form opens.
+let classSource = () => ({});
+
+/** Where the forms find the open job's items: fn() -> the measurement store. */
+export function setClassSource(fn) {
+  classSource = typeof fn === 'function' ? fn : () => ({});
+}
+
+/** A Floor ('floor_level') or Trade ('category') box's suggestions. */
+export function classChoices(field) {
+  let store = {};
+  // A form that cannot see its job offers the stock list, as the desktop's
+  // does when it finds no job (_project_values_near).
+  try { store = classSource() || {}; } catch { store = {}; }
+  return classChoicesFrom(store, field,
+    field === 'floor_level' ? FLOOR_LEVEL_PRESETS : CATEGORY_PRESETS);
+}
 
 /** The dialogs currently on screen, oldest first. */
 const stack = [];
@@ -229,9 +256,9 @@ export function askItem(opts = {}) {
     const purpose = field(form, 'Purpose', input(ex.purpose || ''),
       'What it is for. Shown before the notes everywhere.');
     const floor = field(form, 'Floor / Level',
-      combo(ex.floor_level || '', FLOOR_LEVEL_PRESETS, 'floorPresets'));
+      combo(ex.floor_level || '', classChoices('floor_level'), 'floorPresets'));
     const cat = field(form, 'Group / Trade',
-      combo(ex.category || '', CATEGORY_PRESETS, 'catPresets'));
+      combo(ex.category || '', classChoices('category'), 'catPresets'));
     const sub = field(form, 'Sub-group', input(ex.sub_category || ''));
 
     let spacing = null;
@@ -335,9 +362,9 @@ export function askSlopeRoof({ flatArea, suggestedName = '', color, existing = n
     update();
 
     const floor = field(form, 'Floor / Level',
-      combo(ex.floor_level || 'Roof', FLOOR_LEVEL_PRESETS, 'floorPresets2'));
+      combo(ex.floor_level || 'Roof', classChoices('floor_level'), 'floorPresets2'));
     const cat = field(form, 'Group / Trade',
-      combo(ex.category || 'Roofing', CATEGORY_PRESETS, 'catPresets2'));
+      combo(ex.category || 'Roofing', classChoices('category'), 'catPresets2'));
     const sub = field(form, 'Sub-group', input(ex.sub_category || ''));
     const costType = field(form, 'Type', costRadios(ex.cost_type || 'material'));
     const unitCost = field(form, 'Unit cost',
@@ -427,9 +454,9 @@ export function askTile(setup) {
     update();
 
     const floor = field(form, 'Floor / Level',
-      combo(ex.floor_level || '', FLOOR_LEVEL_PRESETS, 'floorPresets3'));
+      combo(ex.floor_level || '', classChoices('floor_level'), 'floorPresets3'));
     const cat = field(form, 'Group / Trade',
-      combo(ex.category || 'Flooring', CATEGORY_PRESETS, 'catPresets3'));
+      combo(ex.category || 'Flooring', classChoices('category'), 'catPresets3'));
     const costType = field(form, 'Type', costRadios(ex.cost_type || 'material'));
     const unitCost = field(form, 'Unit cost',
       input(String(ex.unit_cost ?? 0), 'number', { step: '0.01', min: '0' }));
@@ -495,8 +522,8 @@ export function askCountItem({ existing = [], note = '' }) {
 
     const form = el('div', 'form');
     const name = field(form, 'New count', input(''), 'What are you counting?');
-    const cat = field(form, 'Group / Trade', combo('', CATEGORY_PRESETS, 'catPresets4'));
-    const floor = field(form, 'Floor / Level', combo('', FLOOR_LEVEL_PRESETS, 'floorPresets4'));
+    const cat = field(form, 'Group / Trade', combo('', classChoices('category'), 'catPresets4'));
+    const floor = field(form, 'Floor / Level', combo('', classChoices('floor_level'), 'floorPresets4'));
     const costType = field(form, 'Type', costRadios('material'));
     const unitCost = field(form, 'Unit cost', input('0', 'number', { step: '0.01', min: '0' }));
     const colorPick = field(form, 'Colour', swatches(null));
@@ -577,9 +604,9 @@ export function askStandalone(existing = null) {
     const unit = field(form, 'Unit',
       combo(ex.unit || 'each', ['each', ...UNIT_CODES.map(c => c.toLowerCase())], 'unitPresets'));
     const floor = field(form, 'Floor / Level',
-      combo(ex.floor_level || '', FLOOR_LEVEL_PRESETS, 'floorPresets5'));
+      combo(ex.floor_level || '', classChoices('floor_level'), 'floorPresets5'));
     const cat = field(form, 'Group / Trade',
-      combo(ex.category || '', CATEGORY_PRESETS, 'catPresets5'));
+      combo(ex.category || '', classChoices('category'), 'catPresets5'));
     const sub = field(form, 'Sub-group', input(ex.sub_category || ''));
     const costType = field(form, 'Type', costRadios(ex.cost_type || 'material'));
     const unitCost = field(form, 'Unit cost',

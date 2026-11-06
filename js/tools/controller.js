@@ -120,12 +120,14 @@ const CLOSING_TOOLS = new Set(['area', 'slope_area', 'grid', 'tile']);
 
 const CATEGORY_DEFAULT_OPENINGS = 'Doors & Windows';
 
-/** How far a finger may slide and still count as a tap, in screen px. */
-const TAP_SLOP = 11;
+/** How far a finger may slide and still count as a tap, in screen px.
+ *  (The Items list's hold, js/ui/hold.js, uses the same number.) */
+export const TAP_SLOP = 11;
 /** A mouse is steadier than a finger: the desktop uses 4px for this. */
 const CLICK_SLOP = 4;
-/** How long a finger must rest before it means the right mouse button. */
-const LONG_PRESS_MS = 500;
+/** How long a finger must rest before it means the right mouse button.
+ *  (The Items list's hold uses the same timer.) */
+export const LONG_PRESS_MS = 500;
 
 export const TILE_PATTERNS = [
   // (id, display label, typical waste %) — the labels print in the items
@@ -357,6 +359,9 @@ export class ToolController extends EventTarget {
     this._openingPress = null;
     this._lpTimer = null;
     this._lpFired = false;
+    // A finger's press selected a shape and may yet be the hold: the Items
+    // list is told to look for it once that is decided (_pressSelect).
+    this._revealDue = false;
     this._rmbCandidate = null;
     this._rmbPanned = false;
     this._moveDrag = null;
@@ -878,7 +883,7 @@ export class ToolController extends EventTarget {
     // rather than in the hit test — a viewer that cannot click a wall to see
     // what it is would not be a viewer.
     if (this.readOnly) {
-      if (hit) this._select(hit.item, ev);
+      if (hit) this._pressSelect(hit.item, ev);
       else if (!ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
         this.selected.clear();
         this.emit('selection-changed', { ids: [] });
@@ -887,7 +892,7 @@ export class ToolController extends EventTarget {
       return;
     }
     if (hit && hit.vertexIndex >= 0) {
-      this._select(hit.item, ev);
+      this._pressSelect(hit.item, ev);
       this.dragVertex = { id: hit.item._uid, index: hit.vertexIndex };
       this._preDrag = this.project.snapshot();
       this._dragMoved = false;
@@ -896,7 +901,7 @@ export class ToolController extends EventTarget {
     }
     if (hit) {
       const already = this.selected.has(hit.item._uid);
-      this._select(hit.item, ev);
+      this._pressSelect(hit.item, ev);
       if (already) {
         this._moveDrag = { id: hit.item._uid, last: pt };
         this._preDrag = this.project.snapshot();
@@ -999,13 +1004,19 @@ export class ToolController extends EventTarget {
   _armLongPress(ev) {
     this._clearLongPress();
     this._lpFired = false;
+    // (It says it is a finger: the item menu it opens is drawn off the
+    // finger, as the Items list's is -- js/ui/hold.js menuPlace.)
     const at = { x: ev.clientX, y: ev.clientY,
-                 clientX: ev.clientX, clientY: ev.clientY };
+                 clientX: ev.clientX, clientY: ev.clientY, pointerType: ev.pointerType };
     this._lpStart = at;
     this._lpTimer = setTimeout(() => {
       this._lpTimer = null;
       if (this._pinch) return;
       this._lpFired = true;
+      // The press was the hold -- the right-click, which selects without a
+      // word to the Items list (_pressSelect): what it selected is lit there
+      // where it is listed, and not looked for.
+      this._revealDue = false;
       if (this._panning) {
         this._panning = false;
         this._panLast = null;
@@ -1035,6 +1046,13 @@ export class ToolController extends EventTarget {
   _clearLongPress() {
     if (this._lpTimer) { clearTimeout(this._lpTimer); this._lpTimer = null; }
     this._lpStart = null;
+    // The finger was not holding after all -- it lifted, slid, or a second
+    // one came: the press was a press, and what it selected is looked for
+    // in the Items list now, as a click's is (_pressSelect).
+    if (this._revealDue) {
+      this._revealDue = false;
+      this.emit('selection-changed', { ids: [...this.selected], reveal: true });
+    }
   }
 
   _startPan(ev) {
@@ -1327,15 +1345,20 @@ export class ToolController extends EventTarget {
     }
     if (this.mode === 'pan') {
       const hit = this.hitTest(pt);
+      // The desktop's right-click selects (or re-selects) the shape without
+      // emitting selection_changed (_do_right_click), so its Items list never
+      // goes looking for it: a floor he has folded stays folded. Its row is
+      // still lit where it is listed (reveal: false).
+      const quiet = { ctrlKey: false, shiftKey: false };
       // The item menu is Delete / Hide / Properties — all edits. Selecting
       // is still allowed, so a right-click still says what you clicked.
       if (this.readOnly) {
-        if (hit) this._select(hit.item, { ctrlKey: false, shiftKey: false });
+        if (hit) this._select(hit.item, quiet, { reveal: false });
         this.emit('status', { text: this.readOnlyReason || READ_ONLY_DEFAULT });
         return;
       }
       if (hit) {
-        this._select(hit.item, { ctrlKey: false, shiftKey: false });
+        this._select(hit.item, quiet, { reveal: false });
         this.host.showItemMenu?.(hit.item, ev);
       } else if (this.selected.size) {
         const first = this.project.findItem([...this.selected][0]);
@@ -1781,7 +1804,19 @@ export class ToolController extends EventTarget {
     return null;
   }
 
-  _select(item, ev) {
+  /**
+   * Select a shape pressed on the drawing. 'selection-changed' goes out only
+   * when the selection CHANGED, as the desktop's selection_changed does: a
+   * press on the shape already selected starts its move and says nothing
+   * (mousePressEvent), a vertex drag says so only `if sel_changed`. Its
+   * `reveal` says whether the Items list goes looking for the item -- opens
+   * the sections its row is folded away in (highlight_measurement, the one
+   * listener of selection_changed) -- or only lights its row where it is
+   * listed: false for a right-click (see _onRightClick). True or false, the
+   * list's lit rows follow the selection. Returns whether it changed.
+   */
+  _select(item, ev, { reveal = true } = {}) {
+    const was = [...this.selected];
     const additive = ev && (ev.ctrlKey || ev.metaKey);
     if (additive) {
       if (this.selected.has(item._uid)) this.selected.delete(item._uid);
@@ -1789,13 +1824,29 @@ export class ToolController extends EventTarget {
     } else if (!this.selected.has(item._uid) || this.selected.size > 1) {
       this.selected = new Set([item._uid]);
     }
-    this.emit('selection-changed', { ids: [...this.selected] });
+    const changed = was.length !== this.selected.size || was.some(id => !this.selected.has(id));
+    if (changed) this.emit('selection-changed', { ids: [...this.selected], reveal });
     this.emit('changed');
+    return changed;
   }
 
+  /**
+   * A press that selects (_panModePress). A finger's press may yet turn out
+   * to be the hold, which is the right-click: the list is not sent looking
+   * until that is decided -- _clearLongPress sends it when the finger lifts,
+   * slides or is joined by a second one, and the hold firing drops it. A
+   * mouse's press is a press at once.
+   */
+  _pressSelect(item, ev) {
+    const held = ev.pointerType === 'touch' && !!this._lpTimer;
+    if (this._select(item, ev, { reveal: !held }) && held) this._revealDue = true;
+  }
+
+  /** A selection made FOR the drawing -- the Items list's click, a jump to
+   *  an item (desktop select_measurement): always said, and looked for. */
   select(ids) {
     this.selected = new Set(Array.isArray(ids) ? ids : [ids]);
-    this.emit('selection-changed', { ids: [...this.selected] });
+    this.emit('selection-changed', { ids: [...this.selected], reveal: true });
     this.emit('changed');
   }
 

@@ -17,6 +17,8 @@ import { unitTotals } from './report-html.js';
 import { reportQty } from '../core/measure.js';
 import { STANDALONE_PAGE } from '../core/takeoff-file.js';
 import { CountingModel } from '../core/counting.js';
+import { headerAct, headerTip, rowsUnder, HDR_FIELD, HDR_WHAT } from '../core/classify.js';
+import { holdGesture } from './hold.js';
 
 /** Item types the panel never lists — rulers, markup and Group containers. */
 const EXCLUDED = new Set(['distance', 'textnote', 'page_ref', 'pitch', 'ref_distance', 'group']);
@@ -31,6 +33,10 @@ export const CATEGORY_PRESETS = [
   'Roofing', 'Drywall', 'Flooring', 'Doors & Windows',
   'Insulation', 'Site Work', 'Miscellaneous',
 ];
+
+/** Said once a session, the first time the list is on screen with something
+ *  in it in the touch layout: an iPad never shows a tooltip. */
+export const HOLD_HINT = 'Hold a heading or a row for its menu';
 
 export class ItemsPanel extends EventTarget {
   constructor({ root, listEl, floorFilterEl, groupFilterEl, costToggleEl, footEl, project, host }) {
@@ -51,6 +57,19 @@ export class ItemsPanel extends EventTarget {
     this.collapsed = new Set();
     this.selected = new Set();
     this._repop = false;
+    /** The tree the last refresh listed (floor -> category -> sub ->
+     *  [[page, item]]): what Collapse all folds, and the rows under a
+     *  heading. View state, like `collapsed`. */
+    this._tree = new Map();
+    /** How many rows the last refresh listed, and whether the one-time hold
+     *  hint has been said -- for this page's life, never saved. */
+    this._listed = 0;
+    this._hinted = false;
+    /** The menu this list opened (the host's handle) and where the list
+     *  stood then: a menu points at a row, so the list scrolling under it
+     *  closes it. */
+    this._menu = null;
+    this._menuTop = 0;
 
     this._bind();
   }
@@ -75,15 +94,110 @@ export class ItemsPanel extends EventTarget {
       this.groupFilter = this.groupFilterEl.value === '\x00ALL' ? null : this.groupFilterEl.value;
       this.refresh();
     });
+    // A menu opened from the list points at the row or heading it was
+    // opened on. When the list scrolls under it -- the held finger slid on
+    // into a scroll, a wheel -- that row has moved away, and the menu goes
+    // (a desktop menu holds the list still while it is open).
+    this.listEl.addEventListener('scroll', () => {
+      if (this._menu && Math.abs((this.listEl.scrollTop || 0) - this._menuTop) > 1) this._closeMenu();
+    }, { passive: true });
+  }
+
+  /** A menu the list has just opened: the host's handle, or nothing. */
+  _openedMenu(handle) {
+    this._menu = handle || null;
+    this._menuTop = this.listEl.scrollTop || 0;
+  }
+
+  /** Close the menu the list opened, if it is still the one on screen. */
+  _closeMenu() {
+    const handle = this._menu;
+    this._menu = null;
+    handle?.close?.();
   }
 
   setSelection(ids) {
     this.selected = new Set(ids);
+    const lit = this._lights(this.selected);
     for (const row of this.listEl.querySelectorAll('.row')) {
-      row.classList.toggle('on', this.selected.has(row.dataset.id));
+      row.classList.toggle('on', lit(row));
     }
-    const first = this.listEl.querySelector('.row.on');
-    first?.scrollIntoView({ block: 'nearest' });
+    this._scrollToRow(this.listEl.querySelector('.row.on'));
+  }
+
+  /**
+   * Which rows a selection lights (desktop _apply_selection): the row of a
+   * selected shape itself, or the row of the item a selected RUN belongs to.
+   * A run of a multi-sheet item is not listed -- it rolls up into its item's
+   * row -- and shares its item's group_id (data-gid on the row), so a run
+   * tapped on its own sheet lights the item's row, as its main shape does.
+   * (A group_id of '' is no group: the desktop never writes one.)
+   */
+  _lights(ids) {
+    const gids = new Set();
+    if (ids.size) {
+      for (const [, it] of this.project.allItems()) {
+        if (it.group_id && ids.has(it._uid)) gids.add(String(it.group_id));
+      }
+    }
+    return row => ids.has(row.dataset.id) || (!!row.dataset.gid && gids.has(row.dataset.gid));
+  }
+
+  /**
+   * Bring a row into view by scrolling the LIST, and nothing else (as
+   * scrollIntoView's block 'nearest'). scrollIntoView scrolls every
+   * ancestor that can scroll, an overflow:hidden one too: on a phone, with
+   * the Items drawer shut, a tap on a shape on the drawing slid the whole
+   * page 315 px sideways under the finger -- the tap's click then folded a
+   * heading in the drawer, and the bar's buttons stayed off screen.
+   */
+  _scrollToRow(row) {
+    const list = this.listEl;
+    if (!row || !row.getBoundingClientRect || !list.getBoundingClientRect) return;
+    const L = list.getBoundingClientRect();
+    const R = row.getBoundingClientRect();
+    let by = 0;
+    if (R.top < L.top) by = R.top - L.top;
+    else if (R.bottom > L.bottom) by = Math.min(R.bottom - L.bottom, R.top - L.top);
+    if (by) list.scrollTop = (list.scrollTop || 0) + by;
+  }
+
+  /**
+   * What was just selected ON THE DRAWING, found in the list (desktop
+   * highlight_measurement): the sections its row is folded away in -- its
+   * floor, its category, its sub-category -- are opened, the list is rebuilt
+   * when one was folded, and its row is lit and scrolled to. Without this, a
+   * Collapse all left every shape tapped on the sheet with no row to show.
+   * The item is the one selected last (the desktop's selection is one item;
+   * a Ctrl+click adds its item last). For a run of a multi-sheet item the
+   * sections are the run's own (they are its item's, as add-shape writes
+   * them) and the row is its item's (_lights); where two rows answer, the
+   * last is scrolled to, as the desktop's target is.
+   *
+   * Only for a selection the desktop's list is told about (main.js: the
+   * controller's `reveal`) -- not a right-click, not a finger's hold.
+   */
+  revealSelection(ids) {
+    const list = [...ids];
+    const m = list.length ? this.project.findItem(list[list.length - 1])?.item : null;
+    if (m) {
+      const fl = String(m.floor_level || '').trim();
+      const cat = String(m.category || '').trim();
+      const sub = String(m.sub_category || '').trim();
+      const keys = [`fl\x00${fl}`, `cat\x00${fl}\x00${cat}`];
+      if (sub) keys.push(`sub\x00${fl}\x00${cat}\x00${sub}`);
+      let opened = false;
+      for (const k of keys) if (this.collapsed.delete(k)) opened = true;
+      if (opened) {
+        this.selected = new Set(list);
+        this.refresh();
+      }
+    }
+    this.setSelection(list);
+    if (m) {
+      const its = [...this.listEl.querySelectorAll('.row')].filter(this._lights(new Set([m._uid])));
+      this._scrollToRow(its[its.length - 1]);
+    }
   }
 
   // ── build ───────────────────────────────────────────────────────────
@@ -125,6 +239,8 @@ export class ItemsPanel extends EventTarget {
     this._repopulateFilters(floorsAll, catsAll);
 
     this.listEl.textContent = '';
+    this._tree = new Map();
+    this._listed = 0;
     if (!all.length) {
       this.listEl.appendChild(this._emptyState());
       this._updateFoot([]);
@@ -149,6 +265,8 @@ export class ItemsPanel extends EventTarget {
       if (!subs.has(sub)) subs.set(sub, []);
       subs.get(sub).push([pg, m]);
     }
+    this._tree = tree;
+    this._listed = all.length;
 
     const gmin = list => (list.length ? Math.min(...list.map(([, m]) => m.sort_order || 0)) : 0);
     const flatten = map => [...map.values()].flatMap(v => (v instanceof Map ? flatten(v) : v));
@@ -165,8 +283,11 @@ export class ItemsPanel extends EventTarget {
       const cats = tree.get(fl);
       const flItems = flatten(cats);
       const flClosed = this.collapsed.has(`fl\x00${fl}`);
+      // Each heading carries what it IS -- the raw floor, category and
+      // sub-category its rows share, as the desktop's row meta does -- so
+      // its menu and its tooltip are worked out from the same answer.
       frag.appendChild(this._groupHeader('floor', fl || 'No Floor Level', flItems,
-        flClosed, hue, null, `fl\x00${fl}`));
+        flClosed, hue, null, `fl\x00${fl}`, { type: 'floor', fl, cat: null, sub: null }));
       if (flClosed) return;
 
       const catKeys = [...cats.keys()].sort(
@@ -180,7 +301,7 @@ export class ItemsPanel extends EventTarget {
         const catClosed = this.collapsed.has(`cat\x00${fl}\x00${cat}`);
         frag.appendChild(this._groupHeader('cat', cat || 'Uncategorized', catItems,
           catClosed, hue, { cols: [], elbow: 0, last: catLast },
-          `cat\x00${fl}\x00${cat}`));
+          `cat\x00${fl}\x00${cat}`, { type: 'cat', fl, cat, sub: null }));
         if (catClosed) return;
 
         const subKeys = [...subs.keys()].sort(
@@ -211,7 +332,7 @@ export class ItemsPanel extends EventTarget {
             const key = `sub\x00${fl}\x00${cat}\x00${sub}`;
             const subClosed = this.collapsed.has(key);
             frag.appendChild(this._groupHeader('sub', sub, subItems, subClosed, hue,
-              { cols: [catCont], elbow: 1, last }, key));
+              { cols: [catCont], elbow: 1, last }, key, { type: 'sub', fl, cat, sub }));
             if (subClosed) return;
             const subCont = !last;
             subItems.forEach(([pg, m], ii) => {
@@ -227,6 +348,105 @@ export class ItemsPanel extends EventTarget {
     this.listEl.appendChild(frag);
     this.setSelection(this.selected);
     this._updateFoot(all);
+    this.maybeHint();
+  }
+
+  /**
+   * The one-time hint: an iPad shows no tooltip, so the first time the list
+   * is ON SCREEN with a heading or a row in it while the layout is touch, the
+   * status line says how a finger opens their menus. Once for this page's
+   * life (a session) -- never saved, no setting. Asked after every rebuild,
+   * and by the app whenever the list may have come on screen (a drawer
+   * opened, the panel shown again, the layout switched). The host may say it
+   * later (when the status line is free); if by then the layout is not touch
+   * or the list is off screen, it is dropped unsaid and asked for again the
+   * next time all of it is true.
+   */
+  maybeHint() {
+    if (this._hinted || !this._hintDue()) return;
+    this._hinted = true;
+    this.host.hint?.(HOLD_HINT, {
+      still: () => this._hintDue(),
+      dropped: () => { this._hinted = false; },
+    });
+  }
+
+  _hintDue() {
+    return !!this._listed && !!this.host.touchLayout?.() && !!this.host.listShown?.();
+  }
+
+  // ── a heading's menu ────────────────────────────────────────────────
+
+  /**
+   * What a heading's menu offers besides Collapse all and Expand all --
+   * 'rename', 'assign', 'group' or '' -- asked by the menu AND the tooltip,
+   * so the tooltip cannot promise what the menu does not have (desktop
+   * _header_act; tests/heading-menu.mjs holds both to it). '' until the web
+   * can rename and set from a heading (the host's canClassifyFromHeadings,
+   * the one switch), and '' whenever the list is read-only (a version up,
+   * View Only): neither may offer a write.
+   */
+  _headerAct(meta) {
+    if (!this.host.canClassifyFromHeadings?.() || this.host.readOnly?.()) return '';
+    return headerAct(meta);
+  }
+
+  /** The heading's tooltip, from the same act as its menu (desktop
+   *  _header_tip): no 'Drag to reorder', the web cannot reorder; in the
+   *  touch layout the same sentence in a finger's words. */
+  _headerTitle(meta) {
+    return headerTip(meta, {
+      canDrag: false, act: this._headerAct(meta), touch: !!this.host.touchLayout?.(),
+    });
+  }
+
+  /**
+   * The heading menu's entries, as the desktop's _show_header_menu builds
+   * them: the act's entry and a rule when there is one, then Collapse all
+   * (every section listed now folds) and Expand all (everything unfolds).
+   * The tree and the rows are the ones listed when the menu opened, as the
+   * desktop's meta carries them.
+   */
+  _headerEntries(meta) {
+    const act = this._headerAct(meta);
+    const tree = this._tree;
+    const rows = rowsUnder(tree, meta);
+    const what = HDR_WHAT[HDR_FIELD[meta.type]] || '';
+    const label = act === 'group' ? 'Rename group…'
+      : act === 'rename' ? `Rename ${what}…`
+        : act === 'assign' ? (rows.length === 1 ? `Set ${what} for this item…`
+          : `Set ${what} for these ${rows.length} items…`)
+          : '';
+    const out = [];
+    if (label) {
+      out.push({
+        label,
+        run: () => {
+          // Asked again HERE, not only when the menu was built: a menu opened
+          // while editing stays on screen when the gate closes under it -- a
+          // version flip -- and its write must not go through then.
+          if (this._headerAct(meta) !== act) return;
+          this.host.classifyFromHeading?.(act, meta, rows);
+        },
+      });
+      out.push('-');
+    }
+    out.push({
+      label: 'Collapse all',
+      run: () => {
+        for (const fl of tree.keys()) this.collapsed.add(`fl\x00${fl}`);
+        this.refresh();
+      },
+    });
+    out.push({
+      label: 'Expand all',
+      run: () => { this.collapsed.clear(); this.refresh(); },
+    });
+    return out;
+  }
+
+  _headerMenu(meta, at) {
+    this._openedMenu(this.host.showMenu?.(this._headerEntries(meta), at));
   }
 
   /** The item as the totals see it (a multi-sheet item: the runs that count). */
@@ -274,7 +494,7 @@ export class ItemsPanel extends EventTarget {
     this.groupFilter = this.groupFilterEl.value === '\x00ALL' ? null : this.groupFilterEl.value;
   }
 
-  _groupHeader(kind, text, items, closed, hue, tree, key) {
+  _groupHeader(kind, text, items, closed, hue, tree, key, meta) {
     const spec = {
       floor: { txt: 1.00, bg: 0.20, upper: true },
       cat: { txt: 0.78, bg: 0.10, upper: false },
@@ -305,11 +525,24 @@ export class ItemsPanel extends EventTarget {
     qty.title = `${items.length} item${items.length === 1 ? '' : 's'}`;
     el.appendChild(qty);
 
-    el.title = 'Click to collapse / expand';
+    el.title = this._headerTitle(meta);
     el.addEventListener('click', () => {
       if (this.collapsed.has(key)) this.collapsed.delete(key);
       else this.collapsed.add(key);
       this.refresh();
+    });
+    // Its menu: a finger held on it (an iPad sends no 'contextmenu' for
+    // one), or the right button / a two-finger click. A finger's
+    // 'contextmenu' (Chrome, Android) is the hold's: one menu, not two.
+    // (A hold the lift's own time shows was a tap gives its menu back.)
+    const hold = holdGesture(el, {
+      onHold: at => this._headerMenu(meta, at),
+      onTakeBack: () => this._closeMenu(),
+    });
+    el.addEventListener('contextmenu', ev => {
+      ev.preventDefault();
+      if (hold.busy()) return;
+      this._headerMenu(meta, ev);
     });
     return el;
   }
@@ -325,6 +558,8 @@ export class ItemsPanel extends EventTarget {
     const el = document.createElement('div');
     el.className = `row${visible ? '' : ' hidden'}${why ? ' nc' : ''}`;
     el.dataset.id = m._uid;
+    // A multi-sheet item's runs are lit through it (_lights).
+    if (m.group_id) el.dataset.gid = String(m.group_id);
     if (why) el.title = why;
     el.style.background = parity === 0 ? '#191919' : '#1e1e1e';
 
@@ -437,9 +672,18 @@ export class ItemsPanel extends EventTarget {
       this.host.selectItem?.(m, pageIdx, ev);
     });
     el.addEventListener('dblclick', () => this.host.openProperties?.(m));
+    // The item menu: a finger held on the row, or the right button. Neither
+    // touches the selection -- the desktop's right-click on a row does not
+    // either (_ClickableRow: the press is the menu's, the row is not
+    // clicked) -- and the hold's lift is swallowed, so it selects nothing.
+    const hold = holdGesture(el, {
+      onHold: at => this._openedMenu(this.host.showItemMenu?.(m, at)),
+      onTakeBack: () => this._closeMenu(),
+    });
     el.addEventListener('contextmenu', ev => {
       ev.preventDefault();
-      this.host.showItemMenu?.(m, ev);
+      if (hold.busy()) return;
+      this._openedMenu(this.host.showItemMenu?.(m, ev));
     });
     return el;
   }

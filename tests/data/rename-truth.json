@@ -1,0 +1,11580 @@
+{
+ "lifted": {
+  "module": [
+   "CATEGORY_PRESETS",
+   "FLOOR_LEVEL_PRESETS",
+   "STANDALONE_PAGE",
+   "_class_sort_key",
+   "_fill_class_combo",
+   "_project_values_near",
+   "_class_norm",
+   "_class_clean"
+  ],
+  "TakeoffItemsPanel": [
+   "_HDR_FIELD",
+   "_HDR_WHAT",
+   "_SOLO",
+   "_MENU_CSS",
+   "_header_act",
+   "_header_tip",
+   "_rows_under",
+   "_show_header_menu",
+   "highlight_measurement",
+   "_apply_selection"
+  ],
+  "GLPageWidget": [
+   "CLASS_FIELDS",
+   "_class_val",
+   "project_values"
+  ]
+ },
+ "SOLO": "\u0000solo",
+ "HDR_FIELD": {
+  "floor": "floor_level",
+  "cat": "category",
+  "sub": "sub_category"
+ },
+ "HDR_WHAT": {
+  "floor_level": "floor level",
+  "category": "category",
+  "sub_category": "sub-category"
+ },
+ "presets": {
+  "floor_level": [
+   "",
+   "Level 1",
+   "Level 2",
+   "Level 3",
+   "Level 4",
+   "Roof",
+   "Basement",
+   "Foundation",
+   "Mezzanine",
+   "Penthouse"
+  ],
+  "category": [
+   "",
+   "Framing",
+   "Concrete",
+   "Masonry",
+   "Structural Steel",
+   "Wood Framing",
+   "MEP",
+   "Electrical",
+   "Plumbing",
+   "HVAC",
+   "Roofing",
+   "Drywall",
+   "Flooring",
+   "Doors & Windows",
+   "Insulation",
+   "Site Work",
+   "Miscellaneous"
+  ]
+ },
+ "rows": {
+  "list": [
+   [
+    0,
+    {
+     "type": "area",
+     "name": "Slab",
+     "floor_level": "Level 1",
+     "category": "Concrete",
+     "sub_category": ""
+    }
+   ],
+   [
+    0,
+    {
+     "type": "area",
+     "name": "Wall A",
+     "floor_level": "Level 1",
+     "category": "Walls",
+     "sub_category": "Exterior"
+    }
+   ],
+   [
+    0,
+    {
+     "type": "area",
+     "name": "Wall B",
+     "floor_level": "Level 1",
+     "category": "Walls",
+     "sub_category": "Exterior"
+    }
+   ],
+   [
+    0,
+    {
+     "type": "area",
+     "name": "Wall C",
+     "floor_level": "Level 1",
+     "category": "Walls",
+     "sub_category": "Interior"
+    }
+   ],
+   [
+    0,
+    {
+     "type": "area",
+     "name": "Loose",
+     "floor_level": "Level 1",
+     "category": "",
+     "sub_category": ""
+    }
+   ],
+   [
+    0,
+    {
+     "type": "area",
+     "name": "Loose 2",
+     "floor_level": "Level 1",
+     "category": "",
+     "sub_category": ""
+    }
+   ],
+   [
+    1,
+    {
+     "type": "area",
+     "name": "Patio",
+     "floor_level": "",
+     "category": "Concrete",
+     "sub_category": ""
+    }
+   ],
+   [
+    1,
+    {
+     "type": "area",
+     "name": "Joists",
+     "floor_level": "Level 2",
+     "category": "Framing",
+     "sub_category": "Floor"
+    }
+   ],
+   [
+    1,
+    {
+     "type": "area",
+     "name": "Roof deck",
+     "floor_level": "",
+     "category": "Roofing",
+     "sub_category": ""
+    }
+   ],
+   [
+    1,
+    {
+     "type": "area",
+     "name": "Outlets",
+     "floor_level": "",
+     "category": "",
+     "sub_category": ""
+    }
+   ],
+   [
+    -1000,
+    {
+     "type": "standalone",
+     "name": "Nails",
+     "floor_level": "Level 1",
+     "category": "Hardware",
+     "sub_category": "",
+     "top": "\u0000g:gi1"
+    }
+   ],
+   [
+    -1000,
+    {
+     "type": "standalone",
+     "name": "Glue",
+     "floor_level": "Level 2",
+     "category": "",
+     "sub_category": "",
+     "top": "\u0000solo"
+    }
+   ]
+  ],
+  "one blank": [
+   [
+    0,
+    {
+     "type": "area",
+     "name": "Stair",
+     "floor_level": "Level 3",
+     "category": "Framing",
+     "sub_category": ""
+    }
+   ],
+   [
+    1,
+    {
+     "type": "area",
+     "name": "Lone",
+     "floor_level": "",
+     "category": "Framing",
+     "sub_category": ""
+    }
+   ]
+  ]
+ },
+ "headers": [
+  {
+   "label": "a named floor",
+   "rows": "list",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [
+    "Slab",
+    "Wall A",
+    "Wall B",
+    "Wall C",
+    "Loose",
+    "Loose 2"
+   ],
+   "menu": [
+    "Rename floor level\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for these 6 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "NO FLOOR LEVEL",
+   "rows": "list",
+   "meta": {
+    "type": "floor",
+    "fl": "",
+    "cat": null,
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+   "under": [
+    "Patio",
+    "Roof deck",
+    "Outlets"
+   ],
+   "menu": [
+    "Set floor level for these 3 items\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for these 3 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a floor of None",
+   "rows": "list",
+   "meta": {
+    "type": "floor",
+    "fl": null,
+    "cat": null,
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+   "under": [],
+   "menu": [
+    "Set floor level for these 0 items\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a Group's section",
+   "rows": "list",
+   "meta": {
+    "type": "floor",
+    "fl": "\u0000g:gi1",
+    "cat": null,
+    "sub": null
+   },
+   "act": "group",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+   "under": [
+    "Nails"
+   ],
+   "menu": [
+    "Rename group\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for this item\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "NOT ON A SHEET",
+   "rows": "list",
+   "meta": {
+    "type": "floor",
+    "fl": "\u0000solo",
+    "cat": null,
+    "sub": null
+   },
+   "act": "",
+   "tip": "Click to collapse / expand",
+   "under": [
+    "Glue"
+   ],
+   "menu": [
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for this item\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a floor the tree no longer has",
+   "rows": "list",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 9",
+    "cat": null,
+    "sub": null
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename floor level\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a category",
+   "rows": "list",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": null
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [
+    "Wall A",
+    "Wall B",
+    "Wall C"
+   ],
+   "menu": [
+    "Rename category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for these 3 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "Uncategorized",
+   "rows": "list",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "",
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+   "under": [
+    "Loose",
+    "Loose 2"
+   ],
+   "menu": [
+    "Set category for these 2 items\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for these 2 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "Uncategorized under NO FLOOR LEVEL",
+   "rows": "list",
+   "meta": {
+    "type": "cat",
+    "fl": "",
+    "cat": "",
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+   "under": [
+    "Outlets"
+   ],
+   "menu": [
+    "Set category for this item\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for this item\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a category of None",
+   "rows": "list",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+   "under": [],
+   "menu": [
+    "Set category for these 0 items\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a category in a Group's section",
+   "rows": "list",
+   "meta": {
+    "type": "cat",
+    "fl": "\u0000g:gi1",
+    "cat": "Hardware",
+    "sub": null
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [
+    "Nails"
+   ],
+   "menu": [
+    "Rename category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for this item\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a sub-category",
+   "rows": "list",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": "Exterior"
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [
+    "Wall A",
+    "Wall B"
+   ],
+   "menu": [
+    "Rename sub-category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename sub-category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a sub-category",
+     "menu": [
+      "Set sub-category for these 2 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a blank sub-category",
+   "rows": "list",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": ""
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename sub-category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename sub-category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a sub-category",
+     "menu": [
+      "Set sub-category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a sub-category under NO FLOOR LEVEL",
+   "rows": "list",
+   "meta": {
+    "type": "sub",
+    "fl": "",
+    "cat": "",
+    "sub": "Gone"
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename sub-category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename sub-category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a sub-category",
+     "menu": [
+      "Set sub-category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a named floor",
+   "rows": "one blank",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename floor level\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "NO FLOOR LEVEL",
+   "rows": "one blank",
+   "meta": {
+    "type": "floor",
+    "fl": "",
+    "cat": null,
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+   "under": [
+    "Lone"
+   ],
+   "menu": [
+    "Set floor level for this item\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for this item\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a floor of None",
+   "rows": "one blank",
+   "meta": {
+    "type": "floor",
+    "fl": null,
+    "cat": null,
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+   "under": [],
+   "menu": [
+    "Set floor level for these 0 items\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a Group's section",
+   "rows": "one blank",
+   "meta": {
+    "type": "floor",
+    "fl": "\u0000g:gi1",
+    "cat": null,
+    "sub": null
+   },
+   "act": "group",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+   "under": [],
+   "menu": [
+    "Rename group\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "NOT ON A SHEET",
+   "rows": "one blank",
+   "meta": {
+    "type": "floor",
+    "fl": "\u0000solo",
+    "cat": null,
+    "sub": null
+   },
+   "act": "",
+   "tip": "Click to collapse / expand",
+   "under": [],
+   "menu": [
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a floor the tree no longer has",
+   "rows": "one blank",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 9",
+    "cat": null,
+    "sub": null
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename floor level\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename floor level\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a floor level",
+     "menu": [
+      "Set floor level for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a category",
+   "rows": "one blank",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": null
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "Uncategorized",
+   "rows": "one blank",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "",
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+   "under": [],
+   "menu": [
+    "Set category for these 0 items\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "Uncategorized under NO FLOOR LEVEL",
+   "rows": "one blank",
+   "meta": {
+    "type": "cat",
+    "fl": "",
+    "cat": "",
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+   "under": [],
+   "menu": [
+    "Set category for these 0 items\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a category of None",
+   "rows": "one blank",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "act": "assign",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+   "under": [],
+   "menu": [
+    "Set category for these 0 items\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a category in a Group's section",
+   "rows": "one blank",
+   "meta": {
+    "type": "cat",
+    "fl": "\u0000g:gi1",
+    "cat": "Hardware",
+    "sub": null
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a category",
+     "menu": [
+      "Set category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a sub-category",
+   "rows": "one blank",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": "Exterior"
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename sub-category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename sub-category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a sub-category",
+     "menu": [
+      "Set sub-category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a blank sub-category",
+   "rows": "one blank",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": ""
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename sub-category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename sub-category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a sub-category",
+     "menu": [
+      "Set sub-category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  },
+  {
+   "label": "a sub-category under NO FLOOR LEVEL",
+   "rows": "one blank",
+   "meta": {
+    "type": "sub",
+    "fl": "",
+    "cat": "",
+    "sub": "Gone"
+   },
+   "act": "rename",
+   "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+   "under": [],
+   "menu": [
+    "Rename sub-category\u2026",
+    "-",
+    "Collapse all",
+    "Expand all"
+   ],
+   "forced": {
+    "none": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder",
+     "menu": [
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "rename": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename",
+     "menu": [
+      "Rename sub-category\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "assign": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to set a sub-category",
+     "menu": [
+      "Set sub-category for these 0 items\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    },
+    "group": {
+     "tip": "Click to collapse / expand  \u2022  Drag to reorder  \u2022  Right-click to rename the group",
+     "menu": [
+      "Rename group\u2026",
+      "-",
+      "Collapse all",
+      "Expand all"
+     ]
+    }
+   }
+  }
+ ],
+ "choices": [
+  {
+   "label": "a named floor",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a named floor",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a named floor",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Rename floor level\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "rename",
+     "floor",
+     "Level 1",
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "label": "NO FLOOR LEVEL",
+   "meta": {
+    "type": "floor",
+    "fl": "",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "NO FLOOR LEVEL",
+   "meta": {
+    "type": "floor",
+    "fl": "",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "NO FLOOR LEVEL",
+   "meta": {
+    "type": "floor",
+    "fl": "",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Set floor level for these 3 items\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "assign",
+     "floor",
+     [
+      "Patio",
+      "Roof deck",
+      "Outlets"
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "a floor of None",
+   "meta": {
+    "type": "floor",
+    "fl": null,
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a floor of None",
+   "meta": {
+    "type": "floor",
+    "fl": null,
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a floor of None",
+   "meta": {
+    "type": "floor",
+    "fl": null,
+    "cat": null,
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Set floor level for these 0 items\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "assign",
+     "floor",
+     []
+    ]
+   ]
+  },
+  {
+   "label": "a Group's section",
+   "meta": {
+    "type": "floor",
+    "fl": "\u0000g:gi1",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a Group's section",
+   "meta": {
+    "type": "floor",
+    "fl": "\u0000g:gi1",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a Group's section",
+   "meta": {
+    "type": "floor",
+    "fl": "\u0000g:gi1",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Rename group\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "item_properties",
+     -1000,
+     "Garage"
+    ]
+   ]
+  },
+  {
+   "label": "NOT ON A SHEET",
+   "meta": {
+    "type": "floor",
+    "fl": "\u0000solo",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "NOT ON A SHEET",
+   "meta": {
+    "type": "floor",
+    "fl": "\u0000solo",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a floor the tree no longer has",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 9",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a floor the tree no longer has",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 9",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a floor the tree no longer has",
+   "meta": {
+    "type": "floor",
+    "fl": "Level 9",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Rename floor level\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "rename",
+     "floor",
+     "Level 9",
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "label": "a category",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a category",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a category",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Rename category\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "rename",
+     "cat",
+     "Level 1",
+     "Walls",
+     null
+    ]
+   ]
+  },
+  {
+   "label": "Uncategorized",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "",
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "Uncategorized",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "",
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "Uncategorized",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": "",
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Set category for these 2 items\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "assign",
+     "cat",
+     [
+      "Loose",
+      "Loose 2"
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "Uncategorized under NO FLOOR LEVEL",
+   "meta": {
+    "type": "cat",
+    "fl": "",
+    "cat": "",
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "Uncategorized under NO FLOOR LEVEL",
+   "meta": {
+    "type": "cat",
+    "fl": "",
+    "cat": "",
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "Uncategorized under NO FLOOR LEVEL",
+   "meta": {
+    "type": "cat",
+    "fl": "",
+    "cat": "",
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Set category for this item\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "assign",
+     "cat",
+     [
+      "Outlets"
+     ]
+    ]
+   ]
+  },
+  {
+   "label": "a category of None",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a category of None",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a category of None",
+   "meta": {
+    "type": "cat",
+    "fl": "Level 1",
+    "cat": null,
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Set category for these 0 items\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "assign",
+     "cat",
+     []
+    ]
+   ]
+  },
+  {
+   "label": "a category in a Group's section",
+   "meta": {
+    "type": "cat",
+    "fl": "\u0000g:gi1",
+    "cat": "Hardware",
+    "sub": null
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a category in a Group's section",
+   "meta": {
+    "type": "cat",
+    "fl": "\u0000g:gi1",
+    "cat": "Hardware",
+    "sub": null
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a category in a Group's section",
+   "meta": {
+    "type": "cat",
+    "fl": "\u0000g:gi1",
+    "cat": "Hardware",
+    "sub": null
+   },
+   "pick": "main",
+   "entry": "Rename category\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "rename",
+     "cat",
+     "\u0000g:gi1",
+     "Hardware",
+     null
+    ]
+   ]
+  },
+  {
+   "label": "a sub-category",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": "Exterior"
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a sub-category",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": "Exterior"
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a sub-category",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": "Exterior"
+   },
+   "pick": "main",
+   "entry": "Rename sub-category\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "rename",
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ]
+  },
+  {
+   "label": "a blank sub-category",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": ""
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a blank sub-category",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": ""
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a blank sub-category",
+   "meta": {
+    "type": "sub",
+    "fl": "Level 1",
+    "cat": "Walls",
+    "sub": ""
+   },
+   "pick": "main",
+   "entry": "Rename sub-category\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "rename",
+     "sub",
+     "Level 1",
+     "Walls",
+     ""
+    ]
+   ]
+  },
+  {
+   "label": "a sub-category under NO FLOOR LEVEL",
+   "meta": {
+    "type": "sub",
+    "fl": "",
+    "cat": "",
+    "sub": "Gone"
+   },
+   "pick": "Collapse all",
+   "entry": "Collapse all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "\u0000g:gi1"
+    ],
+    [
+     "fl",
+     "\u0000solo"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a sub-category under NO FLOOR LEVEL",
+   "meta": {
+    "type": "sub",
+    "fl": "",
+    "cat": "",
+    "sub": "Gone"
+   },
+   "pick": "Expand all",
+   "entry": "Expand all",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [],
+   "shots": [
+    [
+     0,
+     "refresh"
+    ]
+   ],
+   "log": []
+  },
+  {
+   "label": "a sub-category under NO FLOOR LEVEL",
+   "meta": {
+    "type": "sub",
+    "fl": "",
+    "cat": "",
+    "sub": "Gone"
+   },
+   "pick": "main",
+   "entry": "Rename sub-category\u2026",
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Interior"
+    ]
+   ],
+   "shots": [],
+   "log": [
+    [
+     "rename",
+     "sub",
+     "",
+     "",
+     "Gone"
+    ]
+   ]
+  }
+ ],
+ "reveals": [
+  {
+   "folded": "everything folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Wall A",
+      "floor_level": "Level 1",
+      "category": "Walls",
+      "sub_category": "Exterior"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Wall A",
+   "lit": [
+    "Wall A"
+   ],
+   "target": [
+    "Wall A",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab",
+      "floor_level": " Level 1 ",
+      "category": "Concrete ",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Slab",
+   "lit": [
+    "Slab"
+   ],
+   "target": [
+    "Slab",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Outlets",
+      "floor_level": "",
+      "category": "",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Outlets",
+   "lit": [
+    "Outlets"
+   ],
+   "target": [
+    "Outlets",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Joists",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "Floor"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Joists",
+   "lit": [
+    "Joists"
+   ],
+   "target": [
+    "Joists",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Loose",
+      "floor_level": "Level 1",
+      "category": "",
+      "sub_category": "  "
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Loose",
+   "lit": [
+    "Loose"
+   ],
+   "target": [
+    "Loose",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Nowhere",
+      "floor_level": "Level 9",
+      "category": "Other",
+      "sub_category": "Deep"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Nowhere",
+   "lit": [
+    "Nowhere"
+   ],
+   "target": [
+    "Nowhere",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded",
+   "store": [],
+   "pick": null,
+   "before": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "",
+     ""
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Concrete"
+    ],
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ],
+    [
+     "cat",
+     "Level 2",
+     "Framing"
+    ],
+    [
+     "fl",
+     ""
+    ],
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ],
+    [
+     "sub",
+     "Level 2",
+     "Framing",
+     "Floor"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": null,
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "only its category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Wall A",
+      "floor_level": "Level 1",
+      "category": "Walls",
+      "sub_category": "Exterior"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "after": [],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Wall A",
+   "lit": [
+    "Wall A"
+   ],
+   "target": [
+    "Wall A",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab",
+      "floor_level": " Level 1 ",
+      "category": "Concrete ",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Slab",
+   "lit": [
+    "Slab"
+   ],
+   "target": [
+    "Slab",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Outlets",
+      "floor_level": "",
+      "category": "",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Outlets",
+   "lit": [
+    "Outlets"
+   ],
+   "target": [
+    "Outlets",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Joists",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "Floor"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Joists",
+   "lit": [
+    "Joists"
+   ],
+   "target": [
+    "Joists",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Loose",
+      "floor_level": "Level 1",
+      "category": "",
+      "sub_category": "  "
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Loose",
+   "lit": [
+    "Loose"
+   ],
+   "target": [
+    "Loose",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Nowhere",
+      "floor_level": "Level 9",
+      "category": "Other",
+      "sub_category": "Deep"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Nowhere",
+   "lit": [
+    "Nowhere"
+   ],
+   "target": [
+    "Nowhere",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its category folded",
+   "store": [],
+   "pick": null,
+   "before": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "after": [
+    [
+     "cat",
+     "Level 1",
+     "Walls"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": null,
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "only its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Wall A",
+      "floor_level": "Level 1",
+      "category": "Walls",
+      "sub_category": "Exterior"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "after": [],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Wall A",
+   "lit": [
+    "Wall A"
+   ],
+   "target": [
+    "Wall A",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab",
+      "floor_level": " Level 1 ",
+      "category": "Concrete ",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "after": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Slab",
+   "lit": [
+    "Slab"
+   ],
+   "target": [
+    "Slab",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Outlets",
+      "floor_level": "",
+      "category": "",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "after": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Outlets",
+   "lit": [
+    "Outlets"
+   ],
+   "target": [
+    "Outlets",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Joists",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "Floor"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "after": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Joists",
+   "lit": [
+    "Joists"
+   ],
+   "target": [
+    "Joists",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Loose",
+      "floor_level": "Level 1",
+      "category": "",
+      "sub_category": "  "
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "after": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Loose",
+   "lit": [
+    "Loose"
+   ],
+   "target": [
+    "Loose",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Nowhere",
+      "floor_level": "Level 9",
+      "category": "Other",
+      "sub_category": "Deep"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "after": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Nowhere",
+   "lit": [
+    "Nowhere"
+   ],
+   "target": [
+    "Nowhere",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "only its sub-category folded",
+   "store": [],
+   "pick": null,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "after": [
+    [
+     "sub",
+     "Level 1",
+     "Walls",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": null,
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "another floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Wall A",
+      "floor_level": "Level 1",
+      "category": "Walls",
+      "sub_category": "Exterior"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Wall A",
+   "lit": [
+    "Wall A"
+   ],
+   "target": [
+    "Wall A",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "another floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab",
+      "floor_level": " Level 1 ",
+      "category": "Concrete ",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Slab",
+   "lit": [
+    "Slab"
+   ],
+   "target": [
+    "Slab",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "another floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Outlets",
+      "floor_level": "",
+      "category": "",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Outlets",
+   "lit": [
+    "Outlets"
+   ],
+   "target": [
+    "Outlets",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "another floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Joists",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "Floor"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Joists",
+   "lit": [
+    "Joists"
+   ],
+   "target": [
+    "Joists",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "another floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Loose",
+      "floor_level": "Level 1",
+      "category": "",
+      "sub_category": "  "
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Loose",
+   "lit": [
+    "Loose"
+   ],
+   "target": [
+    "Loose",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "another floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Nowhere",
+      "floor_level": "Level 9",
+      "category": "Other",
+      "sub_category": "Deep"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Nowhere",
+   "lit": [
+    "Nowhere"
+   ],
+   "target": [
+    "Nowhere",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "another floor folded",
+   "store": [],
+   "pick": null,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": null,
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Wall A",
+      "floor_level": "Level 1",
+      "category": "Walls",
+      "sub_category": "Exterior"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Wall A",
+   "lit": [
+    "Wall A"
+   ],
+   "target": [
+    "Wall A",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab",
+      "floor_level": " Level 1 ",
+      "category": "Concrete ",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Slab",
+   "lit": [
+    "Slab"
+   ],
+   "target": [
+    "Slab",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Outlets",
+      "floor_level": "",
+      "category": "",
+      "sub_category": ""
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Outlets",
+   "lit": [
+    "Outlets"
+   ],
+   "target": [
+    "Outlets",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Joists",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "Floor"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Joists",
+   "lit": [
+    "Joists"
+   ],
+   "target": [
+    "Joists",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Loose",
+      "floor_level": "Level 1",
+      "category": "",
+      "sub_category": "  "
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Loose",
+   "lit": [
+    "Loose"
+   ],
+   "target": [
+    "Loose",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Nowhere",
+      "floor_level": "Level 9",
+      "category": "Other",
+      "sub_category": "Deep"
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Nowhere",
+   "lit": [
+    "Nowhere"
+   ],
+   "target": [
+    "Nowhere",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [],
+   "pick": null,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": null,
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "everything folded (Collapse all)",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 4,
+   "before": [
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Multi wall (run)",
+   "lit": [
+    "Multi wall"
+   ],
+   "target": [
+    "Multi wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded (Collapse all)",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Multi wall",
+   "lit": [
+    "Multi wall"
+   ],
+   "target": [
+    "Multi wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded (Collapse all)",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 1,
+   "before": [
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Other wall",
+   "lit": [
+    "Other wall"
+   ],
+   "target": [
+    "Other wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded (Collapse all)",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 2,
+   "before": [
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Slab big (run)",
+   "lit": [
+    "Slab big"
+   ],
+   "target": [
+    "Slab big",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "everything folded (Collapse all)",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 3,
+   "before": [
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Moved wall (run)",
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "everything folded (Collapse all)",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 7,
+   "before": [
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Lone run",
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "everything folded (Collapse all)",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 8,
+   "before": [
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ],
+    [
+     "fl",
+     "Level 3"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 1"
+    ],
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Twin A",
+   "lit": [
+    "Twin A",
+    "Twin B"
+   ],
+   "target": [
+    "Twin B",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 4,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "after": [],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Multi wall (run)",
+   "lit": [
+    "Multi wall"
+   ],
+   "target": [
+    "Multi wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "after": [],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Multi wall",
+   "lit": [
+    "Multi wall"
+   ],
+   "target": [
+    "Multi wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 1,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "after": [],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Other wall",
+   "lit": [
+    "Other wall"
+   ],
+   "target": [
+    "Other wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 2,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "after": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Slab big (run)",
+   "lit": [
+    "Slab big"
+   ],
+   "target": [
+    "Slab big",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 3,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "after": [],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Moved wall (run)",
+   "lit": [
+    "Moved wall"
+   ],
+   "target": [
+    "Moved wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 7,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "after": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Lone run",
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "its sub-category folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 8,
+   "before": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "after": [
+    [
+     "sub",
+     "Level 1",
+     "Wood Framing",
+     "Exterior"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Twin A",
+   "lit": [
+    "Twin A",
+    "Twin B"
+   ],
+   "target": [
+    "Twin B",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "the second sheet's item's floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 4,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Multi wall (run)",
+   "lit": [
+    "Multi wall"
+   ],
+   "target": [
+    "Multi wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "the second sheet's item's floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Multi wall",
+   "lit": [
+    "Multi wall"
+   ],
+   "target": [
+    "Multi wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "the second sheet's item's floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 1,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Other wall",
+   "lit": [
+    "Other wall"
+   ],
+   "target": [
+    "Other wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "the second sheet's item's floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 2,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [],
+   "log": [
+    [
+     "refresh"
+    ],
+    [
+     "apply_selection",
+     false
+    ],
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Slab big (run)",
+   "lit": [
+    "Slab big"
+   ],
+   "target": [
+    "Slab big",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "the second sheet's item's floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 3,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Moved wall (run)",
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "the second sheet's item's floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 7,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Lone run",
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "the second sheet's item's floor folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 8,
+   "before": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "after": [
+    [
+     "fl",
+     "Level 2"
+    ]
+   ],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Twin A",
+   "lit": [
+    "Twin A",
+    "Twin B"
+   ],
+   "target": [
+    "Twin B",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 4,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Multi wall (run)",
+   "lit": [
+    "Multi wall"
+   ],
+   "target": [
+    "Multi wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 0,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Multi wall",
+   "lit": [
+    "Multi wall"
+   ],
+   "target": [
+    "Multi wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 1,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Other wall",
+   "lit": [
+    "Other wall"
+   ],
+   "target": [
+    "Other wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 2,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Slab big (run)",
+   "lit": [
+    "Slab big"
+   ],
+   "target": [
+    "Slab big",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 3,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Moved wall (run)",
+   "lit": [
+    "Moved wall"
+   ],
+   "target": [
+    "Moved wall",
+    0,
+    40
+   ]
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 7,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Lone run",
+   "lit": [],
+   "target": null
+  },
+  {
+   "folded": "nothing folded",
+   "store": [
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Multi wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "sort_order": 100
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Other wall",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "sort_order": 200
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Slab big (run)",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "group_child": true
+     }
+    ],
+    [
+     0,
+     {
+      "type": "area",
+      "name": "Moved wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g4",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Multi wall (run)",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "Exterior",
+      "group_id": "g1",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Slab big",
+      "floor_level": "Level 2",
+      "category": "Concrete",
+      "sub_category": "",
+      "group_id": "g2",
+      "sort_order": 300
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Moved wall",
+      "floor_level": "Level 2",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g4",
+      "sort_order": 400
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Lone run",
+      "floor_level": "Level 1",
+      "category": "Wood Framing",
+      "sub_category": "",
+      "group_id": "g9",
+      "group_child": true
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin A",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 500
+     }
+    ],
+    [
+     1,
+     {
+      "type": "area",
+      "name": "Twin B",
+      "floor_level": "Level 3",
+      "category": "Framing",
+      "sub_category": "",
+      "group_id": "g3",
+      "sort_order": 600
+     }
+    ]
+   ],
+   "pick": 8,
+   "before": [],
+   "after": [],
+   "log": [
+    [
+     "apply_selection",
+     true
+    ]
+   ],
+   "selected": "Twin A",
+   "lit": [
+    "Twin A",
+    "Twin B"
+   ],
+   "target": [
+    "Twin B",
+    0,
+    40
+   ]
+  }
+ ],
+ "values": [
+  {
+   "label": "a job with its own names",
+   "store": [
+    [
+     0,
+     [
+      {
+       "type": "area",
+       "name": "Slab",
+       "floor_level": "Level 1",
+       "category": "Concrete",
+       "sub_category": "",
+       "associated_items": [
+        {
+         "name": "Rebar",
+         "floor_level": "Mezz",
+         "category": "Concrete"
+        },
+        {
+         "name": "Chairs",
+         "floor_level": "",
+         "category": ""
+        },
+        null,
+        "junk",
+        {
+         "name": "Form oil",
+         "floor_level": " Level 2 ",
+         "category": "",
+         "sub_category": "Forms"
+        }
+       ]
+      },
+      {
+       "type": "area",
+       "name": "Wall",
+       "floor_level": "Level 10",
+       "category": "Wood Framing",
+       "sub_category": "Exterior"
+      },
+      {
+       "type": "distance",
+       "floor_level": "Level 9",
+       "category": "Rulers"
+      },
+      null,
+      "junk",
+      {
+       "type": "area",
+       "name": "Deck",
+       "floor_level": " Level 2 ",
+       "category": " wood  framing ",
+       "sub_category": "Decking"
+      }
+     ]
+    ],
+    [
+     1,
+     [
+      {
+       "type": "count",
+       "name": "Outlets",
+       "floor_level": "Level 2",
+       "category": "Electrical",
+       "sub_category": "Devices"
+      },
+      {
+       "type": "area",
+       "name": "Copy",
+       "floor_level": "level 2",
+       "category": "ELECTRICAL",
+       "sub_category": "devices"
+      },
+      {
+       "type": "area",
+       "name": "Stairs",
+       "floor_level": "Level  3",
+       "category": "Framing",
+       "sub_category": "Stairs"
+      },
+      {
+       "type": "area",
+       "name": "Ramp",
+       "floor_level": "B2",
+       "category": "",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Ramp 2",
+       "floor_level": "Level 02",
+       "category": "Concrete",
+       "sub_category": "",
+       "associated_items": [
+        {
+         "name": "Bolts",
+         "category": "Hardware",
+         "sub_category": "Anchors"
+        },
+        {
+         "name": "Bolts 2",
+         "sub_category": "Inherited"
+        }
+       ]
+      }
+     ]
+    ],
+    [
+     -1000,
+     [
+      {
+       "type": "standalone",
+       "name": "Nails",
+       "floor_level": "Ground",
+       "category": "Hardware",
+       "sub_category": "Fasteners"
+      }
+     ]
+    ]
+   ],
+   "values": {
+    "floor_level": [
+     "B2",
+     "Ground",
+     "Level 1",
+     "Level 2",
+     "level 2",
+     "Level 02",
+     "Level  3",
+     "Level 9",
+     "Level 10",
+     "Mezz"
+    ],
+    "category": [
+     "Concrete",
+     "Electrical",
+     "ELECTRICAL",
+     "Framing",
+     "Hardware",
+     "Rulers",
+     "Wood Framing",
+     "wood  framing"
+    ],
+    "sub_category": [
+     "Anchors",
+     "Decking",
+     "Devices",
+     "devices",
+     "Exterior",
+     "Fasteners",
+     "Forms",
+     "Inherited",
+     "Stairs"
+    ],
+    "nonsense": []
+   },
+   "combos": [
+    {
+     "owner": "the form's window has the canvas",
+     "field": "floor_level",
+     "items": [
+      "",
+      "B2",
+      "Ground",
+      "Level 1",
+      "Level 2",
+      "level 2",
+      "Level 02",
+      "Level  3",
+      "Level 9",
+      "Level 10",
+      "Mezz",
+      "-",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the form's window has the canvas",
+     "field": "category",
+     "items": [
+      "",
+      "Concrete",
+      "Electrical",
+      "ELECTRICAL",
+      "Framing",
+      "Hardware",
+      "Rulers",
+      "Wood Framing",
+      "wood  framing",
+      "-",
+      "Masonry",
+      "Structural Steel",
+      "MEP",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "floor_level",
+     "items": [
+      "",
+      "B2",
+      "Ground",
+      "Level 1",
+      "Level 2",
+      "level 2",
+      "Level 02",
+      "Level  3",
+      "Level 9",
+      "Level 10",
+      "Mezz",
+      "-",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "category",
+     "items": [
+      "",
+      "Concrete",
+      "Electrical",
+      "ELECTRICAL",
+      "Framing",
+      "Hardware",
+      "Rulers",
+      "Wood Framing",
+      "wood  framing",
+      "-",
+      "Masonry",
+      "Structural Steel",
+      "MEP",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    }
+   ],
+   "subsOf": {
+    "Concrete": [
+     "Forms",
+     "Inherited"
+    ],
+    "Hardware": [
+     "Anchors",
+     "Fasteners"
+    ],
+    "": [],
+    "Electrical": [
+     "Devices"
+    ],
+    " Framing ": [
+     "Stairs"
+    ]
+   }
+  },
+  {
+   "label": "a job renamed off the stock names",
+   "store": [
+    [
+     0,
+     [
+      {
+       "type": "area",
+       "name": "Slab",
+       "floor_level": "First Floor",
+       "category": "Carpentry",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Wall",
+       "floor_level": "Second Floor",
+       "category": "Carpentry",
+       "sub_category": ""
+      }
+     ]
+    ],
+    [
+     2,
+     [
+      {
+       "type": "area",
+       "name": "Beam",
+       "floor_level": "Roof",
+       "category": "Structural Steel",
+       "sub_category": ""
+      }
+     ]
+    ]
+   ],
+   "values": {
+    "floor_level": [
+     "First Floor",
+     "Roof",
+     "Second Floor"
+    ],
+    "category": [
+     "Carpentry",
+     "Structural Steel"
+    ],
+    "sub_category": [],
+    "nonsense": []
+   },
+   "combos": [
+    {
+     "owner": "the form's window has the canvas",
+     "field": "floor_level",
+     "items": [
+      "",
+      "First Floor",
+      "Roof",
+      "Second Floor",
+      "-",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the form's window has the canvas",
+     "field": "category",
+     "items": [
+      "",
+      "Carpentry",
+      "Structural Steel",
+      "-",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "floor_level",
+     "items": [
+      "",
+      "First Floor",
+      "Roof",
+      "Second Floor",
+      "-",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "category",
+     "items": [
+      "",
+      "Carpentry",
+      "Structural Steel",
+      "-",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    }
+   ],
+   "subsOf": {
+    "Concrete": [],
+    "Hardware": [],
+    "": [],
+    "Electrical": [],
+    " Framing ": []
+   }
+  },
+  {
+   "label": "an empty job",
+   "store": [],
+   "values": {
+    "floor_level": [],
+    "category": [],
+    "sub_category": [],
+    "nonsense": []
+   },
+   "combos": [
+    {
+     "owner": "the form's window has the canvas",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the form's window has the canvas",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    }
+   ],
+   "subsOf": {
+    "Concrete": [],
+    "Hardware": [],
+    "": [],
+    "Electrical": [],
+    " Framing ": []
+   }
+  },
+  {
+   "label": "names that are all blank",
+   "store": [
+    [
+     0,
+     [
+      {
+       "type": "area",
+       "name": "A",
+       "floor_level": "",
+       "category": "",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "B",
+       "floor_level": "   ",
+       "category": " ",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "C",
+       "floor_level": null,
+       "category": null,
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "D"
+      }
+     ]
+    ]
+   ],
+   "values": {
+    "floor_level": [],
+    "category": [],
+    "sub_category": [],
+    "nonsense": []
+   },
+   "combos": [
+    {
+     "owner": "the form's window has the canvas",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the form's window has the canvas",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    }
+   ],
+   "subsOf": {
+    "Concrete": [],
+    "Hardware": [],
+    "": [],
+    "Electrical": [],
+    " Framing ": []
+   }
+  },
+  {
+   "label": "a job that has every stock floor, in other capitals",
+   "store": [
+    [
+     0,
+     [
+      {
+       "type": "area",
+       "name": "Level 1",
+       "floor_level": "LEVEL 1",
+       "category": "framing",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Level 2",
+       "floor_level": "LEVEL 2",
+       "category": "concrete",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Level 3",
+       "floor_level": "LEVEL 3",
+       "category": "masonry",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Level 4",
+       "floor_level": "LEVEL 4",
+       "category": "structural steel",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Roof",
+       "floor_level": "ROOF",
+       "category": "wood framing",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Basement",
+       "floor_level": "BASEMENT",
+       "category": "mep",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Foundation",
+       "floor_level": "FOUNDATION",
+       "category": "electrical",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Mezzanine",
+       "floor_level": "MEZZANINE",
+       "category": "plumbing",
+       "sub_category": ""
+      },
+      {
+       "type": "area",
+       "name": "Penthouse",
+       "floor_level": "PENTHOUSE",
+       "category": "hvac",
+       "sub_category": ""
+      }
+     ]
+    ]
+   ],
+   "values": {
+    "floor_level": [
+     "BASEMENT",
+     "FOUNDATION",
+     "LEVEL 1",
+     "LEVEL 2",
+     "LEVEL 3",
+     "LEVEL 4",
+     "MEZZANINE",
+     "PENTHOUSE",
+     "ROOF"
+    ],
+    "category": [
+     "concrete",
+     "electrical",
+     "framing",
+     "hvac",
+     "masonry",
+     "mep",
+     "plumbing",
+     "structural steel",
+     "wood framing"
+    ],
+    "sub_category": [],
+    "nonsense": []
+   },
+   "combos": [
+    {
+     "owner": "the form's window has the canvas",
+     "field": "floor_level",
+     "items": [
+      "",
+      "BASEMENT",
+      "FOUNDATION",
+      "LEVEL 1",
+      "LEVEL 2",
+      "LEVEL 3",
+      "LEVEL 4",
+      "MEZZANINE",
+      "PENTHOUSE",
+      "ROOF"
+     ]
+    },
+    {
+     "owner": "the form's window has the canvas",
+     "field": "category",
+     "items": [
+      "",
+      "concrete",
+      "electrical",
+      "framing",
+      "hvac",
+      "masonry",
+      "mep",
+      "plumbing",
+      "structural steel",
+      "wood framing",
+      "-",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "floor_level",
+     "items": [
+      "",
+      "BASEMENT",
+      "FOUNDATION",
+      "LEVEL 1",
+      "LEVEL 2",
+      "LEVEL 3",
+      "LEVEL 4",
+      "MEZZANINE",
+      "PENTHOUSE",
+      "ROOF"
+     ]
+    },
+    {
+     "owner": "the form is two deep, the canvas private",
+     "field": "category",
+     "items": [
+      "",
+      "concrete",
+      "electrical",
+      "framing",
+      "hvac",
+      "masonry",
+      "mep",
+      "plumbing",
+      "structural steel",
+      "wood framing",
+      "-",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "no job anywhere",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "floor_level",
+     "items": [
+      "",
+      "Level 1",
+      "Level 2",
+      "Level 3",
+      "Level 4",
+      "Roof",
+      "Basement",
+      "Foundation",
+      "Mezzanine",
+      "Penthouse"
+     ]
+    },
+    {
+     "owner": "the job cannot answer",
+     "field": "category",
+     "items": [
+      "",
+      "Framing",
+      "Concrete",
+      "Masonry",
+      "Structural Steel",
+      "Wood Framing",
+      "MEP",
+      "Electrical",
+      "Plumbing",
+      "HVAC",
+      "Roofing",
+      "Drywall",
+      "Flooring",
+      "Doors & Windows",
+      "Insulation",
+      "Site Work",
+      "Miscellaneous"
+     ]
+    }
+   ],
+   "subsOf": {
+    "Concrete": [],
+    "Hardware": [],
+    "": [],
+    "Electrical": [],
+    " Framing ": []
+   }
+  }
+ ],
+ "sorted": [
+  "",
+  "2",
+  "10",
+  "a1b2",
+  "A1B10",
+  "B2",
+  "level 1",
+  "Level 2",
+  "Level 02",
+  "Level  2",
+  "\u00a0Level\u00a02 ",
+  "Level\u001f2",
+  "Level 2A",
+  "Level 007",
+  "Level 7",
+  "Level 10",
+  "Level 99999999999999999998",
+  "Level 99999999999999999999",
+  "Roof",
+  "Stra\u00dfe",
+  "STRASSE"
+ ],
+ "norm": [
+  [
+   "Level 10",
+   "Level 10",
+   "level 10"
+  ],
+  [
+   "Level 2",
+   "Level 2",
+   "level 2"
+  ],
+  [
+   "level 1",
+   "level 1",
+   "level 1"
+  ],
+  [
+   "Roof",
+   "Roof",
+   "roof"
+  ],
+  [
+   "B2",
+   "B2",
+   "b2"
+  ],
+  [
+   "Level 02",
+   "Level 02",
+   "level 02"
+  ],
+  [
+   "Level 2A",
+   "Level 2A",
+   "level 2a"
+  ],
+  [
+   "Level  2",
+   "Level 2",
+   "level 2"
+  ],
+  [
+   "",
+   "",
+   ""
+  ],
+  [
+   "2",
+   "2",
+   "2"
+  ],
+  [
+   "10",
+   "10",
+   "10"
+  ],
+  [
+   "a1b2",
+   "a1b2",
+   "a1b2"
+  ],
+  [
+   "A1B10",
+   "A1B10",
+   "a1b10"
+  ],
+  [
+   "Stra\u00dfe",
+   "Stra\u00dfe",
+   "strasse"
+  ],
+  [
+   "STRASSE",
+   "STRASSE",
+   "strasse"
+  ],
+  [
+   "\u00a0Level\u00a02 ",
+   "Level 2",
+   "level 2"
+  ],
+  [
+   "Level\u001f2",
+   "Level 2",
+   "level 2"
+  ],
+  [
+   "Level 007",
+   "Level 007",
+   "level 007"
+  ],
+  [
+   "Level 7",
+   "Level 7",
+   "level 7"
+  ],
+  [
+   "Level 99999999999999999999",
+   "Level 99999999999999999999",
+   "level 99999999999999999999"
+  ],
+  [
+   "Level 99999999999999999998",
+   "Level 99999999999999999998",
+   "level 99999999999999999998"
+  ]
+ ]
+}

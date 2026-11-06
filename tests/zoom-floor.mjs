@@ -1713,8 +1713,9 @@ log('\n-- 8. the app\'s wiring --');
   ok('the Shortcuts window says the wheel from the settings, and the pinch',
     /wheelHelp\(app\.settings\.get\('wheel_mode'\), stops\)/.test(sc) && /\['Pinch', pinchHelp\(stops\)\]/.test(sc)
     && !/\['Wheel', 'Zoom about the cursor'\]/.test(sc));
+  // (Later rounds' own imports may follow it, each a line of its own.)
   ok('the zoom-floor import is a line of its own after the import list',
-    /\n\} from '\.\/core\/revisions\.js';\nimport \{ ZoomFloor[^\n]*\} from '\.\/render\/zoom-floor\.js';\n\nconst \$ = /.test(MAIN));
+    /\n\} from '\.\/core\/revisions\.js';\nimport \{ ZoomFloor[^\n]*\} from '\.\/render\/zoom-floor\.js';\n(?:import \{[^\n]*\} from '[^'\n]*';\n)*\nconst \$ = /.test(MAIN));
   const ctl = (await readFile(new URL('../js/tools/controller.js', import.meta.url), 'utf-8')).replace(/\r\n/g, '\n');
   ok('the sheet\'s wheel: no up or down, no zoom; Shift goes past',
     /const dir = wheelInOut\(ev\);\n\s*if \(!dir\) return;/.test(ctl)

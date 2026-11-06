@@ -58,6 +58,7 @@ const IMPORTABLE = [
   'core/geom.js', 'core/units.js', 'core/measure.js', 'core/xlsx.js',
   'core/revisions.js',
   'core/scratch.js',
+  'core/classify.js',
   'render/viewport.js', 'render/theme.js', 'render/markers.js', 'render/callouts.js',
   'render/zoom-floor.js',
   // The renderer and its two label modules touch no DOM at module scope —
@@ -66,6 +67,8 @@ const IMPORTABLE = [
   // here and failed in the browser, which is the one thing this file is for.
   'render/renderer.js', 'render/labels.js', 'render/layout.js',
   'tools/markup.js', 'tools/controller.js',
+  // The Items list's hold (it reads the canvas's two numbers).
+  'ui/hold.js',
 ];
 for (const rel of IMPORTABLE) {
   try {

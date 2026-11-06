@@ -63,6 +63,7 @@ import {
   sizesMatch, sizeRefusal, itemRevId,
 } from './core/revisions.js';
 import { ZoomFloor, PinchHold, fitPlace, pinchPlace, wheelInOut, pictureZoom, pictureRect, zoomFloorLine, zoomOutTip, wheelHelp, pinchHelp, PICTURE_STEP } from './render/zoom-floor.js';
+import { menuPlace } from './ui/hold.js';
 
 const $ = id => document.getElementById(id);
 
@@ -173,6 +174,17 @@ const itemsPanel = new ItemsPanel({
     openMaterials: item => openMaterials(item),
     // From the Items list: its Delete takes the whole item, and asks first.
     showItemMenu: (item, ev) => showItemMenu(item, ev, { from: 'list' }),
+    // A heading's menu (Collapse all / Expand all), held or right-clicked.
+    showMenu: (entries, at) => showMenu(entries, at),
+    // The one switch for Rename… / Set … for these N items… on a heading
+    // (desktop 3.07, ported in a later round): until it is on, the menu
+    // offers Collapse all and Expand all only, and the heading's tooltip
+    // promises nothing more.
+    canClassifyFromHeadings: () => false,
+    // The tooltips' words, and the one-time hold hint.
+    touchLayout: () => document.documentElement.dataset.ui === 'touch',
+    listShown: () => itemsListShown(),
+    hint: (text, when) => sayWhenQuiet(text, when),
   },
 });
 
@@ -459,7 +471,13 @@ document.addEventListener('pointerdown', ev => {
   calloutPreview.hide();
 }, true);
 controller.addEventListener('selection-changed', ev => {
-  itemsPanel.setSelection(ev.detail.ids);
+  // Selected on the drawing: its row is lit. Where the desktop's canvas
+  // tells its list (selection_changed: a press on another shape, a
+  // selection made for it) the row is also found -- its folded sections
+  // opened (highlight_measurement). A right-click, a finger's hold, does
+  // not tell it: a floor he folded stays folded (reveal false).
+  if (ev.detail.reveal) itemsPanel.revealSelection(ev.detail.ids);
+  else itemsPanel.setSelection(ev.detail.ids);
 });
 controller.addEventListener('status', ev => setStatus(ev.detail.text));
 // Every finished item passes through controller._file, which says so here.
@@ -2216,6 +2234,8 @@ function setUiMode(mode, { announce = true } = {}) {
   syncUiModeMenu();
   // The canvas box changed underneath the viewport.
   requestDraw();
+  // The headings' tooltips say a click or a tap, a right-click or a hold.
+  itemsPanel.refresh();
   if (announce) {
     setStatus(next === 'touch'
       ? 'Touch layout — bigger targets, made for a finger.'
@@ -2233,6 +2253,16 @@ function syncUiModeMenu() {
 
 const MOBILE_Q = window.matchMedia('(max-width: 1023px)');
 const isMobileLayout = () => MOBILE_Q.matches;
+
+/** Is the Items list on screen? A drawer that is open below 1024px, a
+ *  column that is not tidied away above. (Its own query, not MOBILE_Q: the
+ *  list asks during start-up too.) */
+function itemsListShown() {
+  if (window.matchMedia('(max-width: 1023px)').matches) {
+    return $('itemsPanel').classList.contains('mopen');
+  }
+  return !document.querySelector('.body').classList.contains('no-items');
+}
 
 function closeDrawers() {
   $('thumbsPanel').classList.remove('mopen');
@@ -3710,22 +3740,15 @@ function showItemMenu(item, ev, { from = 'canvas' } = {}) {
     setStatus(controller.readOnlyReason);
     return;
   }
-  const menu = $('ctxMenu');
-  menu.textContent = '';
-  const add = (label, fn, cls) => {
-    const b = document.createElement('button');
-    b.textContent = label;
-    if (cls) b.className = cls;
-    b.addEventListener('click', () => { menu.hidden = true; fn(); });
-    menu.appendChild(b);
-  };
+  const entries = [];
+  const add = (label, run) => entries.push({ label, run });
   // The two rows that would give a reference distance a name or a price are
   // not offered on one — see openProperties. Hide, Isolate, Zoom to and
   // Delete are, because it is an object on the sheet like any other.
   if (item.type !== 'ref_distance') {
     add('Properties…', () => openProperties(item));
     add('Associated materials…', () => openMaterials(item));
-    menu.appendChild(document.createElement('hr'));
+    entries.push('-');
   }
   add(item.visible === false ? 'Show' : 'Hide',
     () => { app.project.setVisible([item._uid], item.visible === false); itemsPanel.refresh(); });
@@ -3752,7 +3775,7 @@ function showItemMenu(item, ev, { from = 'canvas' } = {}) {
     if (Number.isInteger(at) && at >= 0 && elsewhere) { void jumpToItem(item, at); return; }
     if (zoomFloor.zoomToItem(item.points || [], item.type)) requestDraw();
   });
-  menu.appendChild(document.createElement('hr'));
+  entries.push('-');
   // Delete takes exactly what was asked, as on the desktop. From the Items
   // list it is the whole item -- every shape on every sheet -- and it asks
   // first (_on_item_delete). From the drawing it is the one shape pressed
@@ -3765,11 +3788,36 @@ function showItemMenu(item, ev, { from = 'canvas' } = {}) {
     forgetDeletedSelection();
     requestDraw();
   });
+  return showMenu(entries, ev);
+}
+
+/**
+ * A menu at a point: the item menu, and the Items list's heading menu.
+ * `entries` are {label, run}, and '-' draws a rule; `at` is where it was
+ * asked for -- the event, or a held finger's {clientX, clientY,
+ * pointerType}. A finger's menu is drawn off the finger (menuPlace,
+ * js/ui/hold.js), so the lift cannot land on its first entry, and every
+ * menu stays on screen, a phone's too. Returns a handle whose close()
+ * closes THIS menu only -- not one opened over it since.
+ */
+function showMenu(entries, at) {
+  const menu = $('ctxMenu');
+  // A menu opened over another one takes the old one's listeners with it.
+  closeMenu();
+  menu.textContent = '';
+  for (const e of entries) {
+    if (e === '-') { menu.appendChild(document.createElement('hr')); continue; }
+    const b = document.createElement('button');
+    b.textContent = e.label;
+    b.addEventListener('click', () => { closeMenu(); e.run(); });
+    menu.appendChild(b);
+  }
 
   menu.hidden = false;
-  const w = menu.offsetWidth, h = menu.offsetHeight;
-  menu.style.left = `${Math.min(ev.clientX, window.innerWidth - w - 8)}px`;
-  menu.style.top = `${Math.min(ev.clientY, window.innerHeight - h - 8)}px`;
+  const { left, top } = menuPlace(at, menu.offsetWidth, menu.offsetHeight,
+    window.innerWidth, window.innerHeight);
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
   // Only a press OUTSIDE the menu closes it. A press on one of its own
   // buttons used to close it as well -- before that button's click: the
   // release then landed on whatever lay under the menu, the click went to
@@ -3779,10 +3827,35 @@ function showItemMenu(item, ev, { from = 'canvas' } = {}) {
   // for itself cannot leave it open.
   const dismiss = e => {
     if (e && e.target instanceof Node && menu.contains(e.target)) return;
-    menu.hidden = true;
-    document.removeEventListener('pointerdown', dismiss, true);
+    if (menu.dismiss === dismiss) closeMenu();
   };
-  setTimeout(() => document.addEventListener('pointerdown', dismiss, true), 0);
+  // Escape closes it, as it closes a desktop menu, and goes no further: it
+  // is the menu's, not the sheet's or the version's (capture phase, ahead
+  // of the app's own keys).
+  const onKey = e => {
+    if (e.key !== 'Escape' || menu.dismiss !== dismiss) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeMenu();
+  };
+  menu.dismiss = dismiss;
+  menu.onKey = onKey;
+  setTimeout(() => {
+    if (menu.dismiss === dismiss) document.addEventListener('pointerdown', dismiss, true);
+  }, 0);
+  document.addEventListener('keydown', onKey, true);
+  return { close: () => { if (menu.dismiss === dismiss) closeMenu(); } };
+}
+
+/** Close the menu on screen and stop listening for its dismiss and its
+ *  Escape. */
+function closeMenu() {
+  const menu = $('ctxMenu');
+  menu.hidden = true;
+  if (menu.dismiss) document.removeEventListener('pointerdown', menu.dismiss, true);
+  if (menu.onKey) document.removeEventListener('keydown', menu.onKey, true);
+  menu.dismiss = null;
+  menu.onKey = null;
 }
 
 /**
@@ -4743,6 +4816,28 @@ function setStatus(text) {
   }
 }
 
+/**
+ * A sentence that can wait: said once the status line is quiet -- showing
+ * nothing but the tool's own hint -- so it does not wipe what the action
+ * that brought it on screen has just said (Edit Mode's sentence, the touch
+ * layout's). Looked at after this turn, then once a second; said anyway
+ * after about twelve seconds. The Items list's one-time hold hint.
+ * `still()` is asked at every look: once the sentence is no longer true
+ * where it would be said (the layout went standard, the drawer shut) it is
+ * dropped unsaid, and `dropped()` tells the asker, so it can ask again.
+ */
+function sayWhenQuiet(text, { still = () => true, dropped = () => {} } = {}) {
+  let tries = 0;
+  const attempt = () => {
+    if (!still()) { dropped(); return; }
+    const now = $('statusText').textContent || '';
+    const quiet = !now || now === 'Ready' || now === (HINTS[controller.mode] || 'Ready');
+    if (quiet || ++tries > 12) setStatus(text);
+    else setTimeout(attempt, 1000);
+  };
+  setTimeout(attempt, 0);
+}
+
 // Why zooming out stopped -- said once a session, not on every refused
 // notch (the desktop's _say_zoom_floor_once): a fast spin sends thirty of
 // them, and the status line is where the tools say what they want next. The
@@ -4888,6 +4983,20 @@ if (window.matchMedia('(max-width: 720px)').matches) $('markupBar').hidden = tru
 // the menu agree with it and settles the value on a first-ever launch.
 document.documentElement.dataset.ui = uiMode();
 syncUiModeMenu();
+// Every Floor and Trade box lists this job's own names first (desktop
+// _fill_class_combo): the forms read the open project's store each time
+// one opens.
+D.setClassSource(() => app.project.measurements);
+// The Items list's one-time hold hint waits for the list to be ON SCREEN:
+// a drawer opened, the panel shown again, the layout made touch. Each of
+// those is a class or an attribute, so one observer hears all of them,
+// whichever menu, button or key did it.
+{
+  const shown = new MutationObserver(() => itemsPanel.maybeHint());
+  shown.observe($('itemsPanel'), { attributes: true, attributeFilter: ['class'] });
+  shown.observe(document.querySelector('.body'), { attributes: true, attributeFilter: ['class'] });
+  shown.observe(document.documentElement, { attributes: true, attributeFilter: ['data-ui'] });
+}
 // Settle the mode chrome before anything is open, so the empty state is not
 // briefly offering an Edit Mode button for a project that does not exist.
 syncModeUi();

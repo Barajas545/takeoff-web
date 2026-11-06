@@ -16,7 +16,6 @@
 import * as D from './dialogs.js';
 import { assemblyTotal, notesWithPurpose } from '../core/measure.js';
 import { attachSearch, catalogPrice } from './catalog.js';
-import { FLOOR_LEVEL_PRESETS, CATEGORY_PRESETS } from './items-panel.js';
 
 /** The "Per <hint>" label, by what the parent measures. */
 const UNIT_HINT = {
@@ -214,10 +213,10 @@ export function editLine(parent, existing, hint) {
     kindRef.node = kind;
 
     const floor = D.field(form, 'Floor / Level',
-      D.combo(ex.floor_level || '', FLOOR_LEVEL_PRESETS, 'aiFloor'),
+      D.combo(ex.floor_level || '', D.classChoices('floor_level'), 'aiFloor'),
       'Blank inherits the parent item’s.');
     const cat = D.field(form, 'Group / Trade',
-      D.combo(ex.category || '', CATEGORY_PRESETS, 'aiCat'));
+      D.combo(ex.category || '', D.classChoices('category'), 'aiCat'));
     const sub = D.field(form, 'Sub-group', D.input(ex.sub_category || ''));
 
     const notes = document.createElement('textarea');

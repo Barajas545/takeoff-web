@@ -57,6 +57,7 @@ import * as Reports from '../js/ui/reports.js';
 import { yesNoDialog } from '../js/ui/dialogs.js';
 import * as Dialogs from '../js/ui/dialogs.js';
 import { MARKUP_TOOLS } from '../js/tools/controller.js';
+import { menuPlace } from '../js/ui/hold.js';
 
 const { collectRows, collectItems, buildReportHtml } = Reports;
 // Absent from a build that has no counting rule at all (3.04's port): the
@@ -724,9 +725,13 @@ function apartJob() {
     requestDraw() {},
     deleteWholeItem: m => calls.push(['deleteWholeItem', m._uid]),
     forgetDeletedSelection() {},
+    // The menu itself is showMenu's (main.js, lifted with it), placed by
+    // hold.js's menuPlace.
+    menuPlace,
   };
   const names = Object.keys(env);
-  const showItemMenu = new Function(...names, `${fn('showItemMenu')}\nreturn showItemMenu;`)(
+  const showItemMenu = new Function(...names,
+    `${fn('closeMenu')}\n${fn('showMenu')}\n${fn('showItemMenu')}\nreturn showItemMenu;`)(
     ...names.map(k => env[k]));
   const press = async (label, from, how = 'mouse') => {
     calls.length = 0;
