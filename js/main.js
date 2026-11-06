@@ -5660,23 +5660,27 @@ async function receiveFromPortal(nonce) {
     return;
   }
   const { plan, origin } = got;
-  // Work started here while the plan was on its way (a blank sheet, a PDF,
-  // a project opened from a file) is not replaced without asking: nothing
-  // else asks, since loadProjectFile itself never does.
-  if (app.project.dirty && !(await D.confirmDialog(
-    'The plan from the portal is here',
-    `You started work here while ${plan.name} was on its way, and it has not been saved.\n\n`
-      + `Open ${plan.name} and lose that work?`,
-    { okLabel: 'Discard and open', danger: true }))) {
-    setStatus(`${plan.name} was not opened, so your work here is kept. Open the plan again in the portal when you are ready.`);
-    return;
-  }
   // From here on the peer is the address the plan came from, and nothing else.
   const pinned = { ...peer, origin };
   tellPortalOffline(pinned, nonce);
   // Inside the portal the drafts are the signed-in person's: set before the
-  // plan opens, so its draft is looked for under that person's word.
+  // plan opens, so its draft is looked for under that person's word (and
+  // before the question below, so work kept by its Cancel is drafted as
+  // theirs too).
   if (embedded) app.draftWho = plan.who || '';
+  // Work started here while the plan was on its way (a blank sheet, a PDF,
+  // a project opened from a file) is not replaced without asking: nothing
+  // else asks, since loadProjectFile itself never does. Kept, it is a
+  // project of its own: only File › Save keeps it once this is closed.
+  if (app.project.dirty && !(await D.confirmDialog(
+    'The plan from the portal is here',
+    `You started work here while ${plan.name} was on its way, and it has not been saved.\n\n`
+      + `Open ${plan.name} and lose that work?\n\n`
+      + `Cancel keeps the work here: save it with File › Save before you close the takeoff tool, then open the plan again.`,
+    { okLabel: 'Discard and open', danger: true }))) {
+    setStatus(`${plan.name} was not opened, so your work here is kept. Save it with File › Save before you close the takeoff tool.`);
+    return;
+  }
   if (plan.kind === 'file') {
     // Wrapped only to carry the plan's name and the version's date; no bytes
     // are copied. The copy is the portal's: Save never writes into it (Save
