@@ -4869,6 +4869,9 @@ async function addBlankSheet() {
   if (spec.label) app.project.setPageLabel(at, spec.label);
   if (spec.name) app.project.setPageName(at, spec.name);
   c.width = c.height = 0;
+  // Added from the start screen, the sheet is the job now: the start card
+  // comes down, as it does for a PDF, or it sits over the new sheet.
+  hideEmptyState();
   thumbs.refresh(at);
   await goToPage(at);
   setStatus(`Added a blank ${spec.size[0]} sheet`);

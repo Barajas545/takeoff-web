@@ -304,6 +304,13 @@ eq('settings that are not JSON, or a store that refuses: touch', [boot('{not jso
     && read('js/ui/settings.js').includes("const STORAGE_KEY = 'ptt.settings.v1';")
     && main.includes("const RECENT_KEY = 'ptt.recent.v1';") && read('js/ui/catalog.js').includes("const USER_KEY = 'ptt.catalog.user.v1';")
     && read('sw.js').includes("const CACHE = 'ptt-web-v22';"));
+  // A blank sheet added from the start screen (the iPad's first screen) takes the start card down, as a PDF does.
+  {
+    const i = main.indexOf('async function addBlankSheet(');
+    const body = i < 0 ? '' : main.slice(i, main.indexOf('\n}\n', i));
+    ok('Add Blank Sheet takes the start card down before it turns to the sheet',
+      /hideEmptyState\(\);[\s\S]*await goToPage\(at\);/.test(body));
+  }
   // and nothing anywhere in the shipped program names one of the portal's
   const files = [];
   const walk = dir => {
