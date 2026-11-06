@@ -290,7 +290,8 @@ eq('settings that are not JSON, or a store that refuses: touch', [boot('{not jso
     'IndexedDB plans archive': 'ptt-plans-archive',
     'OPFS kept': KEPT_DIR,
     'lock keep-write': WRITE_LOCK,
-    'cache': 'ptt-web-v22',
+    // The worker's cache name moves at every publish (ptt-web-vN); read it from sw.js rather than pin a number.
+    'cache': (/const CACHE = '([^']+)';/.exec(read('sw.js')) || [])[1] || '',
     'old portal index': PORTAL_INDEX_KEY,
     'old portal token': PORTAL_TOKEN_KEY,
     'old portal IndexedDB': PORTAL_DB,
@@ -303,7 +304,7 @@ eq('settings that are not JSON, or a store that refuses: touch', [boot('{not jso
     && read('js/core/plans-folder.js').includes("export function idbBackend(name = 'ptt-plans-archive'")
     && read('js/ui/settings.js').includes("const STORAGE_KEY = 'ptt.settings.v1';")
     && main.includes("const RECENT_KEY = 'ptt.recent.v1';") && read('js/ui/catalog.js').includes("const USER_KEY = 'ptt.catalog.user.v1';")
-    && read('sw.js').includes("const CACHE = 'ptt-web-v22';"));
+    && /const CACHE = 'ptt-web-v\d+';/.test(read('sw.js')));
   // A blank sheet added from the start screen (the iPad's first screen) takes the start card down, as a PDF does.
   {
     const i = main.indexOf('async function addBlankSheet(');
