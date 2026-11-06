@@ -38,6 +38,7 @@ const PORTABLE = [
   'revision-counting',  // what counts == the desktop's own methods (closure-checked)
   'revision-web-flow',  // origins follow their sheets; stamp, book, undo; reports
   'count-undo',         // Ctrl+Z keeps the count: the desktop's sections; diff + tag check need its source
+  'zoom-floor',         // zooming out stops at Fit == the desktop's own methods; touch, resize, Settings, pictures
   'picture-overlay-format', // a save keeps the 3.06 overlay; undo keeps one copy of its picture
   'plans-folder',       // the Plans Archive: projects, plan files, save guard, made-up folders
   'device-plans',       // plans kept on this device: keep, list, remove, the portal's copies after the move
