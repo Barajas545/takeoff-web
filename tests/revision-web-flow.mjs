@@ -36,7 +36,17 @@
 //   9. a job switch puts the count down: the first tap in the next job asks
 //      the form, no window pin takes the last job's floor, and a form still
 //      up from the last job answers nothing in the next.
-//  10. a file's words are printed, never made markup: a cost type, floor or
+//  10. the Count bar (desktop 3.07 on a tablet): Undo and Redo inside it,
+//      finger-sized, doing what the top bar's do -- the same data-act, the
+//      same dispatcher, a real press -- off when there is nothing to take
+//      back, the bar still up after, the keyboard handed back to the
+//      drawing after a press, and off again when another job comes in; and
+//      Return or Escape in the Item box lets go of the keyboard, so the
+//      next tap and Cmd+Z reach the drawing -- and goes no further, so the
+//      document's own Escape never takes him off the drawing he counts on.
+//      And where the bar is parked on an iPad: over the sheet, not the
+//      Items panel's head, and below the toolbars when they are pulled down.
+//  11. a file's words are printed, never made markup: a cost type, floor or
 //      category from the file is escaped in every report, and a row's class
 //      is one of the report's own two words.
 //
@@ -49,6 +59,8 @@ import { CountingModel, takeoffMoveWords, deleteItemQuestion } from '../js/core/
 import * as Reports from '../js/ui/reports.js';
 import * as H from '../js/ui/report-html.js';
 import { yesNoDialog } from '../js/ui/dialogs.js';
+import * as Dialogs from '../js/ui/dialogs.js';
+import { MARKUP_TOOLS } from '../js/tools/controller.js';
 
 const { collectRows, collectItems, buildReportHtml } = Reports;
 // Absent from a build that has no counting rule at all (3.04's port): the
@@ -412,6 +424,8 @@ class StubEl {
     this._l = [];
     this.offsetWidth = 160;
     this.offsetHeight = 120;
+    this.dataset = {};
+    this.disabled = false;
     const cls = () => this.className.split(/\s+/).filter(Boolean);
     this.classList = {
       add: c => { if (!cls().includes(c)) this.className = [...cls(), c].join(' '); },
@@ -440,6 +454,25 @@ class StubEl {
       e.tagName === tag.toUpperCase() && (!cl || e.classList.contains(cl)))) || null;
   }
   focus() { this.ownerDocument.activeElement = this; }
+  blur() { if (this.ownerDocument.activeElement === this) this.ownerDocument.activeElement = null; }
+  // `tag`, `.class`, `tag.class` or `tag[data-some-thing]`
+  matches(sel) {
+    return sel.split(',').some(one => {
+      const m = /^([a-z]*)(?:\.([\w-]+))?(?:\[data-([\w-]+)(?:="([^"]*)")?\])?$/i.exec(one.trim());
+      if (!m) return false;
+      const [, tag, cl, data, val] = m;
+      if (tag && this.tagName !== tag.toUpperCase()) return false;
+      if (cl && !this.classList.contains(cl)) return false;
+      if (data) {
+        const key = data.replace(/-([a-z])/g, (_, ch) => ch.toUpperCase());
+        if (!this.dataset || !(key in this.dataset)) return false;
+        if (val !== undefined && this.dataset[key] !== val) return false;
+      }
+      return true;
+    });
+  }
+  closest(sel) { for (let x = this; x && x.tagName; x = x.parentNode) if (x.matches && x.matches(sel)) return x; return null; }
+  querySelectorAll(sel) { return this.descendants().filter(e => e.matches(sel)); }
   select() {}
   setAttribute() {}
 }
@@ -464,7 +497,7 @@ function stubDocument() {
     if (path[path.length - 1] !== doc) path.push(doc);
     let stopped = false;
     const ev = { type, target, button: 0, pointerType: 'mouse', ...extra,
-      stopPropagation() { stopped = true; }, preventDefault() {} };
+      stopPropagation() { stopped = true; }, preventDefault() { this.defaultPrevented = true; } };
     for (let i = path.length - 1; i > 0 && !stopped; i--) fire(path[i], ev, true);
     if (!stopped) fire(path[0], ev, true);
     for (let i = 0; i < path.length && !stopped; i++) fire(path[i], ev, false);
@@ -1007,8 +1040,9 @@ const OUTLETS = { name: 'Outlets', label: 'Outlets', category: 'Electrical', flo
   r.c._remember(OUTLETS);
   r.c._addCountPoint([1, 1]);
   r.c.options.pendingName = 'Switches';
+  const told = r.told;                    // arming put its name in the box; not this
   p.loadFrom(jobB());
-  eq('a typed name the tool did not count stays', [r.c.options.pendingName, r.told], ['Switches', 0]);
+  eq('a typed name the tool did not count stays', [r.c.options.pendingName, r.told - told], ['Switches', 0]);
   r.asked = 0;
   r.c._addCountPoint([3, 3]); await tick();
   eq('and the first tap counts it, with no form and nothing of the last job\'s',
@@ -1016,16 +1050,21 @@ const OUTLETS = { name: 'Outlets', label: 'Outlets', category: 'Electrical', flo
     [0, [['Switches', '', '', 'material']]]);
 }
 {
-  // the count was armed FROM THE FORM under the name he had typed in the box:
-  // the box shows that count's name, so another job empties it
+  // the count was armed FROM THE FORM with Count pressed again while
+  // counting: the box shows that count's name (picked up from another tool
+  // it starts empty), so another job empties it
   const p = new Project(); p.loadFrom(jobA());
   const r = countRig(p);
-  r.c.options.pendingName = 'Outlets';
+  r.answer = { spec: { ...OUTLETS, name: 'Doors', label: 'Doors' } };
+  await r.c.setMode('count');
+  eq('Count picked up from Pan: the box starts empty', r.c.options.pendingName, '');
   r.answer = { spec: { ...OUTLETS } };
   await r.c.setMode('count');
-  eq('armed from the form, counted under its name', [r.c.mode, r.c.countNamed], ['count', 'Outlets']);
+  eq('armed from the form again, in Count: the box shows its name, counted under it',
+    [r.c.mode, r.c.options.pendingName, r.c.countNamed], ['count', 'Outlets', 'Outlets']);
+  const told = r.told;
   p.loadFrom(jobB());
-  eq('another job empties the box that shows it', [r.c.options.pendingName, r.told], ['', 1]);
+  eq('another job empties the box that shows it', [r.c.options.pendingName, r.told - told], ['', 1]);
 }
 {
   // ...and the same when a tap with nothing to go on asked the form
@@ -1036,9 +1075,10 @@ const OUTLETS = { name: 'Outlets', label: 'Outlets', category: 'Electrical', flo
   r.c._addCountPoint([1, 1]); await tick();
   eq('the tap asked, and counts under the answer\'s name',
     [r.asked, p.measurements[0].map(m => m.name), r.c.countNamed], [1, ['Outlets'], 'Outlets']);
-  r.c.options.pendingName = 'Outlets';      // the box shows the name counted
+  eq('...and the form put that name in the box', r.c.options.pendingName, 'Outlets');
+  const told = r.told;
   p.loadFrom(jobB());
-  eq('another job empties that box too', [r.c.options.pendingName, r.told], ['', 1]);
+  eq('another job empties that box too', [r.c.options.pendingName, r.told - told], ['', 1]);
 }
 // A form left up while another job comes in -- a .takeoff dropped on the
 // window, the portal handing one over; neither waits for a form. Answered
@@ -1084,7 +1124,164 @@ const scaled = j => ({ ...j, metadata: { ...j.metadata, pixels_per_foot: 50, dpi
     [(p.measurements[0] || []).length, p._undo.length], [0, 0]);
 }
 
-// ═══ 10. a file's words are printed, never made markup ═════════════════════
+// ═══ 10. the Count bar: Undo, Redo, and Return in the Item box ══════════
+console.log('\n-- the Count bar --');
+{
+  const src = await readFile(new URL('../js/main.js', import.meta.url), 'utf-8');
+  const fn = name => {
+    const i = src.indexOf(`function ${name}(`);
+    const j = src.indexOf('\n}\n', i);
+    return i < 0 ? '' : src.slice(src.lastIndexOf('\n', i) + 1, j + 2);
+  };
+  ok('the Count bar\'s buttons follow the history, as the top bar\'s do',
+    /app\.project\.addEventListener\('history-changed', \(\) => syncCountHistoryButtons\(\)\);/.test(src));
+  // main.js's own listeners on the job that keep the bars' Undo and Redo
+  // true, lifted by text and run below against the real Project: another
+  // job empties the history and says nothing on 'history-changed'.
+  const jobListeners = src.split('\n').filter(l => /^app\.project\.addEventListener\('(history-changed|reset)', \(\) => .*\);$/.test(l)
+    && /sync(Count)?HistoryButtons/.test(l));
+  ok('another job puts both bars\' Undo and Redo right (main.js listens for \'reset\')',
+    jobListeners.some(l => l.includes("'reset'") && l.includes('syncHistoryButtons()')
+      && l.includes('syncCountHistoryButtons()')), jobListeners.join('\n'));
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf-8');
+  ok('the top bar\'s Undo and Redo are data-act buttons, the same dispatcher',
+    /data-act="undo" id="undoBtn"/.test(html) && /data-act="redo" id="redoBtn"/.test(html));
+  const doc = stubDocument();
+  const bar = doc.add('div', 'toolOpts');
+  bar.hidden = true;
+  doc.add('div', 'menus');
+  const canvasEl = doc.add('canvas', 'canvas');
+  // What a browser does on a mouse press: the pressed button takes the
+  // keyboard (Safari does not, for a finger -- the case that hid this).
+  doc.addEventListener('mousedown', ev => { if (ev.target.tagName === 'BUTTON') ev.target.focus(); }, true);
+  // The document's own keydown (main.js): its Escape closes the revisions
+  // panel, clears an overlay, takes an older drawing to the newest.
+  const docKeys = [];
+  doc.addEventListener('keydown', ev => docKeys.push(ev.key));
+  const was = globalThis.document;
+  globalThis.document = doc;
+  try {
+    const p = new Project(); p.loadFrom(jobA());
+    const r = countRig(p);
+    const c = r.c;
+    const ran = [];
+    const topBar = [];
+    const env = {
+      $: id => doc.byId(id), controller: c, D: Dialogs, MARKUP_TOOLS, requestDraw() {},
+      TILE_SIZE_OPTIONS: () => [], TILE_PATTERN_OPTIONS: () => [], placeToolOptions() {},
+      app: { project: p }, document: doc,
+      // what the top bar's Undo and Redo run (safeRun -> runAction)
+      safeRun: act => { ran.push(act); if (act === 'undo') p.undo(); if (act === 'redo') p.redo(); },
+      // the top bar's own (not lifted: it reads index.html's buttons)
+      syncHistoryButtons: () => topBar.push([p.canUndo, p.canRedo]),
+    };
+    const names = Object.keys(env);
+    const lifted = new Function(...names, `${fn('syncToolOptions')}\n${fn('syncCountHistoryButtons')}\n`
+      + `${fn('wireMenus')}\n${jobListeners.join('\n')}\n`
+      + 'return { syncToolOptions, syncCountHistoryButtons, wireMenus };')(
+      ...names.map(k => env[k]));
+    lifted.wireMenus();
+    r.answer = { spec: { ...OUTLETS } };
+    await c.setMode('count');
+    lifted.syncToolOptions('count');
+    const buttons = () => bar.descendants().filter(e => e.tagName === 'BUTTON');
+    eq('the Count bar holds Undo and Redo', buttons().map(b => [b.textContent, b.dataset.act]),
+      [['↶ Undo', 'undo'], ['↷ Redo', 'redo']]);
+    ok('finger-sized: at least 40 px each way', buttons().length === 2 && buttons().every(b =>
+      parseFloat(b.style.minHeight) >= 40 && parseFloat(b.style.minWidth) >= 40));
+    eq('nothing to take back yet: both off', buttons().map(b => b.disabled), [true, true]);
+    c._addCountPoint([10, 10]); c._addCountPoint([20, 10]); c._addCountPoint([30, 10]);
+    eq('three taps: Undo on, Redo off', buttons().map(b => b.disabled), [false, true]);
+    if (buttons().length === 2) doc.realPress(buttons()[0], 'touch');
+    eq('a real press on the bar\'s Undo runs the top bar\'s Undo', ran, ['undo']);
+    eq('...which takes the last mark back', p.measurements[0].map(m => m.points.length), [2]);
+    eq('the bar is still up, Redo now on', [bar.hidden, buttons().map(b => b.disabled)], [false, [false, false]]);
+    r.asked = 0;
+    c._addCountPoint([40, 10]); await tick();
+    eq('and the next tap counts, on the same item, with no form',
+      [r.asked, p.measurements[0].map(m => m.points.length)], [0, [3]]);
+    p.undo();
+    if (buttons().length === 2) doc.realPress(buttons()[1], 'mouse');
+    eq('Redo, pressed with a mouse', ran, ['undo', 'redo']);
+    // Left on the button, the keyboard's Space or Return pressed it again
+    // and took another step, with nothing on screen to say why.
+    eq('...and the press hands the keyboard back to the drawing', doc.activeElement === canvasEl, true);
+    if (buttons().length === 2) doc.realPress(buttons()[0], 'mouse');
+    eq('Undo, pressed with a mouse: the keyboard is the drawing\'s again',
+      [ran.slice(-1)[0], doc.activeElement === canvasEl], ['undo', true]);
+    p.redo();
+    const box = bar.descendants().find(e => e.tagName === 'INPUT');
+    box.focus();
+    box.value = 'Switches';
+    for (const l of box._l) if (l.t === 'input') l.fn.call(box, { type: 'input', target: box });
+    eq('typing in the box is the name', c.options.pendingName, 'Switches');
+    for (const key of ['Enter', 'Escape']) {
+      box.focus();
+      const ev = doc.dispatch(box, 'keydown', { key });
+      eq(`${key === 'Enter' ? 'Return' : 'Escape'}: the box lets go of the keyboard, keeping the name`,
+        [doc.activeElement === box, !!ev.defaultPrevented, c.options.pendingName], [false, true, 'Switches']);
+    }
+    eq('...and neither key goes on to the document\'s own Escape and Return', docKeys, []);
+    // Another job, Count still in hand (open_in_edit_mode, the portal's
+    // hand-over): its history is empty, and so are both bars' buttons.
+    c._addCountPoint([50, 10]);
+    eq('set-up: something to undo', buttons().map(b => b.disabled), [false, true]);
+    topBar.length = 0;
+    p.loadFrom(jobB());
+    eq('another job: the Count bar\'s Undo and Redo are off', [c.mode, buttons().map(b => b.disabled)],
+      ['count', [true, true]]);
+    eq('...and say there is nothing', buttons().map(b => b.title), ['Nothing to undo', 'Nothing to redo']);
+    eq('...and the top bar\'s are put right too', topBar.slice(-1), [[false, false]]);
+    lifted.syncToolOptions('area');
+    eq('no Undo or Redo in another tool\'s bar', buttons().length, 0);
+  } finally {
+    globalThis.document = was;
+  }
+
+  // Where the bar is parked (placeToolOptions, lifted by text), on an iPad
+  // in landscape: 1024 wide, the sheets panel to 194, the Items panel from
+  // 724, the Count bar 336 wide hanging from the Count button at 434.
+  const rect = o => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, ...o });
+  const geo = { chromeOpen: false };
+  const btn = { getBoundingClientRect: () => (geo.chromeOpen
+    ? rect({ left: 434, top: 39, bottom: 79 }) : rect({ left: 434, top: -187, bottom: -147 })) };
+  const els = {
+    toolOpts: { hidden: false, offsetWidth: 336, style: {} },
+    toolButtons: { querySelector: () => btn },
+    viewToolButtons: { querySelector: () => null },
+    markupButtons: { querySelector: () => null },
+    stage: { getBoundingClientRect: () => rect({ left: 194, right: 720, top: 0 }) },
+    chrome: { getBoundingClientRect: () => (geo.chromeOpen ? rect({ top: 0, bottom: 226 }) : rect({ top: -226, bottom: 0 })) },
+    app: { getBoundingClientRect: () => rect({ width: 1024, height: 768, right: 1024, bottom: 768 }) },
+  };
+  const placeToolOptions = new Function('$', 'document', `${fn('placeToolOptions')}\nreturn placeToolOptions;`)(
+    id => els[id], { getElementById: id => els[id] });
+  const optsBar = els.toolOpts;
+  placeToolOptions('count');
+  eq('the Count bar ends over the sheet, not over the Items panel\'s head',
+    parseFloat(optsBar.style.left) + optsBar.offsetWidth <= 720 - 6, true);
+  eq('...and, the toolbars away, sits at the top of the sheet', parseFloat(optsBar.style.top), 6);
+  geo.chromeOpen = true;
+  placeToolOptions('count');
+  ok('the toolbars pulled down over the sheet: the bar hangs below the whole stack, where it can be reached',
+    parseFloat(optsBar.style.top) >= 226, `top ${optsBar.style.top}`);
+  // ...asked again once the slide is over (syncChrome asks at its start)
+  const m = /\$\('chrome'\)\.addEventListener\('transitionend', [\s\S]*?\n\}\);\n/.exec(src);
+  ok('main.js parks the bar again when the toolbars have finished sliding', !!m);
+  if (m) {
+    const heard = {};
+    const placed = [];
+    const chromeEl = { addEventListener: (t, f) => { heard[t] = f; } };
+    new Function('$', 'placeToolOptions', 'controller', m[0])(
+      id => (id === 'chrome' ? chromeEl : null), mode => placed.push(mode), { mode: 'count' });
+    heard.transitionend({ target: chromeEl, propertyName: 'transform' });
+    heard.transitionend({ target: {}, propertyName: 'transform' });          // a button inside it
+    heard.transitionend({ target: chromeEl, propertyName: 'box-shadow' });
+    eq('...on the stack\'s own slide, and nothing else', placed, ['count']);
+  }
+}
+
+// ═══ 11. a file's words are printed, never made markup ═════════════════════
 // A measurement's cost_type is whatever its file says, and the Report Center
 // puts the report into the page with innerHTML (the print window: with
 // document.write). Inside the portal that page is on the portal's own site.
