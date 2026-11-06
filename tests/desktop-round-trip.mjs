@@ -9,14 +9,19 @@
 //   2. THIS APP opens that file and must price it exactly as the desktop
 //      does — every counted item and quantity, the Report's rows, which
 //      drawing each sheet counts from, the sheets a revision added, where
-//      every pin points, what every tile says.
+//      every pin points, what every tile says, and the picture it laid over
+//      A6.0 as the overlay to compare (3.06): the sheet's record, its look,
+//      the flagged picture.
 //   3. It then EDITS: the first takeoff on A5.0's newest drawing (booking
 //      it), a count on the ADDED sheet A7.0 (its own drawing must be
 //      takeable), and DELETES A1.0 — the first sheet, holding the wall's
-//      master — so every index after it moves. Saved.
+//      master — so every index after it moves. Saved. Then it deletes that
+//      wall from the Items list and saves again: the desktop must reopen it
+//      with no shape of the wall left to heal back into the bid.
 //   4. The DESKTOP reopens what this app saved, asks nothing, and reads back
-//      every total, every sheet_origin and every pin exactly as this app
-//      left them — and its Delete Revision removes the untouched sheet that
+//      every total, every sheet_origin, every pin and the overlay exactly as
+//      this app left them (the overlay put up again in its look) — and its
+//      Delete Revision removes the untouched sheet that
 //      revision added, and no original sheet.
 //
 // Needs the desktop source and its Python (PyQt5, PIL); SKIPS otherwise.
@@ -127,12 +132,38 @@ function webSummary(project) {
     }
   }
   groups.sort();
+  // Each sheet's saved overlay record, by label, as the desktop driver
+  // reports it (overlays()): what it compares, its tint, fade and look, and
+  // for a picture whether the picture on that sheet still carries its flag.
+  const overlays = {};
+  for (const [k, st] of Object.entries(md.page_overlays || {})) {
+    const p = Number(k);
+    const rec = { color: (st.color || []).map(c => r4(Number(c))), alpha: st.alpha ?? null,
+      mode: st.mode ?? null, invert: st.invert ?? null, cutoff: st.cutoff ?? null };
+    if (st.image_id) {
+      const pics = (project.annotations[p] || []).filter(a => a.subtype === 'cad'
+        && a.etype === 'image' && String(a.id) === String(st.image_id));
+      Object.assign(rec, { kind: 'picture', matched: !!st.matched,
+        flagged: pics.map(a => !!a.as_overlay) });
+    } else if (st.rev_id != null) {
+      Object.assign(rec, { kind: 'revision', of: model.revName(st.rev_id) });
+    } else {
+      const op = st.overlay_page;
+      Object.assign(rec, { kind: 'sheet', of: Number.isInteger(op) && op >= 0 && op < n ? labs[op] : null });
+    }
+    overlays[lab(p)] = rec;
+  }
+  const byLabel = Object.fromEntries(Object.entries(overlays)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
   return { labels: labs, origin, book, counted, sums, estimate, marks, tiles, newest, groups,
-    revisions: model.revs.map(r => model.revName(r.id)) };
+    overlays: byLabel, revisions: model.revs.map(r => model.revName(r.id)) };
 }
 
 const SAME = ['labels', 'origin', 'book', 'counted', 'sums', 'estimate', 'marks', 'tiles',
-  'newest', 'groups', 'revisions'];
+  'newest', 'groups', 'overlays', 'revisions'];
+// The overlay the desktop lays over A6.0 in `make`, as it must come back.
+const A6_OVERLAY = { color: [1, 0.3, 0.3], alpha: 0.5, mode: 'original', invert: true, cutoff: 180,
+  kind: 'picture', matched: false, flagged: [true] };
 
 const dir = await mkdtemp(path.join(tmpdir(), 'ptt-roundtrip-'));
 try {
@@ -144,6 +175,8 @@ try {
     JSON.stringify(d1.origin));
   ok('and its takeoff is on revisions', d1.counted.some(r => r[4]) && Object.keys(d1.book).length >= 2,
     JSON.stringify(d1.book));
+  eq('and it laid a picture over A6.0 as the overlay, flagged, in a look of its own',
+    d1.overlays, { 'A6.0': A6_OVERLAY });
 
   // ── 2. this app opens it and prices it the same ──
   console.log('\n-- 2. this app opens it: the same job, the same price --');
@@ -215,11 +248,40 @@ try {
   });
   await writeFile(savedPath, new Uint8Array(await blob.arrayBuffer()));
 
+  // ── 3b. ...and again with the wall deleted from the Items list ──
+  // The list's Delete used to take the item off ONE sheet: its runs stayed
+  // on the others, and the desktop's open-time heal (one_main_shape) made
+  // the first of them the item again -- the deleted wall, back in the bid.
+  // Now every shape goes, so the desktop has nothing to heal.
+  console.log('\n-- 3b. this app deletes the multi-sheet wall from the Items list, saves again --');
+  const wallRow = [...project.allItems()].find(([, m]) => m.name === 'Footing' && !m.group_child);
+  ok('the wall is still a multi-sheet item before the delete', !!wallRow
+    && [...project.allItems()].filter(([, m]) => m.group_id === wallRow[1].group_id).length === 2);
+  project.removeItems([wallRow[1]._uid]);
+  eq('no shape of the wall is left on any sheet',
+    [...project.allItems()].filter(([, m]) => m.group_id === wallRow[1].group_id).length, 0);
+  const w3 = webSummary(project);
+  const deletedPath = path.join(dir, 'web-deleted.takeoff');
+  const blob3 = await writeProject({
+    metadata: project.buildSaveMetadata(),
+    pageSources: store.saveSources(),
+    revisionSources: store.saveRevisionSources(),
+  });
+  await writeFile(deletedPath, new Uint8Array(await blob3.arrayBuffer()));
+  const d4 = await desktop('check', deletedPath);
+  for (const k of SAME) eq(`reopened after the list's Delete: ${k}`, d4[k], w3[k]);
+  eq('the desktop healed nothing back into the bid: no wall', d4.groups, []);
+  eq('...and asked nothing', d4.asked, []);
+
   // ── 4. the desktop reopens what this app saved ──
   console.log('\n-- 4. the desktop reopens it --');
   const d2 = await desktop('check', savedPath);
   for (const k of SAME) eq(`reopened on the desktop: ${k}`, d2[k], w2[k]);
   eq('opening asked nothing (nothing to repair, nothing left out)', d2.asked, []);
+  eq('the picture overlay came back on A6.0 -- record, flag and look -- moved up a row with its sheet',
+    d2.overlays, { 'A6.0': A6_OVERLAY });
+  eq('...and arriving on A6.0 puts it up: a picture, Original colours, inverted, cut off at 180',
+    d2.overlayUp, { 'A6.0': [true, true, 'original', true, 180] });
   eq('Delete Revision would remove only what the revisions added', d2.plans, {
     'ASI 1': { added: ['A2.5'], drop: [], keep: ['A2.5'] },
     'REV 2': { added: ['A7.0', 'A8.0'], drop: ['A8.0'], keep: ['A7.0'] },

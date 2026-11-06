@@ -98,28 +98,48 @@ for await (const file of walk(ROOT)) {
     // there is no way to know how long without reading it -- one request,
     // which matters when the file is read over the network in ranges.
     //
-    // It used to be a flat 256 KB + 20 KB a set. The metadata block is the
-    // job's own items and notes, and on a busy job it is 765 KB by itself,
-    // so the flat number failed a job whose reader was doing nothing wrong
-    // -- and a test that is always red guards nothing.
+    // It used to be a flat 256 KB + 20 KB a set. But the metadata block also
+    // carries the annotations, and a picture pasted or dropped onto a sheet
+    // is stored there inline, as base64 PNG: on one real job two pasted
+    // screenshots are 746 KB of a 765 KB block, and one project's pictures
+    // reach 51.6 MB. So the flat number failed a job whose reader was doing
+    // nothing wrong -- and a test that is always red guards nothing.
+    //
+    // Everything here comes from the file itself, through `fh`, never from
+    // what the reader returned: a reader that misread its own page index
+    // must not be the thing that decides where its reads were allowed.
     const head = Buffer.alloc(MAGIC.length + 8);
     await fh.read(head, 0, head.length, 0);
+    const pageCount = head.readUInt32LE(MAGIC.length);
     const metaLen = head.readUInt32LE(MAGIC.length + 4);
-    const mainEnd = opened.pages.length
-      ? opened.pages[opened.pages.length - 1].offset + opened.pages[opened.pages.length - 1].size
+    const index = Buffer.alloc(pageCount * 12);
+    await fh.read(index, 0, index.length, head.length + metaLen);
+    const filePages = [];
+    for (let i = 0; i < pageCount; i++) {
+      filePages.push({ offset: Number(index.readBigUInt64LE(i * 12)),
+        size: index.readUInt32LE(i * 12 + 8) });
+    }
+    const misread = filePages.findIndex((p, i) => !opened.pages[i]
+      || opened.pages[i].offset !== p.offset || opened.pages[i].size !== p.size);
+    if (opened.pages.length !== pageCount || misread !== -1) {
+      fail(`${path.basename(file)}: the reader's page index differs from the file's `
+        + `(${opened.pages.length} pages read, ${pageCount} in the file`
+        + `${misread !== -1 ? `; first difference at page ${misread + 1}` : ''})`);
+    }
+    const mainEnd = filePages.length
+      ? filePages[filePages.length - 1].offset + filePages[filePages.length - 1].size
       : 0;
     const tablePos = mainEnd + REVS_MAGIC.length + 4;
     const tableMax = Math.min(size - tablePos, revCount * 4 * (1 + 4096));
-    const budget = head.length + metaLen + opened.pageCount * 12
+    const budget = head.length + metaLen + pageCount * 12
       + REVS_MAGIC.length + 4 + tableMax;
     if (openBytes > budget) {
-      fail(`${path.basename(file)}: opening read ${(openBytes / 1024).toFixed(0)} KB, `
-        + `over the ${(budget / 1024).toFixed(0)} KB its header, metadata, page index `
-        + `and revision table need`);
+      fail(`${path.basename(file)}: opening read ${openBytes} B, over the ${budget} B `
+        + `its header, metadata, page index and revision table need`);
     }
 
     // Not one sheet pixel. No read during the open may touch a main sheet.
-    const touched = opened.pages.filter(p => stats.ranges.some(
+    const touched = filePages.filter(p => stats.ranges.some(
       ([a, b]) => a < p.offset + p.size && b > p.offset)).length;
     if (touched) {
       fail(`${path.basename(file)}: the open read into ${touched} sheet(s)' pixels`);
@@ -135,10 +155,8 @@ for await (const file of walk(ROOT)) {
       fail(`${path.basename(file)}: the open read ${past} B of revision pixels, more than `
         + `the size table's bounded over-read`);
     }
-    const tailBytes = size - mainEnd;
-    if (openBytes > tailBytes && tailBytes > 0 && openBytes > budget) {
-      fail(`${path.basename(file)}: the open read more than the whole revision tail`);
-    }
+    // (The old "the open read more than the whole revision tail" check is
+    // gone: it could only fire after the budget above had already failed.)
 
     // ONE REVISION SHEET. Pick the first version of the first sheet that has
     // one, and read exactly it.

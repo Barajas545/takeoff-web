@@ -6,7 +6,10 @@ desktop decides which, item by item, in a handful of PDFCacheViewer METHODS
 (working_version_of, item_on_drawing, run_counts_towards, item_counts_towards,
 _counted_qty, _counted_quantities, totals_effect, _book_first_takeoff, ...).
 The browser port must reach the same totals on the same file, or the same job
-is priced twice, differently.
+is priced twice, differently. The same goes for what a DELETE takes
+(GLPageWidget.delete_item / delete_shapes / _drop_shape, and the Items list's
+question in _on_item_delete) and what a job switch leaves of the count tool
+(_drop_per_project_reads): both write the file, so both are lifted too.
 
 So the rule is not re-typed here. The methods are lifted out of
 pdf_fast_viewer.py BY TEXT -- through `ast`, so a method is exactly its own
@@ -33,6 +36,8 @@ A gap fails with the missing names, never with a NameError from a line inside
 Usage:
     python counting-python-truth.py --scenarios      > truth.json
     python counting-python-truth.py a.takeoff b.takeoff > truth.json
+    python counting-python-truth.py --reopen < saved.json  (the desktop
+        opening what the browser saved: which totals its open re-adds)
 PTT_DESKTOP_SRC must point at pdf_fast_viewer.py; tests/revision-counting.mjs
 passes it through.
 """
@@ -41,6 +46,7 @@ import copy
 import json
 import math
 import os
+import random
 import re
 import struct
 import sys
@@ -77,6 +83,13 @@ WIN_METHODS = [
     "_tag_asked_booking", "_lone_uncounted_sheets", "_left_out_sentence",
     "_lone_words", "_amount_words", "_totals_gain_text",
     "_watch_counted_takeoff", "_retract_stale_watch",
+    # Delete from the Items list: the question, word for word, and what a
+    # Yes deletes. _ask_delete_here is the SHEET chip's three-way question;
+    # with the list not on one sheet (always, in the browser: it has no
+    # chip yet) it answers None and the plain question is asked.
+    "_on_item_delete", "_ask_delete_here",
+    # A job switch: the count held for the last job is put down.
+    "_drop_per_project_reads",
 ]
 # The stand-in window's DATA and the side effects that move no number.
 WIN_STUBS = {
@@ -92,14 +105,49 @@ WIN_STUBS = {
     # about totals that have moved since is never appended to): a record
     # of the line, no number
     "_note_money_line",
+    # Only the SHEET chip's three-way question reads the shapes on screen;
+    # with the list not on one sheet it is never reached (the stand-in
+    # raises if it is).
+    "_shapes_on_screen",
+    # What a job switch forgets that is not the count: a marking run, the
+    # source PDF, the vision readings. None of it moves a number, and the
+    # stand-ins record nothing. The Item box is the window's.
+    "_detail_next", "_end_manual_details", "_source_pdf_path",
+    "_vision_callouts", "tool_name_box",
 }
 
 # GLPageWidget: the item's drawing, and the multi-shape arithmetic.
 GL_METHODS = ["item_rev_id", "_measurement_group", "_sync_group",
-              "_shape_counts", "_page_of_item"]
+              "_shape_counts", "_page_of_item",
+              # Delete: the whole item (delete_item), one shape
+              # (delete_selected_measurement -> _drop_shape) and the shapes
+              # on one sheet (delete_shapes), with the multi-shape item kept
+              # whole: a run re-adds its master, a master hands it on.
+              "delete_item", "delete_shapes", "delete_selected_measurement",
+              "_drop_shape", "_promote_child", "_group_master",
+              # the count tool's held count, put down on a job switch
+              "forget_armed_count", "_pending_name"]
+# Class-level names lifted with the methods (assignments, not defs).
+GL_ATTRS = ["_PROMOTE_KEYS"]
 GL_STUBS = {"_measurements", "_current_page", "_main_window", "_undo_stack",
             "current_page", "viewing_rev_id",
-            "recompute_framing", "tag_undo_top", "update"}
+            "recompute_framing", "tag_undo_top", "update",
+            # Delete's bookkeeping: an undo level counted, the selection and
+            # isolation it clears, the signals it emits -- no number.
+            "_push_undo", "_isolation_saved", "_sel_meas", "_sel_vert_idx",
+            "_drag_active", "selection_changed", "measurement_changed",
+            "is_isolated", "isolated_master", "exit_isolation",
+            # The framing engine's: a framed wall re-deriving its openings
+            # when a pin goes, and which walls use them. `_framing` is None
+            # here, so the last two are never reached (they raise if they
+            # are), and refresh_walls_for_pin only records the call: the
+            # browser has no framing engine, and that is a known gap.
+            "refresh_walls_for_pin", "_uses_openings", "_framing_shapes",
+            # the count tool's state, as a job switch reads and clears it
+            "_mode", "_pending_item_name", "set_detail_zones",
+            "_count_target", "_count_spec", "_count_answers",
+            "_count_category", "_count_named", "_count_left",
+            "_last_floor", "_last_category", "_last_sub", "_last_cost_type"}
 
 # Module-level names the TEST itself calls. Everything they and the methods
 # reach is found by the closure walk below, not listed by hand.
@@ -115,16 +163,26 @@ CLASS_ALIASES = {"GLPageWidget": "GL"}
 
 # Module-level imports a lifted body may reach, and what provides them.
 class _QMessageBox:
-    """The one Qt name the questions reach: what was asked is recorded,
-    and the answer is whatever the scenario says."""
-    Yes, No = 1, 0
+    """The one Qt name the questions reach: what was asked is recorded --
+    title, text, the buttons and the default one -- and the answer is
+    whatever the scenario says. Qt's own values, so `Yes | No` is a set of
+    two buttons that can be told from `Yes` alone."""
+    Yes, No = 0x4000, 0x10000
     asked = []
-    answer = 0
+    answer = No
+
+    @staticmethod
+    def _names(flags):
+        return [n for n, v in (("Yes", 0x4000), ("No", 0x10000))
+                if int(flags or 0) & v]
 
     @staticmethod
     def question(*a, **k):
-        _QMessageBox.asked.append([str(a[1]) if len(a) > 1 else "",
-                                   str(a[2]) if len(a) > 2 else ""])
+        _QMessageBox.asked.append([
+            str(a[1]) if len(a) > 1 else "",
+            str(a[2]) if len(a) > 2 else "",
+            _QMessageBox._names(a[3]) if len(a) > 3 else [],
+            _QMessageBox._names(a[4]) if len(a) > 4 else []])
         return _QMessageBox.answer
 
     @staticmethod
@@ -133,8 +191,22 @@ class _QMessageBox:
                                    str(a[2]) if len(a) > 2 else ""])
 
 
+def _log_exception(where=""):
+    """The desktop writes a caught error to its crash log and carries on.
+    Here it is raised again: a lifted body that swallowed an error (a stub
+    nobody declared, say) would otherwise leave a half-done answer that
+    looks like the desktop's."""
+    raise
+
+
+# Module-level DEFS a lifted body reaches that are stood in for, not lifted.
+MODULE_STUBS = {"_log_exception": _log_exception}
+
 PROVIDED_IMPORTS = {"re": re, "math": math, "json": json, "os": os,
-                    "QMessageBox": _QMessageBox}
+                    "QMessageBox": _QMessageBox,
+                    # the framing engine, absent: as on a desktop where
+                    # framing.py did not import -- and as in the browser
+                    "_framing": None}
 
 
 with open(SRC, "r", encoding="utf-8") as fh:
@@ -179,6 +251,15 @@ def _method(cls, name):
     for n in cls.body:
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) \
                 and n.name == name:
+            return n
+    raise SystemExit("could not find %s.%s in %s" % (cls.name, name, SRC))
+
+
+def _attr(cls, name):
+    """A class-level assignment (`_PROMOTE_KEYS = (...)`), by its name."""
+    for n in cls.body:
+        if isinstance(n, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == name for t in n.targets):
             return n
     raise SystemExit("could not find %s.%s in %s" % (cls.name, name, SRC))
 
@@ -282,19 +363,22 @@ def closure_problems():
             problems.append("PDFCacheViewer.%s reads self.%s, which is "
                             "neither lifted nor a declared stub"
                             % (fn.name, a))
-        for a in sorted((gl | gl_self) - set(GL_METHODS) - GL_STUBS):
+        for a in sorted((gl | gl_self) - set(GL_METHODS) - set(GL_ATTRS)
+                        - GL_STUBS):
             problems.append("%s.%s reads the canvas's .%s, which is neither "
                             "lifted nor a declared stub"
                             % ("PDFCacheViewer" if kind == "win"
                                else "GLPageWidget", fn.name, a))
         want |= _free_names(fn)
+    for n in GL_ATTRS:
+        want |= _free_names(_attr(gl_cls, n))
     seen, queue, lifted = set(), sorted(want), []
     while queue:
         nm = queue.pop(0)
         if nm in seen:
             continue
         seen.add(nm)
-        if nm in CLASS_ALIASES:
+        if nm in CLASS_ALIASES or nm in MODULE_STUBS:
             continue
         node = TOP.get(nm)
         if node is None:
@@ -326,18 +410,22 @@ def _module_source():
     return "\n".join(_text(n) for n in nodes)
 
 
-def _class_source(name, cls, methods, stubs_doc):
+def _class_source(name, cls, methods, stubs_doc, attrs=()):
     body = ["class %s:" % name,
             "    %r" % stubs_doc]
+    for a in attrs:
+        body.append(textwrap.indent(_text(_attr(cls, a)), "    "))
     for m in methods:
         body.append(textwrap.indent(_text(_method(cls, m)), "    "))
     return "\n".join(body)
 
 
 NS = dict(PROVIDED_IMPORTS)
+NS.update(MODULE_STUBS)
 exec(compile(_module_source(), "<extracted module names>", "exec"), NS)
 exec(compile(_class_source("GL", _class("GLPageWidget"), GL_METHODS,
-                           "the canvas: lifted methods + declared stubs"),
+                           "the canvas: lifted methods + declared stubs",
+                           attrs=GL_ATTRS),
              "<extracted GLPageWidget>", "exec"), NS)
 NS["GLPageWidget"] = NS["GL"]
 exec(compile(_class_source("WinBase", _class("PDFCacheViewer"), WIN_METHODS,
@@ -368,6 +456,33 @@ class _Panel:
     def refresh(self):
         pass
 
+    def sheet_only(self):
+        # The Items list is not on one sheet: the browser has no SHEET chip
+        # yet, so the desktop's three-way question is never its question.
+        return False
+
+
+class _Sig:
+    def __init__(self):
+        self.n = 0
+
+    def emit(self, *a):
+        self.n += 1
+
+
+class _Box:
+    """The Item box (ToolNameBox): what a job switch reads and empties."""
+    def __init__(self, canvas):
+        self.gl = canvas
+        self.cleared = False
+
+    def clear_name(self):
+        # as the real box does: the canvas's copy of the name goes with it,
+        # and so does the count's own copy of the last name it used
+        self.cleared = True
+        self.gl._pending_item_name = ""
+        self.gl._count_category = ""
+
 
 class Canvas(NS["GL"]):
     def __init__(self, win, meas):
@@ -376,6 +491,49 @@ class Canvas(NS["GL"]):
         self._current_page = 0
         self._undo_stack = []
         self.tags = []
+        # Delete's bookkeeping
+        self.undo_levels = 0
+        self.walls = []
+        self._isolation_saved = None
+        self._sel_meas = None
+        self._sel_vert_idx = -1
+        self._drag_active = False
+        self.selection_changed = _Sig()
+        self.measurement_changed = _Sig()
+        # the count tool, at rest
+        self._mode = "pan"
+        self._pending_item_name = ""
+        self._count_target = self._count_spec = self._count_answers = None
+        self._count_category = self._count_named = ""
+        self._count_left = []
+        self._last_floor = self._last_category = self._last_sub = ""
+        self._last_cost_type = "material"
+
+    def _push_undo(self):
+        self.undo_levels += 1
+
+    def refresh_walls_for_pin(self, pin=None, page=None):
+        # framing: a framed wall re-derives its openings. No framing engine
+        # here or in the browser -- recorded, and nothing moves.
+        self.walls.append([(pin or {}).get("type"), page])
+
+    def _uses_openings(self, master):
+        raise AssertionError("reached only with the framing engine loaded")
+
+    def _framing_shapes(self, m):
+        raise AssertionError("reached only with the framing engine loaded")
+
+    def is_isolated(self):
+        return False
+
+    def isolated_master(self):
+        return None
+
+    def exit_isolation(self):
+        raise AssertionError("not isolated, so never left")
+
+    def set_detail_zones(self, items):
+        pass
 
     def _main_window(self):
         return self._win
@@ -433,6 +591,18 @@ class Win(NS["WinBase"]):
         self.items_panel = _Panel()
         self._unsaved = False
         self.announced = []
+        # what a job switch forgets besides the count
+        self._detail_next = ""
+        self._source_pdf_path = "last-job.pdf"
+        self._vision_callouts = {"0": []}
+        self.tool_name_box = None
+
+    def _shapes_on_screen(self, page_idx, m):
+        raise AssertionError("reached only while the Items list shows one "
+                             "sheet (the SHEET chip)")
+
+    def _end_manual_details(self, msg):
+        pass
 
     def _announce_price(self, text):
         # Kept as given: the desktop may hand a callable that WORDS the
@@ -694,6 +864,188 @@ def truth(scn):
                      for r in rows_],
             "notes": notes}
     out["latest"] = latest
+    out["deletes"] = deletes(scn)
+    return out
+
+
+class _Before:
+    """A fresh job, with every item's place and contents as they were, so a
+    delete can be told as WHAT IT DID: the places emptied, and the items
+    that stayed but changed (a master re-adding, a run taking over)."""
+    def __init__(self, scn):
+        self.win = Win(scn)
+        self.gl = self.win.gl_widget
+        self.was = {}
+        for pg, i, m in _items(self.win):
+            self.was[id(m)] = (pg, i, json.dumps(m, sort_keys=True))
+
+    def at(self, pg, i):
+        return self.gl._measurements[pg][i]
+
+    def delta(self):
+        here = set()
+        changed = []
+        for pg, lst in self.gl._measurements.items():
+            for m in lst or []:
+                if id(m) not in self.was:
+                    raise AssertionError("a delete made an item")
+                p0, i0, j0 = self.was[id(m)]
+                if p0 != pg:
+                    raise AssertionError("a delete moved an item to a sheet")
+                here.add(id(m))
+                if json.dumps(m, sort_keys=True) != j0:
+                    changed.append([pg, i0, copy.deepcopy(m)])
+        gone = sorted([[p, i] for k, (p, i, _j) in self.was.items()
+                       if k not in here])
+        return {"gone": gone, "changed": sorted(changed, key=lambda c: c[:2])}
+
+
+def deletes(scn):
+    """What each Delete takes, on a fresh copy of the job each time:
+
+      shape        the drawing's Delete of ONE shape -- the Delete key, Edit
+                   > Delete Selected, the canvas menu
+                   (delete_selected_measurement -> _drop_shape)
+      item         the Items list's Delete of a row, answered Yes and No:
+                   the question word for word, and what a Yes takes
+                   (_on_item_delete -> delete_item)
+      item-of-run  delete_item handed a RUN: still the whole item
+      shapes       every shape of one item on one sheet at once, runs first
+                   (delete_shapes) -- what a selection of several does
+      selection    shapes of several items on SEVERAL sheets at once: an
+                   item's main shape with a run on another sheet, every run
+                   of an item and not its main shape, and a seeded random
+                   mix. Not a desktop gesture -- its canvas selects one shape
+                   at a time -- but the browser's selection can hold more,
+                   and its Delete of them must be the desktop's own pieces:
+                   one undo level, then _drop_shape on each, the runs first
+                   (delete_shapes' order, across sheets), so an item whose
+                   main shape goes too passes ONCE.
+
+    Each is told by what it did (_Before.delta) and how many undo levels it
+    took, never by the whole store, so a real project's run stays small.
+    """
+    out = []
+    for pg, i, m in _items(Win(scn)):
+        b = _Before(scn)
+        b.gl._current_page = pg
+        b.gl._sel_meas = b.at(pg, i)
+        b.gl.delete_selected_measurement()
+        out.append(dict({"kind": "shape", "page": pg, "i": i,
+                         "undo": b.gl.undo_levels}, **b.delta()))
+        if m.get("group_child"):
+            b = _Before(scn)
+            b.gl.delete_item(b.at(pg, i))
+            out.append(dict({"kind": "item-of-run", "page": pg, "i": i,
+                             "undo": b.gl.undo_levels}, **b.delta()))
+            continue
+        for ans in ("Yes", "No"):
+            b = _Before(scn)
+            _QMessageBox.asked[:] = []
+            _QMessageBox.answer = getattr(_QMessageBox, ans)
+            b.win._on_item_delete(pg, b.at(pg, i))
+            out.append(dict({"kind": "item", "answer": ans, "page": pg,
+                             "i": i,
+                             "asked": [list(x) for x in _QMessageBox.asked],
+                             "said": list(b.win.status_label.said),
+                             "undo": b.gl.undo_levels}, **b.delta()))
+    for pg, lst in Win(scn).gl_widget._measurements.items():
+        gids = []
+        for s in lst or []:
+            gid = s.get("group_id")
+            if gid and gid not in gids:
+                gids.append(gid)
+        for gid in gids:
+            idx = [i for i, s in enumerate(lst) if s.get("group_id") == gid]
+            if len(idx) < 2:
+                continue
+            b = _Before(scn)
+            n = b.gl.delete_shapes(pg, [b.at(pg, i) for i in idx])
+            out.append(dict({"kind": "shapes", "page": pg, "ids": idx, "n": n,
+                             "undo": b.gl.undo_levels}, **b.delta()))
+    for at in _selections(scn):
+        b = _Before(scn)
+        doomed = [(pg, b.at(pg, i)) for pg, i in at]
+        b.gl._push_undo()
+        for pg, s in sorted(doomed, key=lambda d: not d[1].get("group_child")):
+            b.gl._drop_shape(pg, s)
+        out.append(dict({"kind": "selection", "at": [list(x) for x in at],
+                         "n": len(doomed), "undo": b.gl.undo_levels},
+                        **b.delta()))
+    return out
+
+
+def _selections(scn):
+    """The several-sheet selections deletes() takes, each as [(page, i)] in
+    the browser's order (pages ascending, each page in its own order)."""
+    every = sorted((pg, i) for pg, i, _m in _items(Win(scn)))
+    item = {(pg, i): m for pg, i, m in _items(Win(scn))}
+    groups = {}
+    for pg, i in every:
+        gid = item[(pg, i)].get("group_id")
+        if gid:
+            groups.setdefault(gid, []).append((pg, i))
+    out = []
+    for gid, at in groups.items():
+        if len({pg for pg, _i in at}) < 2:
+            continue
+        mains = [a for a in at if not item[a].get("group_child")]
+        runs = [a for a in at if item[a].get("group_child")]
+        if mains:
+            far = [a for a in runs if a[0] != mains[0][0]]
+            if far:
+                out.append(sorted([mains[0], far[0]]))
+        if runs:
+            out.append(runs)
+    rng = random.Random("selection " + str(scn.get("name", "")))
+    for _ in range(3 if len(every) >= 2 else 0):
+        out.append(sorted(rng.sample(every, min(len(every), rng.randint(2, 5)))))
+    return out
+
+
+def job_switch():
+    """The count tool's state when another job comes in, and what is left of
+    it after (_drop_per_project_reads): every combination of the tool, the
+    Item box, the name the clicks were counted under and what is armed."""
+    out = []
+    held = {"type": "count", "name": "Outlets", "points": [[1, 1]]}
+    for mode in ("count", "area"):
+        for box in ("", "Outlets", "  Outlets ", "Switches"):
+            for named in ("", "Outlets"):
+                for armed in ("none", "target", "spec"):
+                    w = Win({"metadata": {}, "pageCount": 1,
+                             "measurements": {"0": [held]}})
+                    g = w.gl_widget
+                    w.tool_name_box = _Box(g)
+                    g._mode = mode
+                    g._pending_item_name = box
+                    g._count_named = named
+                    g._count_category = named
+                    if armed == "target":
+                        g._count_target = g._measurements[0][0]
+                    elif armed == "spec":
+                        g._count_spec = {"name": "Outlets",
+                                         "floor_level": "Level 1"}
+                        g._count_answers = g._count_spec
+                    g._count_left = [g._measurements[0][0]]
+                    g._last_floor, g._last_sub = "Level 3", "Rough-in"
+                    g._last_category, g._last_cost_type = "Electrical", "labor"
+                    w._drop_per_project_reads()
+                    out.append({
+                        "mode": mode, "box": box, "named": named,
+                        "armed": armed,
+                        "after": {
+                            "cleared": w.tool_name_box.cleared,
+                            "box": g._pending_item_name,
+                            "armed": ("target" if g._count_target is not None
+                                      else "spec" if g._count_spec is not None
+                                      else "none"),
+                            "named": g._count_named,
+                            "category": g._count_category,
+                            "lastFloor": g._last_floor,
+                            "lastSub": g._last_sub,
+                            "lastCostType": g._last_cost_type,
+                        }})
     return out
 
 
@@ -993,6 +1345,80 @@ def scenarios():
         },
     })
 
+    # 11. Delete takes what was asked (3.07 round 1 of the browser port):
+    #     a multi-sheet wall with its main shape on one sheet and runs on two
+    #     others (one of them on a revision nothing counts from, so it is in
+    #     no total), an item with two shapes on ONE sheet, a sloped roof and a
+    #     post run whose totals carry perimeter / flat area / feet, a Group
+    #     container with members on two sheets, window and door pins, a lone
+    #     count, a job-wide item, and runs whose main shape is gone.
+    def _slope(name, value, **kw):
+        m = _area(name, value, type="slope_area", pitch=6.0, **kw)
+        return m
+    S.append({
+        "name": "what a delete takes", "pageCount": 4,
+        "metadata": {
+            "page_labels": ["A1.0", "A1.1", "A2.0", "A3.0"],
+            "revisions": [_rev("r-d", "11/01/2026", "ASI 2", 1,
+                               match={"2": 0})],
+        },
+        "measurements": {
+            "0": [_area("Wall M", 65, own_value=10.0, group_id="g-m",
+                        group_count=5, perimeter=40.0, own_perimeter=8.0,
+                        associated_items=[{"name": "Studs", "qty": 0.75,
+                                           "qty_mode": "per_unit",
+                                           "unit": "EA"}],
+                        notes="main", in_group="grp-1"),
+                  {"type": "window", "name": "Window 1", "label": "Window 1",
+                   "points": [[3, 3]], "value": 1, "visible": True,
+                   "win_seq": 1},
+                  {"type": "count", "name": "Outlets", "label": "Outlets",
+                   "points": [[1, 1], [2, 2]], "value": 2, "visible": True}],
+            "1": [_area("Wall M", 20, group_id="g-m", group_child=True,
+                        perimeter=12.0),
+                  _area("Deck", 30, own_value=18.0, group_id="g-d",
+                        group_count=2),
+                  _area("Wall M", 15, group_id="g-m", group_child=True,
+                        perimeter=10.0),
+                  _area("Deck", 12, group_id="g-d", group_child=True),
+                  {"type": "door", "name": "Door 1", "label": "Door 1",
+                   "points": [[4, 4]], "value": 1, "visible": True,
+                   "door_seq": 1}],
+            "2": [_area("Wall M", 20, group_id="g-m", group_child=True,
+                        perimeter=10.0),
+                  _area("Wall M", 9, group_id="g-m", group_child=True,
+                        perimeter=6.0, rev_id="r-d", rev_page=0),
+                  _slope("Roof", 150, own_value=100.0, group_id="g-r",
+                         group_count=2, perimeter=50.0, own_perimeter=40.0,
+                         flat_area=134.0, own_flat=89.4, in_group="grp-1"),
+                  _line("Ghost", 7.0, group_id="g-gone", group_child=True),
+                  # the main shape and the FIRST run on one sheet, a second
+                  # run on the next: deleting both here, the item must pass
+                  # once, straight to the second run -- never through the
+                  # first, whose own notes and colour it would then carry
+                  _line("Beam", 30.0, own_value=12.0, group_id="g-b",
+                        group_count=3),
+                  _line("Beam", 10.0, group_id="g-b", group_child=True,
+                        notes="run note", color=[0.0, 0.0, 1.0, 1.0])],
+            "3": [_slope("Roof", 50, group_id="g-r", group_child=True,
+                         perimeter=10.0, flat_area=44.6),
+                  {"type": "linear_count", "name": "Posts", "label": "Posts",
+                   "points": [[0, 0], [30, 0]], "value": 6, "own_value": 4,
+                   "total_ft": 50.0, "own_total_ft": 30.0, "spacing_in": 60,
+                   "group_id": "g-p", "group_count": 2, "visible": True},
+                  {"type": "linear_count", "name": "Posts", "label": "Posts",
+                   "points": [[0, 5], [20, 5]], "value": 2, "total_ft": 20.0,
+                   "spacing_in": 60, "group_id": "g-p", "group_child": True,
+                   "visible": True},
+                  _line("Ghost", 5.0, group_id="g-gone", group_child=True),
+                  _line("Beam", 8.0, group_id="g-b", group_child=True)],
+            "-1000": [{"type": "group", "name": "Garage", "label": "Garage",
+                       "group_item_id": "grp-1", "visible": True},
+                      {"type": "standalone", "name": "Nails", "qty": 5,
+                       "unit": "box", "visible": True}],
+        },
+    })
+
     # Every scenario in both orders: the order setting changes which drawing
     # is newest, never what counts.
     out = []
@@ -1049,13 +1475,52 @@ def scenario_from_file(path, index):
             "measurements": meas, "order": "date"}
 
 
+def reopen(req):
+    """The desktop OPENING what the browser saved: every multi-shape item is
+    re-added from its runs on every open (_resync_group_totals), and any
+    total that comes out different at all is announced as re-added. Each
+    job is the browser's own JSON text, so a whole number it wrote as `180`
+    is an int here, as it is to the desktop. Returns, per job, the items
+    whose total moved: [group_id, was, now]. And Python's own sum() of each
+    list in `sums`, read the same way."""
+    moved = []
+    for job in req.get("jobs") or []:
+        w = Win(job)
+        gl = w.gl_widget
+        was = {}
+        for lst in gl._measurements.values():
+            for m in lst or []:
+                if m.get("group_id") and not m.get("group_child"):
+                    was[id(m)] = m.get("value")
+        w._resync_group_totals()
+        out = []
+        for lst in gl._measurements.values():
+            for m in lst or []:
+                if id(m) in was and m.get("value") != was[id(m)]:
+                    out.append([m.get("group_id"), was[id(m)], m.get("value")])
+        moved.append(out)
+    # and what a main shape's heir takes over from it (_promote_child)
+    heirs = []
+    for doomed, heir in req.get("promote") or []:
+        Win({"metadata": {}, "pageCount": 1, "measurements": {}}) \
+            .gl_widget._promote_child(doomed, heir)
+        heirs.append(heir)
+    return {"moved": moved, "sums": [sum(v) for v in req.get("sums") or []],
+            "heirs": heirs}
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if args == ["--reopen"]:
+        print(json.dumps(reopen(json.loads(sys.stdin.read()))))
+        sys.stdout.flush()
+        sys.exit(0)
     if args == ["--scenarios"]:
         scns = scenarios()
         print(json.dumps({"lifted": sorted(MODULE_NAMES),
                           "scenarios": [{"input": s, "truth": truth(s)}
-                                        for s in scns]}, indent=1))
+                                        for s in scns],
+                          "jobSwitch": job_switch()}, indent=1))
     else:
         res = []
         for i, p in enumerate(args):
