@@ -1594,7 +1594,10 @@ ok('a newer pick settles an older one still waiting', /currentPick\.abandon\(\)/
     && /putDraft\(draftKey\(app\.fileName, now\.size, app\.draftWho, app\.draftPlan\), work, info\)/.test(body('keepChangesAsDraft'))
     && (main.match(/draftKey\(/g) || []).length === 2 && (main.match(/draftHomeKeys\(/g) || []).length === 1);
   ok('… the word is the portal\'s, set inside the portal only, before the plan opens (either kind)',
-    /if \(embedded\) app\.draftWho = plan\.who \|\| '';\s*if \(plan\.kind === 'file'\) \{/.test(recv)
+    // (the question before work started during the wait is replaced sits between: it comes after the word, so a
+    // Cancel keeps that work as the person's - and nothing between them opens anything)
+    /if \(embedded\) app\.draftWho = plan\.who \|\| '';\s*(?:\/\/[^\n]*\n\s*)*if \(app\.project\.dirty && !\(await D\.confirmDialog\([\s\S]*?\n  \}\n\s*if \(plan\.kind === 'file'\) \{/.test(recv)
+    && !/loadProjectFile\(/.test(recv.slice(recv.indexOf("app.draftWho = plan.who || '';"), recv.indexOf("if (plan.kind === 'file') {")))
     && (main.match(/app\.draftWho = /g) || []).length === 1);
   // Review fix: the portal's "copy" news makes the copy a home of the drafts.
   ok('the save tells handToPortal the sheets composed and the project it is for',
