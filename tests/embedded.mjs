@@ -290,7 +290,7 @@ eq('settings that are not JSON, or a store that refuses: touch', [boot('{not jso
     'IndexedDB plans archive': 'ptt-plans-archive',
     'OPFS kept': KEPT_DIR,
     'lock keep-write': WRITE_LOCK,
-    'cache': 'ptt-web-v17',
+    'cache': 'ptt-web-v18',
     'old portal index': PORTAL_INDEX_KEY,
     'old portal token': PORTAL_TOKEN_KEY,
     'old portal IndexedDB': PORTAL_DB,
@@ -303,7 +303,7 @@ eq('settings that are not JSON, or a store that refuses: touch', [boot('{not jso
     && read('js/core/plans-folder.js').includes("export function idbBackend(name = 'ptt-plans-archive'")
     && read('js/ui/settings.js').includes("const STORAGE_KEY = 'ptt.settings.v1';")
     && main.includes("const RECENT_KEY = 'ptt.recent.v1';") && read('js/ui/catalog.js').includes("const USER_KEY = 'ptt.catalog.user.v1';")
-    && read('sw.js').includes("const CACHE = 'ptt-web-v17';"));
+    && read('sw.js').includes("const CACHE = 'ptt-web-v18';"));
   // and nothing anywhere in the shipped program names one of the portal's
   const files = [];
   const walk = dir => {
