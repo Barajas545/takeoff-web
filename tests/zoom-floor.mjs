@@ -20,7 +20,20 @@
 //     zoom cases and the app's own ZoomFloor host, both lifted out of
 //     main.js by text -- with the desktop's margin and limits, and diffed
 //     after every step: zoom, pan, readout, the zoom he chose, past-Fit, the
-//     raise and every sentence. From the COMMITTED tests/data/zoom-floor-truth.json,
+//     raise, the drawing on screen and every sentence. PAGE TURNS (3.06) go
+//     through main.js's own goToPage, a sheet card's own tap, stepSheet
+//     (Page Down / Up), showSheetVersion and the Items list's jump, against
+//     the desktop's own next_page / prev_page / go_to_page /
+//     show_sheet_version / _on_item_activated: Fit remembered as Fit, the
+//     small sheet raised and the big one back at his zoom, Shift past Fit
+//     kept (onto a reissue on smaller paper too), the box off as 3.05, Fit
+//     Width a number, a newest drawing on other paper, a turn while a
+//     revision decodes, the card of the sheet on screen clicked again
+//     (centred and settled), and a step made while the sheet a turn asked
+//     for is still being decoded ('during': Page Down then Page Up, the
+//     card, Page Down twice, a row whose item is on the sheet just left --
+//     the desktop's turns are synchronous, so there they are one after the
+//     other). From the COMMITTED tests/data/zoom-floor-truth.json,
 //     so it runs on a fresh clone; and live against the desktop source when
 //     it is here, which also fails a stale snapshot.
 //  4. The picture windows (the Diff, a revision page on its own): main.js's
@@ -43,9 +56,22 @@
 //     stops.
 //  8. The app's wiring, by text and by lifting: F fits the drawing ON SCREEN
 //     (a revision on other paper by its own paper), the once-a-session line,
-//     and a landing on a sheet whose Newest is on other paper ends framed on
-//     that drawing (main.js's own goToPage) -- not over a zoom or a drag he
-//     made while it decoded, and not on the next sheet he turned to.
+//     and a landing on a sheet whose Newest is on other paper ends settled on
+//     that drawing (main.js's own goToPage) -- not over a zoom, a pinch or a
+//     drag he made while it decoded, and not on the next sheet he turned to;
+//     a decode he turned past settles nothing; a settle parked for want of a
+//     canvas runs on the first frame that has one, and never over a zoom to
+//     an item; the doors (import, delete, the Items list, Zoom to item, the
+//     Fit Width menu) and 'keep' (the save's re-read, handed to the peer).
+//     And WHILE THE NEXT SHEET DECODES, the drawing up is the last sheet's
+//     (goToPage's shownPage): a card tapped twice, Next and then the card, a
+//     row double-clicked, a turn made with nothing up (a deleted sheet's
+//     neighbour decoding, a sheet that would not decode), a zoom past Fit or
+//     a notch in and out made on the drawing still up, Page Down then Page
+//     Up (the keys and runAction's own arrows), a row or a row menu's Zoom
+//     to item whose item is on the sheet being left -- 'this sheet' asked of
+//     the drawing up AND app.currentPage (onSheetUp), neither alone -- and a
+//     mark is refused there, while a pinch, which is looking, says nothing.
 //
 // The only differences from the desktop are the documented ones: the web's
 // Fit keeps its 16 px margin, and Zoom to item fits the desktop's box inside
@@ -63,7 +89,14 @@
 // desktop keeps half whatever the box says); and, box or no box, they zoom
 // IN until a drawing pixel is 32 screen px, the sheet's own most (the
 // desktop stops at ten times the whole picture, short of the drawing's own
-// pixels in the Diff on a phone).
+// pixels in the Diff on a phone); and a job that opens at Fit Width keeps
+// the top of the sheet in view on the web, where the desktop's is centred
+// (the same zoom; from the first turn on both are centred); and 1 (100%)
+// centres the sheet on the web, as it always has, where the desktop keeps a
+// dragged pan (the same zoom; centred from the next turn on). Not in the
+// differential, on purpose: the web's row click on THIS sheet selects and
+// scrolls to the item at the zoom he has, as it always has (the desktop's
+// double-click zooms there too); a row on another sheet is the desktop's.
 //
 // Run: node tests/zoom-floor.mjs
 import { execFile } from 'node:child_process';
@@ -163,20 +196,53 @@ const ITEM_FN = (() => {
   if (a < 0) return null;
   return MAIN.slice(MAIN.indexOf('() =>', a), MAIN.indexOf('\n  });', a) + 4);
 })();
+// The Items list's row click, word for word (the ItemsPanel host's selectItem).
+const SELECT_ITEM = (() => {
+  const a = MAIN.indexOf('    selectItem: (m, pageIdx, ev) => {');
+  const b = MAIN.indexOf('\n    },\n', a);
+  return a < 0 || b < 0 ? null : MAIN.slice(a, b + 6);
+})();
+// The tools' host: whether the sheet turned to is still opening, and the words.
+const SHEET_OPENING = between('    sheetOpening: () =>', "once it is on screen` : ''),");
+// The thumbnails' tap, word for word: a sheet card (and the Sheets drawer).
+const THUMB_PICK = between('  onPick: idx => goToPage(', '  onPick: idx => goToPage(')?.trim().replace(/,$/, '');
+// drawFrame's parked view: the open and the turn that had no canvas to land in.
+const PARKED = (() => {
+  const a = MAIN.indexOf('  if (pendingFit && pageImage && viewport.measured) {');
+  const b = MAIN.indexOf('if (zoomFloor.turned(pendingTurn.chose)) pendingTurn = null;', a);
+  return a < 0 || b < 0 ? null : MAIN.slice(a, MAIN.indexOf('\n  }\n', b) + 4);
+})();
 const LIFTED = ['shownDrawingSize', 'zoomStopsAtFit', 'applyDefaultZoom',
-  'applyDefaultZoomTo', 'sayZoomFloorOnce', 'pressedByFinger',
+  'applyDefaultZoomTo', 'landOpen', 'sayZoomFloorOnce', 'pressedByFinger',
   // a flip between the versions of a sheet
-  'showSheetVersion', 'clearVersion'];
+  'showSheetVersion', 'clearVersion',
+  // a page turn, and its doors: Page Down / Up, the own drawing, an item
+  'goToPage', 'stepSheet', 'goToPageOwnVersion', 'jumpToItem',
+  // ...and what it asks: whose drawing is up, which job, how it comes up
+  'sheetUp', 'onSheetUp', 'jobNow', 'inLandedJob', 'viewOf', 'leftByChoice'];
+const tick = () => new Promise(res => setTimeout(res, 0));
 
 /**
  * One sheet on screen: a real Viewport and ToolController on a stand-in
  * canvas, the app's own ZoomFloor host and zoom cases from main.js.
  * `desktop` runs the desktop's margin-free Fit and limits, for the diff.
  */
-function rig({ canvas: [w, h], pages, settings: s0 = {} }, { desktop = false, touch = false } = {}) {
+function rig({ canvas: [w, h], pages, settings: s0 = {}, revs = null, newest = true },
+  { desktop = false, touch = false } = {}) {
   const settings = { zoom_out_stops_at_fit: true, wheel_mode: 'zoom', zoom_step_percent: 15,
     default_zoom_mode: 'fit', ...s0 };
   const rect = { left: 0, top: 0, width: w, height: h };
+  // The sheets' other drawings ({page: [[rev_id, [w, h]], ...]}, oldest
+  // first, the last the newest), each in a blob set of its own; and '~flip',
+  // the revision the 'rev' step flips up on whatever sheet is up.
+  const sets = [];
+  const versOf = new Map();
+  for (const [page, list] of Object.entries(revs || {})) {
+    versOf.set(Number(page), list.map(([revId, size]) => {
+      sets.push(size);
+      return { revId, revPage: Number(page), rev: { _setIndex: sets.length - 1 }, label: revId, date: '' };
+    }));
+  }
   const on = {};
   const canvas = { addEventListener: (t, f) => { on[t] = f; }, setPointerCapture() {},
     releasePointerCapture() {}, style: {}, getBoundingClientRect: () => ({ ...rect }),
@@ -188,23 +254,55 @@ function rig({ canvas: [w, h], pages, settings: s0 = {} }, { desktop = false, to
     currentPage: () => st.page, host: {} });
   c.zoomStepPercent = settings.zoom_step_percent;
   c.wheelMode = settings.wheel_mode;
+  const bitmap = set => {
+    const sz = set < 0 ? env.revBitmap && [env.revBitmap.width, env.revBitmap.height] : sets[set];
+    return sz ? { width: sz[0], height: sz[1] } : null;
+  };
+  let img = pages[0] ? { width: pages[0][0], height: pages[0][1] } : null;
   const env = {
     ZoomFloor: ZF.ZoomFloor, zoomFloorLine: ZF.zoomFloorLine, boundingBox,
-    viewport: vp, controller: c, zoomFloor: null, pendingFit: false, zoomFloorSaid: false,
+    viewport: vp, controller: c, zoomFloor: null, pendingFit: false, pendingTurn: null,
+    zoomFloorSaid: false, pageTicket: 0, STANDALONE_PAGE: -1000,
+    // Whose drawing is up (the first sheet's, to begin with), and the job a
+    // sheet landed in: none, so the first goToPage is the job's opening.
+    shownPage: img ? 0 : -1, landedJob: null, jobIds: new WeakMap(), jobIdCount: 0, pageFinalLabel: i => `X${i}`,
     app: {
-      settings: { get: k => settings[k] }, get currentPage() { return st.page; },
-      // One revision page, of the size the step asks for, for the flip.
-      pages: { get pageCount() { return pages.length; }, lruSize: 4,
-        hasRevisionPage: () => true, getRevisionPage: async () => env.revBitmap },
-      project: { measurements: {} },
+      settings: { get: k => settings[k] },
+      get currentPage() { return st.page; }, set currentPage(v) { st.page = v; },
+      pages: { get pageCount() { return pages.length; }, lruSize: 4, file: null,
+        // A sheet's own drawing decodes at once -- or, held, when the test
+        // lets it (holdPage), each held decode its own release (st.held,
+        // oldest first; st.releasePage the newest); or fails (failPage, a
+        // sheet index); a revision the same way (holdRev).
+        getPage: i => {
+          if (i === env.failPage) return Promise.reject(new Error('unreadable'));
+          const out = { width: pages[i][0], height: pages[i][1] };
+          if (!env.holdPage) return Promise.resolve(out);
+          return new Promise(res => {
+            st.releasePage = () => res(out);
+            (st.held ||= []).push(st.releasePage);
+          });
+        },
+        prefetchAround() {},
+        hasRevisionPage: () => true,
+        getRevisionPage: set => (env.holdRev
+          ? new Promise(res => { st.release = () => res(bitmap(set)); })
+          : Promise.resolve(bitmap(set))),
+      },
+      project: { measurements: {}, metadata: {}, findItem: id => env.itemAt?.(id) ?? null },
     },
     versionView: { revId: '', revPage: null, set: -1, bitmap: null, size: null },
-    versionTicket: 0, MAIN_LRU: 4, MAIN_LRU_COMPARING: 2, revBitmap: null,
+    versionTicket: 0, MAIN_LRU: 4, MAIN_LRU_COMPARING: 2, revBitmap: null, holdRev: false, holdPage: false,
+    failPage: -1, from: 'canvas',
     allRevisions: () => [], sheetOrigin: () => null,
-    sheetVersions: () => [{ revId: 'r1', revPage: 0, rev: { _setIndex: 0 }, label: 'Rev 1', date: '' }],
-    syncVersionUi() {}, goToPage: async () => {},
+    sheetVersions: page => [{ revId: '', revPage: null, rev: null, label: 'Own', date: '' },
+      ...(versOf.get(page) || []),
+      { revId: '~flip', revPage: page, rev: { _setIndex: -1 }, label: 'Flip', date: '' }],
+    newestOf: i => (newest === false ? '' : (versOf.get(i) || []).at(-1)?.revId || ''),
+    syncVersionUi() {}, clearOverlay() {}, thumbs: { setCurrent() {} }, syncPageOf() {},
+    syncScaleSelect() {}, itemsPanel: { refresh() {} },
     revPageLabel: () => '', sizesMatch: () => true, sizeRefusal: () => '',
-    get pageImage() { const p = pages[st.page]; return p ? { width: p[0], height: p[1] } : null; },
+    get pageImage() { return img; }, set pageImage(v) { img = v; },
     browsingOtherVersion: () => !!env.versionView.revId,
     setStatus: t => { st.said.push(t); st.saidAt.push(st.step); },
     uiMode: () => (touch ? 'touch' : 'standard'),
@@ -214,6 +312,18 @@ function rig({ canvas: [w, h], pages, settings: s0 = {} }, { desktop = false, to
     requestDraw() {},
   };
   liftMain(LIFTED, env);
+  // The tools ask the app's own host whether the sheet turned to is still opening.
+  // eslint-disable-next-line no-new-func
+  c.host.sheetOpening = new Function('env', `with (env) { return ({ ${SHEET_OPENING} }).sheetOpening; }`)(env);
+  // The jump's promise, so a step can wait for it (selectItem does not).
+  const jump = env.jumpToItem;
+  env.jumpToItem = (...a) => (st.jumped = jump(...a));
+  // eslint-disable-next-line no-new-func
+  env.selectItem = new Function('env', `with (env) { return ({ ${SELECT_ITEM} }).selectItem; }`)(env);
+  // eslint-disable-next-line no-new-func
+  env.pickCard = new Function('env', `with (env) { return ({ ${THUMB_PICK} }).onPick; }`)(env);
+  // eslint-disable-next-line no-new-func
+  env.parked = new Function('env', `with (env) { return function parked() {\n${PARKED}\n}; }`)(env);
   runMain(BUILD.replace('const zoomFloor =', 'zoomFloor ='), env);
   const zf = env.zoomFloor;
   if (desktop) { zf.margin = 0; zf.min = 0.05; zf.max = 10; }
@@ -225,13 +335,13 @@ function rig({ canvas: [w, h], pages, settings: s0 = {} }, { desktop = false, to
     vp, zf, c, on, rect, st, env, settings, pages, act,
     size: () => pages[st.page],
     resize(w2, h2) { rect.width = w2; rect.height = h2; vp.resize(); },
-    /** Zoom to item, through showItemMenu's own callback. */
-    item(points, type = 'count') { zoomToItem(env, { points, type }); },
+    /** Zoom to item, through showItemMenu's own callback (its item's other fields in `extra`). */
+    item(points, type = 'count', extra = {}) { zoomToItem(env, { points, type, ...extra }); },
     /** A revision of size [w, h] flipped up, or (null) the sheet's own drawing back. */
     async flip(size) {
       if (size) {
         env.revBitmap = { width: size[0], height: size[1] };
-        await env.showSheetVersion(st.page, 'r1', { announce: false, flip: false });
+        await env.showSheetVersion(st.page, '~flip', { announce: false, flip: false });
       } else {
         await env.showSheetVersion(st.page, '', { announce: false });
       }
@@ -341,40 +451,85 @@ async function replay(scn, { swap = true } = {}) {
   const out = [];
   for (const [i, step] of scn.steps.entries()) {
     r.st.step = i;
-    const op = step[0];
-    if (op === 'open') r.env.applyDefaultZoom();
-    else if (op === 'wheel') r.wheel(step[1], step[2], step[3], step[4] || 0, !!step[5], !!step[6], swap);
-    else if (op === 'pinch') r.zf.zoomAt(step[1], step[2], step[3], false, 'pinch');
-    else if (op === 'minus') await r.act('zoom-out');
-    else if (op === 'plus') await r.act('zoom-in');
-    else if (op === 'F') await r.act('zoom-fit');
-    else if (op === 'one') await r.act('zoom-100');
-    else if (op === 'pan') r.vp.panBy(step[1], step[2]);
-    else if (op === 'turn') {
-      // The module's page-turn rule (the next round wires it into goToPage):
-      // asked of the sheet being left, the new sheet centred at the zoom it
-      // had (what the desktop's set_page does), then settled.
-      const chose = r.zf.belowFitByChoice();
-      r.st.page = step[1];
-      const [pw, ph] = r.size();
-      r.vp.centerOn(pw / 2, ph / 2);
-      r.zf.turnSettle(chose);
-    } else if (op === 'resize') r.resize(step[1], step[2]);
-    // Zoom to item through showItemMenu's own callback, the box and all.
-    else if (op === 'item') r.item(step[1], step[2] || 'count');
-    // A flip, through main.js's own showSheetVersion / clearVersion.
-    else if (op === 'rev') await r.flip(step[1]);
-    else if (op === 'settings') {
-      Object.assign(r.settings, step[1]);
-      r.c.wheelMode = r.settings.wheel_mode;
-    } else throw new Error(`unknown step ${JSON.stringify(step)}`);
-    out.push({ page: r.st.page, zoom: r.vp.zoom, pan: r.pan(), label: r.zf.label(),
+    await webStep(r, step, i, swap);
+    const shown = r.env.shownDrawingSize();
+    out.push({ page: r.st.page, shown: shown && [shown.w, shown.h], zoom: r.vp.zoom, pan: r.pan(), label: r.zf.label(),
       atFloor: r.zf.atFloor(), showsFit: r.zf.showsFit(), base: r.zf.base,
       baseFit: r.zf.baseFit, pastFit: r.zf.pastFit, raised: r.zf.raise !== null,
       said: r.st.said.slice(), saidAt: r.st.saidAt.slice() });
   }
   return { trace: out,
     minusTip: ZF.zoomOutTip(r.settings.zoom_out_stops_at_fit !== false, r.settings.wheel_mode) };
+}
+/** One step of a scenario, taken on the web as the app takes it. */
+async function webStep(r, step, i, swap) {
+  const op = step[0];
+  // A job opens as loadProjectFile opens it: the store re-pointed at the
+  // file just opened (setFromProject), no drawing up, then the sheet.
+  if (op === 'open') {
+    r.env.app.pages.file = { opened: i };
+    r.env.pageImage = null;
+    await r.env.goToPage(step[1] || 0);
+  }
+  else if (op === 'wheel') r.wheel(step[1], step[2], step[3], step[4] || 0, !!step[5], !!step[6], swap);
+  else if (op === 'pinch') r.zf.zoomAt(step[1], step[2], step[3], false, 'pinch');
+  else if (op === 'minus') await r.act('zoom-out');
+  else if (op === 'plus') await r.act('zoom-in');
+  else if (op === 'F') await r.act('zoom-fit');
+  else if (op === 'one') await r.act('zoom-100');
+  else if (op === 'pan') r.vp.panBy(step[1], step[2]);
+  // A sheet card (the desktop's thumbnail: go_to_page), through the
+  // thumbnails' own tap -- the sheet on screen too.
+  else if (op === 'turn') await r.env.pickCard(step[1]);
+  // Page Down / Up: the keys' own stepSheet.
+  else if (op === 'next' || op === 'prev') await r.env.stepSheet(op === 'next' ? 1 : -1);
+  // The version bar, the matrix: showSheetVersion, onto another sheet too.
+  else if (op === 'version') await r.env.showSheetVersion(step[1], step[2], { announce: false, flip: false });
+  // The Items list's row, through its own selectItem.
+  else if (op === 'jump') {
+    r.st.jumped = null;
+    r.env.selectItem({ _uid: `j${i}`, type: step[3] || 'count', points: step[2], rev_id: step[4] || '' }, step[1]);
+    await r.st.jumped;
+  } else if (op === 'turns') {
+    // The second sheet turned to while the first one's newest drawing is
+    // still being decoded (the desktop's turns are synchronous).
+    const [a, b] = step[1];
+    r.env.holdRev = true;
+    r.st.release = null;
+    let done = false;
+    const first = r.env.goToPage(a).then(() => { done = true; });
+    while (!done && !r.st.release) await tick();
+    // ...and it really is still decoding when he turns on, if it has one.
+    if (r.env.newestOf(a) && (done || !r.st.release)) {
+      throw new Error(`"turns" ${JSON.stringify(step)}: ${a}'s newest drawing was not held`);
+    }
+    r.env.holdRev = false;
+    await r.env.goToPage(b);
+    r.st.release?.();
+    await first;
+  } else if (op === 'during') {
+    // ["during", turn, step...]: the steps made while the sheet the turn
+    // asked for is still being decoded -- seconds on an iPad; the desktop's
+    // turns are synchronous. What they turn to comes up at once (a sheet
+    // just left is in the cache); the turn's own decode finishes last.
+    r.env.holdPage = true;
+    r.st.held = [];
+    const turn = webStep(r, step[1], i, swap);
+    r.env.holdPage = false;
+    const held = r.st.held.splice(0);
+    if (!held.length) throw new Error(`"during" ${JSON.stringify(step)}: the turn's sheet was not held`);
+    for (const sub of step.slice(2)) await webStep(r, sub, i, swap);
+    for (const f of held) f();
+    await turn;
+  } else if (op === 'resize') r.resize(step[1], step[2]);
+  // Zoom to item through showItemMenu's own callback, the box and all.
+  else if (op === 'item') r.item(step[1], step[2] || 'count');
+  // A flip, through main.js's own showSheetVersion / clearVersion.
+  else if (op === 'rev') await r.flip(step[1]);
+  else if (op === 'settings') {
+    Object.assign(r.settings, step[1]);
+    r.c.wheelMode = r.settings.wheel_mode;
+  } else throw new Error(`unknown step ${JSON.stringify(step)}`);
 }
 // Where the web differs from the desktop on purpose: scenario -> the fields
 // that differ (at the steps listed, or at any step) and why. Every entry must
@@ -402,6 +557,23 @@ const KNOWN = {
   }, {
     fields: ['said'], at: [1, 2, 3],
     why: 'the web\'s refused minus says the once-a-session line; the desktop refused nothing to say it of',
+  }],
+  // FIT WIDTH keeps the top of the sheet in view on the web (Viewport.fitWidth,
+  // as it always has); the desktop's width zoom (set_zoom) leaves the pan
+  // where the opening put it, in the middle. The zoom is the same number, and
+  // from the first turn on both are centred.
+  'turns: a job that opens at Fit Width keeps it as a number': [{
+    fields: ['pan'], at: [0],
+    why: 'the web\'s Fit Width puts the top of the sheet at the top of the screen; the desktop\'s leaves it centred',
+  }],
+  // 1 (100%) centres the sheet on the web, as it always has; the desktop's
+  // _set_zoom_100 (set_zoom) leaves the pan -- the page centre's screen
+  // offset -- where a drag put it. The same zoom, his zoom; from the next
+  // turn on both are centred.
+  '1 (100%) after a drag, then a walk': [{
+    fields: ['pan'], at: [2],
+    why: 'the web\'s 1 puts the middle of the sheet in the middle of the screen; the desktop\'s keeps the dragged '
+      + 'pan (120 x -70 screen px) at 100%',
   }],
   'a sheet whose Fit is below the minimum': [{
     fields: ['label', 'said'],
@@ -446,6 +618,7 @@ async function checkScenarios(truth, label) {
         for (const k of ['page', 'atFloor', 'showsFit', 'baseFit', 'pastFit', 'raised']) {
           if (g[k] !== t[k]) diff.push(`${k} ${g[k]} vs ${t[k]}`);
         }
+        if (JSON.stringify(g.shown) !== JSON.stringify(t.shown)) diff.push(`shown ${g.shown} vs ${t.shown}`);
         if (!close(g.base, t.base)) diff.push(`base ${g.base} vs ${t.base}`);
         // What was said, and when: the desktop's words -- except that a pinch
         // says the touch line, as the user chose.
@@ -1399,6 +1572,58 @@ log('\n-- 6. a change of size: Fit stays Fit, anything else keeps its centre --'
   ok('a hook that throws never fails the frame', !threw && vp.width === 700);
 }
 
+{
+  // The foot bar of a phone or tablet. It is opaque and drawn over the
+  // bottom of the stage, so the canvas stops at its top edge: at 844x390 the
+  // stage is 366 high, the bar 53, the canvas 313. Fit and the floor are then
+  // the part he can see, with nothing of their own to know about a bar.
+  const CSS = (await readFile(new URL('../css/app.css', import.meta.url), 'utf-8')).replace(/\r\n/g, '\n');
+  const rule = /\n#canvas \{([^}]*)\}/.exec(CSS)?.[1] || '';
+  ok('css: the canvas is cut short by the foot bar (--mbar-h)',
+    /height:\s*calc\(100% - var\(--mbar-h, 0px\)\)/.test(rule) && /bottom:\s*auto/.test(rule)
+    && !/height:\s*100%\s*;/.test(rule) && !/inset:\s*0\s*;/.test(rule), rule);
+  const fitText = fnText('fitCanvasAboveFootBar');
+  ok('main.js: one observer hears the stage AND the bar, measures, then draws',
+    !!fitText && /const ro = new ResizeObserver\(\(\) => \{ fitCanvasAboveFootBar\(\); requestDraw\(\); \}\);\n\s*ro\.observe\(\$\('stage'\)\);\n\s*ro\.observe\(\$\('mobileBar'\)\);/.test(MAIN)
+    && !/new ResizeObserver\(\(\) => requestDraw\(\)\)\.observe\(\$\('stage'\)\)/.test(MAIN));
+  const cover = (stage, bar, hidden = false) => {
+    const set = [];
+    const props = {};
+    const el = {
+      stage: { getBoundingClientRect: () => stage,
+        style: { getPropertyValue: k => props[k] || '', setProperty: (k, v) => { props[k] = v; set.push(v); } } },
+      mobileBar: { hidden, getBoundingClientRect: () => bar },
+    };
+    const env = liftMain(['fitCanvasAboveFootBar'], { $: id => el[id] });
+    env.fitCanvasAboveFootBar();
+    env.fitCanvasAboveFootBar();
+    return [props['--mbar-h'], set.length];
+  };
+  const R = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height });
+  eq('844x390: the bar covers 53 px of the stage, written once', cover(R(0, 24, 844, 366), R(0, 337, 844, 53)), ['53px', 1]);
+  eq('820x1180 portrait: the same 53 px', cover(R(0, 24, 820, 1156), R(0, 1127, 820, 53)), ['53px', 1]);
+  eq('a bar with the home-indicator inset: its whole height', cover(R(0, 24, 844, 366), R(0, 319, 844, 71)), ['71px', 1]);
+  eq('no bar (hidden): nothing cut', cover(R(194, 24, 682, 796), R(0, 0, 0, 0), true), ['0px', 1]);
+  eq('a bar beside the stage, not over it: nothing cut', cover(R(0, 24, 400, 366), R(500, 337, 300, 53)), ['0px', 1]);
+  eq('never more than the stage itself', cover(R(0, 24, 844, 40), R(0, 0, 844, 400)), ['40px', 1]);
+
+  // What the viewport then hears: a canvas 53 px shorter, like a turn.
+  const r = pinchRig();
+  r.resize(844, 366);
+  ok('(at Fit on the full stage)', r.zf.showsFit());
+  r.resize(844, 313);
+  const [, y0] = r.vp.toScreen(0, 0);
+  const [, y1] = r.vp.toScreen(SHEET[0], SHEET[1]);
+  ok('the bar appears at Fit: the Fit of the canvas above the bar, centred',
+    r.zf.showsFit() && r.vp.zoom === Math.min((844 - 32) / SHEET[0], (313 - 32) / SHEET[1]) && centred(r));
+  ok('...and the whole sheet is above the bar, with the 16 px margin', y0 >= 16 - 1e-9 && y1 <= 313 - 16 + 1e-9, `${y0}..${y1}`);
+  const fit = r.vp.zoom;
+  r.wheel(400, 150, -120);
+  eq('a notch out from there is refused: the sheet does fit', r.vp.zoom, fit);
+  r.resize(844, 366);
+  ok('the bar goes (the layout switched): the bigger Fit', r.zf.showsFit() && r.vp.zoom > fit);
+}
+
 // ═══ 7. the Settings box ════════════════════════════════════════════════
 log('\n-- 7. the Settings box, on a stand-in page --');
 {
@@ -1633,36 +1858,22 @@ log('\n-- 8. the app\'s wiring --');
 }
 
 {
-  // R3b-3: landing on a sheet whose Newest is a reissue on other paper,
-  // through main.js's own goToPage, showSheetVersion and applyDefaultZoom.
-  // The default zoom framed the sheet's OWN drawing while it was all there
-  // was; the landing ends framed on the drawing that goes up -- as the
-  // desktop's held turn settles on the revision's Fit -- unless he zoomed or
-  // moved the sheet while it was being decoded.
-  const tick = () => new Promise(res => setTimeout(res, 0));
-  const landing = (revSize, { mode = 'fit', hold = false } = {}) => {
-    const r = rig({ canvas: IPAD, pages: [SHEET, SHEET], settings: { default_zoom_mode: mode } }, { touch: true });
-    const env = r.env;
-    let img = null;
-    Object.defineProperty(env, 'pageImage', { get: () => img, set: v => { img = v; }, configurable: true });
-    Object.defineProperty(env.app, 'currentPage', { get: () => r.st.page, set: v => { r.st.page = v; },
-      configurable: true });
-    Object.assign(env, { pageTicket: 0, clearOverlay() {}, thumbs: { setCurrent() {} }, syncPageOf() {},
-      syncScaleSelect() {}, itemsPanel: { refresh() {} }, newestOf: i => (i === 1 ? 'r1' : '') });
-    env.app.project.metadata = {};
-    env.app.pages.getPage = async i => ({ width: r.pages[i][0], height: r.pages[i][1] });
-    env.app.pages.prefetchAround = () => {};
-    env.revBitmap = { width: revSize[0], height: revSize[1] };
-    r.release = null;
-    if (hold) {
-      // The revision's decode waits until the test lets it finish.
-      env.app.pages.getRevisionPage = () => new Promise(res => { r.release = () => res(env.revBitmap); });
-    }
-    liftMain(['goToPage'], env);
+  // Landing on a sheet whose Newest is a reissue on other paper, through
+  // main.js's own goToPage, showSheetVersion, landOpen and ZoomFloor.turned.
+  // The view was settled on the sheet's OWN drawing while it was all there
+  // was; the landing settles again on the drawing that goes up -- as the
+  // desktop's held turn settles once its revision is on screen -- unless he
+  // zoomed, pinched or moved the sheet while it was being decoded.
+  const landing = (revSize, { mode = 'fit', hold = false, settings = {} } = {}) => {
+    const r = rig({ canvas: IPAD, pages: [SHEET, SHEET], revs: { 1: [['r1', revSize]] },
+      settings: { default_zoom_mode: mode, ...settings } }, { touch: true });
+    r.env.pageImage = null;              // nothing up yet: the job opens on the first goToPage
+    r.env.holdRev = hold;                // the revision's decode waits until the test lets it finish
     return r;
   };
   const revFit = (r, s) => Math.min((r.vp.width - 32) / s[0], (r.vp.height - 32) / s[1]);
-  for (const [paper, size] of [['smaller', [3400, 2200]], ['bigger', [10800, 7200]], ['the same', SHEET]]) {
+  const SMALL_SHEET = [3400, 2200];
+  for (const [paper, size] of [['smaller', SMALL_SHEET], ['bigger', [10800, 7200]], ['the same', SHEET]]) {
     const r = landing(size);
     await r.env.goToPage(0);
     await r.env.goToPage(1);
@@ -1677,68 +1888,865 @@ log('\n-- 8. the app\'s wiring --');
     ok('...and a notch in from there is a notch from Fit', close(r.vp.zoom / revFit(r, size), 1.15, 1e-12));
   }
   {
-    const r = landing([3400, 2200], { mode: '100' });
+    const r = landing(SMALL_SHEET, { mode: '100' });
     await r.env.goToPage(1);
-    eq('the default zoom at 100%: the reissue at 100%, centred', [r.vp.zoom, r.pan().map(v => Math.abs(v) < 1e-6)],
+    eq('a job opening at 100% on a reissue: the reissue at 100%, centred', [r.vp.zoom, r.pan().map(v => Math.abs(v) < 1e-6)],
       [1, [true, true]]);
   }
   {
-    const r = landing([3400, 2200], { mode: 'width' });
+    // The desktop's settle (Round 3 re-applied the default zoom to the
+    // reissue): the width is the sheet's OWN, a number, and a reissue on
+    // smaller paper it would show smaller than the screen is raised.
+    const r = landing(SMALL_SHEET, { mode: 'width' });
     await r.env.goToPage(1);
-    const z = (IPAD[0] - 32) / 3400;
-    ok('the default zoom at Fit Width: the reissue\'s width, its top at the margin', close(r.vp.zoom, z, 1e-12)
-      && close(r.vp.origin.x, -16 / z, 1e-12, 1e-9) && close(r.vp.origin.y, -16 / z, 1e-12, 1e-9),
-    JSON.stringify([r.vp.zoom / z, r.vp.origin]));
+    const width = (IPAD[0] - 32) / SHEET[0];
+    eq('a job opening at Fit Width on a reissue on smaller paper: raised to the reissue\'s Fit, his zoom the sheet\'s width',
+      [r.vp.zoom === revFit(r, SMALL_SHEET), r.zf.showsFit(), r.zf.raise !== null, close(r.zf.base, width), r.zf.baseFit],
+      [true, true, true, true, false]);
+    r.wheel(512, 352, 120);
+    r.wheel(512, 352, -120);
+    ok('...a notch in and out there: his width again (the raise was the turn\'s)', close(r.zf.base, width) && !r.zf.baseFit);
+    await r.env.goToPage(0);
+    ok('...and the next sheet comes up at that width, centred', close(r.vp.zoom, width) && centred(r),
+      JSON.stringify([r.vp.zoom / width, r.pan()]));
+  }
+  {
+    // ...while with no reissue the web's Fit Width keeps the top of the
+    // sheet in view: the open's settle sets his zoom and keeps the pan.
+    // (A landscape screen wider than the sheet: there the width is not Fit.)
+    const r = rig({ canvas: [1600, 900], pages: [SHEET, SMALL_SHEET], settings: { default_zoom_mode: 'width' } });
+    r.env.pageImage = null;
+    await r.env.goToPage(0);
+    const z = (1600 - 32) / SHEET[0];
+    ok('(the width is not Fit there)', z > r.zf.floor() * 1.1);
+    ok('a job opening at Fit Width: the sheet\'s width, its top at the margin (the settle keeps the pan)',
+      close(r.vp.zoom, z, 1e-12) && close(r.vp.origin.x, -16 / z, 1e-12, 1e-9) && close(r.vp.origin.y, -16 / z, 1e-12, 1e-9),
+      JSON.stringify([r.vp.zoom / z, r.vp.origin]));
+    await r.env.goToPage(1);
+    ok('...the small sheet after it raised to its Fit', r.zf.showsFit() && r.zf.raise !== null);
+    await r.env.goToPage(0);
+    ok('...and the sheet after that at the width again, centred', close(r.vp.zoom, z) && centred(r));
   }
   {
     // He zooms while the reissue is decoded: his zoom is not overridden.
-    const r = landing([3400, 2200], { hold: true });
+    const r = landing(SMALL_SHEET, { hold: true });
     await r.env.goToPage(0);
     const turned = r.env.goToPage(1);
-    while (!r.release) await tick();
+    while (!r.st.release) await tick();
     r.wheel(400, 300, 120);
     const z = r.vp.zoom;
-    r.release();
+    r.st.release();
     await turned;
-    eq('a notch in while the reissue decodes: his zoom stays (it is not re-fitted)', [r.env.versionView.revId, r.vp.zoom],
+    eq('a notch in while the reissue decodes: his zoom stays (it is not re-settled)', [r.env.versionView.revId, r.vp.zoom],
       ['r1', z]);
   }
   {
-    const r = landing([3400, 2200], { hold: true });
+    const r = landing(SMALL_SHEET, { hold: true });
+    await r.env.goToPage(0);
     const turned = r.env.goToPage(1);
-    while (!r.release) await tick();
+    while (!r.st.release) await tick();
+    const h = hand(r).down(512, 352, 200);
+    h.to(300);
+    h.up();
+    const z = r.vp.zoom;
+    const [px, py] = r.pan();
+    r.st.release();
+    await turned;
+    eq('a pinch while the reissue decodes: his zoom and his place stay (it is not re-settled)',
+      [r.env.versionView.revId, z > revFit(r, SHEET) * 1.2, r.vp.zoom === z,
+        close(r.pan()[0], px, 1e-9, 1e-6) && close(r.pan()[1], py, 1e-9, 1e-6)], ['r1', true, true, true]);
+  }
+  {
+    const r = landing(SMALL_SHEET, { hold: true });
+    const turned = r.env.goToPage(1);
+    while (!r.st.release) await tick();
     r.finger('pointerdown', 7, 500, 350);
     r.finger('pointermove', 7, 560, 330);
     r.finger('pointerup', 7, 560, 330);
-    r.release();
+    r.st.release();
     await turned;
-    ok('a drag while it decodes: the reissue comes up where he put the sheet (it is not re-framed)',
+    ok('a drag while it decodes: the reissue comes up where he put the sheet (it is not re-settled)',
       r.env.versionView.revId === 'r1' && close(r.pan()[0], 60, 1e-9, 1e-6) && close(r.pan()[1], -20, 1e-9, 1e-6),
       JSON.stringify(r.pan()));
   }
   {
     // The iPad turned while it decodes, at Fit: Fit stays Fit, so the landing still ends on the reissue's.
-    const r = landing([3400, 2200], { hold: true });
+    const r = landing(SMALL_SHEET, { hold: true });
     const turned = r.env.goToPage(1);
-    while (!r.release) await tick();
+    while (!r.st.release) await tick();
     r.resize(704, 1024);
-    r.release();
+    r.st.release();
     await turned;
-    ok('turned while it decodes: the reissue\'s Fit at the new size', r.zf.showsFit() && r.vp.zoom === revFit(r, [3400, 2200]),
-      String(r.vp.zoom / revFit(r, [3400, 2200])));
+    ok('turned while it decodes: the reissue\'s Fit at the new size', r.zf.showsFit() && r.vp.zoom === revFit(r, SMALL_SHEET),
+      String(r.vp.zoom / revFit(r, SMALL_SHEET)));
   }
   {
-    // He turns on before the reissue is up: the stale landing frames nothing.
-    const r = landing([3400, 2200], { hold: true });
+    // He turns on before the reissue is up: the stale landing settles nothing.
+    const r = landing(SMALL_SHEET, { hold: true });
     const turned = r.env.goToPage(1);
-    while (!r.release) await tick();
-    const rel = r.release;
+    while (!r.st.release) await tick();
+    const rel = r.st.release;
+    r.env.holdRev = false;
     await r.env.goToPage(0);
     rel();
     await turned;
-    eq('turned on while it decodes: the sheet he turned to at its own Fit, no reissue up, nothing re-framed',
+    eq('turned on while it decodes: the sheet he turned to at its own Fit, no reissue up, nothing re-settled',
       [r.st.page, r.env.versionView.revId, r.zf.showsFit(), r.vp.zoom === revFit(r, SHEET)], [0, '', true, true]);
   }
+  {
+    // The box off: a turn keeps the zoom, centred (3.05) -- onto a reissue too.
+    const r = landing(SMALL_SHEET, { settings: { zoom_out_stops_at_fit: false } });
+    await r.env.goToPage(0);
+    r.vp.panBy(80, 40);
+    const z = r.vp.zoom;
+    await r.env.goToPage(1);
+    eq('the box off: the reissue comes up at the zoom the sheet had, centred, nothing raised',
+      [r.env.versionView.revId, r.vp.zoom === z, centred(r), r.zf.raise], ['r1', true, true, null]);
+  }
+}
+{
+  // A decode of the sheet's OWN drawing he turned past settles nothing.
+  const SMALL_SHEET = [3400, 2200];
+  const r = rig({ canvas: IPAD, pages: [SHEET, SMALL_SHEET, SHEET] }, { touch: true });
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  r.wheel(512, 352, 120);
+  const his = r.vp.zoom;
+  r.env.holdPage = true;
+  const slow = r.env.goToPage(1);
+  const rel = r.st.releasePage;
+  r.env.holdPage = false;
+  await r.env.goToPage(2);
+  rel();
+  await slow;
+  eq('a turn whose drawing he turned past while it decoded: the sheet he went to at his zoom, centred, nothing raised',
+    [r.st.page, r.env.pageImage.width, r.vp.zoom === his, centred(r), r.zf.raise], [2, SHEET[0], true, true, null]);
+}
+{
+  // A turn with no canvas to land in is parked, and settled on the first
+  // frame that has one (drawFrame's own lines), as pendingFit is.
+  const SMALL_SHEET = [3400, 2200];
+  const r = rig({ canvas: IPAD, pages: [SHEET, SMALL_SHEET] }, { touch: true });
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  r.wheel(512, 352, 120);
+  const his = r.zf.base;
+  r.resize(0, 0);
+  await r.env.goToPage(1);
+  ok('a turn landing with no canvas is parked for the sheet it landed on',
+    r.env.pendingTurn !== null && r.zf.raise === null);
+  r.resize(...IPAD);
+  r.env.parked();
+  eq('...and settled on the first frame with one: the small sheet raised to its Fit, his zoom kept aside',
+    [r.zf.showsFit(), r.zf.raise !== null, r.zf.base === his, r.env.pendingTurn], [true, true, true, null]);
+  r.wheel(512, 352, 120);
+  r.wheel(512, 352, -120);
+  ok('...a notch in and out there gives his zoom back', r.zf.base === his);
+}
+{
+  // A jump to an item on another sheet whose landing had to park: the frame
+  // after it does not settle over the zoom on the item.
+  const r = rig({ canvas: IPAD, pages: [SHEET, SHEET], revs: { 1: [['r1', SHEET]] } }, { touch: true });
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  r.resize(0, 0);
+  r.env.holdRev = true;
+  r.st.jumped = null;
+  r.env.selectItem({ _uid: 'x', type: 'count', points: [[3000, 2000], [3100, 2050]], rev_id: 'r1' }, 1);
+  while (!r.st.release) await tick();
+  ok('(its landing parked: no canvas when it landed)', r.env.pendingTurn !== null);
+  r.resize(...IPAD);
+  r.st.release();
+  await r.st.jumped;
+  const z = r.vp.zoom;
+  const [px, py] = r.pan();
+  r.env.parked();
+  eq('a jump to an item, its landing parked: zoomed on the item, a number, and the next frame leaves it there',
+    [r.env.versionView.revId, close(r.vp.toPage(512, 352)[0], 3050, 1e-9, 1e-6), r.zf.baseFit, r.vp.zoom === z,
+      close(r.pan()[0], px, 1e-9, 1e-6) && close(r.pan()[1], py, 1e-9, 1e-6), r.env.pendingTurn, [...r.c.selected]],
+    ['r1', true, false, true, true, null, ['x']]);
+}
+{
+  // The Items list: a jump to an item on another sheet ends zoomed on it, in
+  // the web's own margin; a jump he turned past does nothing.
+  const SMALL_SHEET = [3400, 2200];
+  const r = rig({ canvas: IPAD, pages: [SHEET, SMALL_SHEET, SHEET] }, { touch: true });
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  r.st.jumped = null;
+  r.env.selectItem({ _uid: 'a', type: 'count', points: [[1000, 800], [1300, 1000]] }, 1);
+  await r.st.jumped;
+  const want = Math.min((IPAD[0] - 32) / Math.max(300 * 1.8, SMALL_SHEET[0] * 0.12),
+    (IPAD[1] - 32) / Math.max(200 * 1.8, SMALL_SHEET[1] * 0.12), 8);
+  eq('a row\'s item on another sheet: turned to, zoomed on the item, centred on it, selected, his zoom a number',
+    [r.st.page, close(r.vp.zoom, want), close(r.vp.toPage(512, 352)[0], 1150, 1e-9, 1e-6),
+      close(r.vp.toPage(512, 352)[1], 900, 1e-9, 1e-6), [...r.c.selected], r.zf.baseFit],
+    [1, true, true, true, ['a'], false]);
+  await r.env.goToPage(2);
+  ok('...and the next sheet comes up at that zoom, centred', close(r.vp.zoom, want) && centred(r));
+  // Turned away and back while the jump's sheet decoded: the jump is over.
+  r.env.holdPage = true;
+  r.st.jumped = null;
+  r.env.selectItem({ _uid: 'b', type: 'count', points: [[100, 100], [140, 120]] }, 1);
+  const relA = r.st.releasePage;
+  const away = r.env.goToPage(0);
+  const relB = r.st.releasePage;
+  r.env.holdPage = false;
+  await r.env.goToPage(1);
+  const z1 = r.vp.zoom;
+  relA();
+  relB();
+  await r.st.jumped;
+  await away;
+  eq('a jump he turned past and came back from: nothing zoomed to its item, nothing selected',
+    [r.st.page, r.vp.zoom === z1, [...r.c.selected]], [1, true, []]);
+  // Zoom to item from a row's menu, the item on another sheet: turned to first.
+  r.env.itemAt = () => ({ pageKey: 0 });
+  r.st.jumped = null;
+  r.item([[5000, 3000], [5400, 3300]]);
+  await r.st.jumped;
+  eq('Zoom to item from a row, the item on another sheet: its sheet, zoomed on it',
+    [r.st.page, close(r.vp.toPage(512, 352)[0], 5200, 1e-9, 1e-6), r.zf.baseFit], [0, true, false]);
+}
+{
+  // Fit Width from the menu (web only): a NUMBER, as the desktop's width
+  // zoom is (the user's decision) -- not a way of looking like Fit.
+  const SMALL_SHEET = [3400, 2200];
+  const r = rig({ canvas: [1600, 900], pages: [SHEET, SMALL_SHEET, SHEET, [10800, 7200]] });
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  await r.act('zoom-width');
+  const width = (1600 - 32) / SHEET[0];
+  ok('(the width is not Fit there)', width > r.zf.floor() * 1.1);
+  eq('Fit Width: his zoom is the number', [close(r.zf.base, width), r.zf.baseFit], [true, false]);
+  await r.env.goToPage(1);
+  ok('...a smaller sheet it would show smaller than the screen: raised to its own Fit', r.zf.showsFit() && r.zf.raise !== null);
+  await r.env.goToPage(2);
+  ok('...the big sheet after it at the width again, centred', close(r.vp.zoom, width) && centred(r));
+  await r.env.goToPage(3);
+  ok('...and bigger paper at the same NUMBER, not its own width', close(r.vp.zoom, width) && centred(r)
+    && !close(r.vp.zoom, (1600 - 32) / 10800));
+}
+{
+  // Delete the sheet on screen: the sheet after it comes up as a turn onto
+  // it (_apply_page_layout) -- through main.js's own deleteCurrentPage,
+  // which asks below_fit_by_choice before the sheet goes.
+  const SMALL_SHEET = [3400, 2200];
+  const del = pages => {
+    const r = rig({ canvas: IPAD, pages }, { touch: true });
+    Object.assign(r.env, {
+      D: { alertDialog: async () => {}, confirmDialog: async () => true },
+      isTakeoffItem: () => true, takeoffQuantityWords: () => '', pageFinalLabel: i => `X${i}`,
+      countingModel: () => ({ countedQuantities: () => ({}) }), takeoffMoveWords: () => '',
+      sayPrice() {}, calloutPreview: { clearCache() {} },
+    });
+    r.env.thumbs.refresh = () => {};
+    r.env.app.pages.removePage = i => { pages.splice(i, 1); };
+    r.env.app.project.notePageRemoved = () => {};
+    liftMain(['deleteCurrentPage'], r.env);
+    return r;
+  };
+  {
+    const r = del([SHEET, SHEET, SHEET]);
+    r.env.pageImage = null;
+    await r.env.goToPage(0);
+    await r.env.goToPage(1);
+    r.wheel(512, 352, -120, 0, true);
+    const past = r.vp.zoom;
+    ok('(past Fit by Shift on the sheet to delete)', r.zf.belowFitByChoice() && past < r.zf.floor());
+    await r.env.deleteCurrentPage();
+    eq('delete a sheet with a zoom Shift took past Fit: the sheet after it at that zoom, centred, still past Fit',
+      [r.vp.zoom === past, centred(r), r.zf.pastFit, r.zf.raise], [true, true, true, null]);
+  }
+  {
+    const r = del([SHEET, SHEET, SMALL_SHEET]);
+    r.env.pageImage = null;
+    await r.env.goToPage(0);
+    await r.env.goToPage(1);
+    r.wheel(512, 352, 120);
+    const his = r.zf.base;
+    await r.env.deleteCurrentPage();
+    eq('delete a sheet at a notch in, a small sheet after it: raised to its Fit, his zoom kept aside (not the default zoom)',
+      [r.zf.showsFit(), r.zf.raise !== null, r.zf.base === his, r.zf.baseFit], [true, true, true, false]);
+  }
+  const imp = fnText('importPdfFile') || '';
+  ok('importPdfFile: sheets added to an open job are a turn (asked before the drawing goes); a new job opens',
+    /const view = intoOpen && startAt > 0 \? 'turn' : 'open';\n\s*const chose = view === 'turn' && leftByChoice\(\);\n\s*pageImage = null;\n\s*await goToPage\(startAt, \{ view, chose \}\);/.test(imp));
+}
+{
+  // 'keep': the drawing taken down and read back (the save's re-read --
+  // reacquireAfterSave is the peer's this round; the one-line change it
+  // needs is handed over): the view exactly as it was, a reissue on other
+  // paper up too.
+  const r = rig({ canvas: IPAD, pages: [SHEET], revs: { 0: [['r1', [3400, 2200]]] } }, { touch: true });
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  await r.act('zoom-in');
+  r.vp.panBy(50, 30);
+  const before = r.vp.serialize();
+  r.env.pageImage = null;
+  await r.env.goToPage(0, { version: 'r1', view: 'keep' });
+  const after = r.vp.serialize();
+  ok('kept through a re-read: the same zoom, the reissue where he had it',
+    r.env.versionView.revId === 'r1' && after.zoom === before.zoom && close(after.x, before.x, 1e-12, 1e-9)
+      && close(after.y, before.y, 1e-12, 1e-9), JSON.stringify([before, after]));
+  r.env.app.pages.file = { reread: true };   // the re-read re-points the store (setFromProject)
+  r.env.pageImage = null;
+  await r.env.goToPage(0, { version: 'r1' });
+  ok('...which the re-read without it does not do: it opens again (the save re-fit, handed to the peer)',
+    r.zf.showsFit());
+  // ...and with it, a Page Down while the re-read decodes is a turn, not
+  // another opening: the job is the one he was in.
+  r.wheel(512, 352, -120, 0, true);
+  const past = r.vp.zoom;
+  r.env.app.pages.file = { reread: 2 };
+  r.env.pageImage = null;
+  r.env.holdPage = true;
+  const kept = r.env.goToPage(0, { version: 'r1', view: 'keep' });
+  r.env.holdPage = false;
+  r.st.held = [];
+  ok('(the re-read still decoding)', r.env.pageImage === null && !!r.st.releasePage);
+  const relKeep = r.st.releasePage;
+  r.pages.push(SHEET);
+  await r.env.stepSheet(1);
+  relKeep();
+  await kept;
+  eq('a Page Down while a kept re-read decodes: a turn at his zoom past Fit, not the default zoom',
+    [r.st.page, r.vp.zoom === past, r.zf.pastFit, centred(r)], [1, true, true, true]);
+  ok('reacquireAfterSave is untouched this round (the peer\'s save rework)',
+    /pageImage = null;\n[\s\S]{0,600}?await goToPage\(app\.currentPage, \{ version: versionView\.revId \}\);/.test(fnText('reacquireAfterSave') || ''));
+}
+{
+  // The wiring, by text: the doors.
+  const gp = fnText('goToPage') || '';
+  ok('goToPage asks below_fit_by_choice of the sheet being LEFT -- the drawing still up -- as it lands under its own ticket',
+    /if \(ticket !== pageTicket\) return;[^\n]*\n\n(\s*\/\/[^\n]*\n)*\s*const chose = how === 'turn' && \(leftChose \?\? leftByChoice\(\)\);\n\s*pageImage = decoded;\n\s*shownPage = index;\n\s*landedJob = jobNow\(\);[\s\S]*zoomFloor\.turned\(chose\)/.test(gp));
+  // 'This sheet' is one question, asked in one place: he is on it AND its
+  // drawing is up (onSheetUp) -- either alone was wrong while a turn decodes.
+  const one = fnText('onSheetUp') || '';
+  ok('onSheetUp asks both the drawing up and app.currentPage',
+    /return sheetUp\(\) === index && app\.currentPage === index;/.test(one), one);
+  ok('...and how the sheet comes up is asked of it, not of app.currentPage or the drawing alone',
+    /const how = viewOf\(index, view\);/.test(gp) && !/app\.currentPage !== index \? 'turn'/.test(gp)
+    && /view === 'turn' \|\| !onSheetUp\(index\) \? 'turn' : 'keep'/.test(fnText('viewOf') || ''));
+  ok('the Items list: a row on another sheet than the one he is on, up, is a jump, zoomed on its item',
+    /pageIdx !== STANDALONE_PAGE && !onSheetUp\(pageIdx\)\) \{ void jumpToItem\(m, pageIdx\); return; \}/.test(SELECT_ITEM || ''));
+  ok('...and so is Zoom to item from a row\'s menu', /const elsewhere = !onSheetUp\(at\)\n/.test(ITEM_FN || ''));
+  eq('nothing else asks sheetUp() alone whether a sheet is this one', [...MAIN.matchAll(/sheetUp\(\)/g)].length, 2);
+  ok('the zoom floor\'s sheet is the one whose drawing is up', /page: \(\) => shownPage,/.test(BUILD || ''));
+  const del = fnText('deleteCurrentPage') || '';
+  ok('deleteCurrentPage: asked before the sheet goes, landed as a turn',
+    /const chose = leftByChoice\(\);[\s\S]*app\.pages\.removePage\(idx\);[\s\S]*pageImage = null;\n\s*await goToPage\([^\n]*, \{ view: 'turn', chose \}\);/.test(del));
+  ok('the turn doors all go through goToPage: the arrows, the keys, the thumbnails, a callout\'s sheet',
+    /case 'prev-page': goToPage\(app\.currentPage - 1\); break;/.test(MAIN) && /case 'next-page': goToPage\(app\.currentPage \+ 1\); break;/.test(MAIN)
+    && /onPick: idx => goToPage\(idx, \{ view: 'turn' \}\),/.test(MAIN)
+    && /goToSheet: i => \{ void goToPage\(i, \{ view: 'turn' \}\); \},/.test(MAIN)
+    && /return goToPage\(next\);/.test(fnText('stepSheet') || ''));
+}
+{
+  // A row on THIS sheet whose item is on another drawing of it: a flip, not
+  // a turn -- the view he has is kept, his drag included (no settle).
+  const r = rig({ canvas: IPAD, pages: [SHEET, SHEET], revs: { 0: [['r1', [3400, 2200]]] } }, { touch: true });
+  r.env.pageImage = null;
+  await r.env.goToPage(0, { version: '' });
+  r.vp.panBy(120, -50);
+  const before = r.pan();
+  r.env.selectItem({ _uid: 'k', type: 'count', points: [[3600, 2400], [3700, 2450]], rev_id: 'r1' }, 0);
+  for (let k = 0; k < 5; k += 1) await tick();
+  eq('a row on this sheet, its item on a reissue of it: the reissue up, his place on the sheet kept, nothing settled',
+    [r.env.versionView.revId, close(r.pan()[0], before[0], 1e-9, 1e-6) && close(r.pan()[1], before[1], 1e-9, 1e-6)],
+    ['r1', true]);
+}
+{
+  // An item filed under a sheet the set does not have: goToPage refuses
+  // it, and the jump zooms nothing on the sheet that is up.
+  const r = rig({ canvas: IPAD, pages: [SHEET, SHEET] }, { touch: true });
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  const v = r.vp.serialize();
+  r.st.jumped = null;
+  r.env.selectItem({ _uid: 'z', type: 'count', points: [[100, 100], [150, 120]] }, 7);
+  await r.st.jumped;
+  eq('a jump to a sheet the set does not have: the sheet up is left as it was', [r.st.page, r.vp.serialize()], [0, v]);
+}
+{
+  // A job opening with no canvas to land in: parked, then the default zoom
+  // AND the settle on the first frame with one -- a sheet smaller than the
+  // screen at 100% raised to its Fit, as the desktop's load does.
+  const r = rig({ canvas: [1600, 900], pages: [[500, 300], SHEET], settings: { default_zoom_mode: '100' } });
+  r.resize(0, 0);
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  ok('(parked: the open had no canvas)', r.env.pendingFit === true);
+  r.resize(1600, 900);
+  r.env.parked();
+  eq('...the first frame with one: 100% would show it smaller than the screen, so it is raised, his zoom 100%',
+    [r.zf.showsFit(), r.zf.raise !== null, r.zf.base, r.env.pendingFit], [true, true, 1, false]);
+  await r.env.goToPage(1);
+  eq('...and the big sheet after it at 100%, centred', [r.vp.zoom, centred(r)], [1, true]);
+}
+{
+  // A turn parked for want of a canvas belongs to the sheet it was for: a
+  // job opened after it (at Fit Width, its top in view) is not settled by it.
+  const r = rig({ canvas: [1600, 900], pages: [SHEET, SHEET], settings: { default_zoom_mode: 'width' } });
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  r.resize(0, 0);
+  await r.env.goToPage(1);
+  ok('(a turn parked)', r.env.pendingTurn !== null);
+  r.env.app.pages.file = { another: true };   // another job opens, still with no canvas
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  r.resize(1600, 900);
+  r.env.parked();
+  const z = (1600 - 32) / SHEET[0];
+  ok('the job opened after a parked turn: at Fit Width, its top in view -- the old turn did not centre it',
+    close(r.vp.zoom, z) && close(r.vp.origin.y, -16 / z, 1e-12, 1e-9) && r.env.pendingTurn === null,
+    JSON.stringify([r.vp.zoom / z, r.vp.origin, r.env.pendingTurn]));
+}
+
+// ── while the next sheet decodes ─────────────────────────────────────────
+// The drawing up is still the last sheet's for as long as the next one takes
+// to read -- seconds on the iPad. What he does in that window is done on the
+// drawing up (shownPage), not on app.currentPage, which the turn already
+// moved: a second tap, a row clicked twice, a zoom, a mark. But the sheet up
+// is no longer the sheet he is on: a turn back to it, or a row on it, is a
+// turn, not a 'keep' (onSheetUp asks both).
+const SMALL_PAPER = [3400, 2200];
+const fitOn = (r, s) => Math.min((r.vp.width - 32) / s[0], (r.vp.height - 32) / s[1]);
+/** A touch rig on the iPad, the job open on its first sheet. */
+async function opened(pages, opts = {}) {
+  const r = rig({ canvas: IPAD, pages, ...opts }, { touch: true });
+  r.env.pageImage = null;
+  await r.env.goToPage(0);
+  return r;
+}
+/** Start `fn` with every sheet decode it asks for held; returns the release of them all, oldest first. */
+function holding(r, fn) {
+  r.env.holdPage = true;
+  r.st.held = [];
+  const out = fn();
+  r.env.holdPage = false;
+  return { out, release: () => { for (const f of r.st.held.splice(0)) f(); } };
+}
+{
+  // A card tapped twice while its sheet decodes (F1): the second tap is the
+  // same turn, centred and settled -- it was a 'keep' that cancelled the
+  // first, and left the small sheet at the big one's Fit, off centre.
+  const r = await opened([SHEET, SMALL_PAPER, SHEET]);
+  const h = holding(r, () => [r.env.pickCard(1), r.env.pickCard(1)]);
+  h.release();
+  await Promise.all(h.out);
+  eq('a card tapped twice while its sheet decodes, at Fit: that sheet at its own Fit, centred, "Fit N%"',
+    [r.st.page, r.vp.zoom === fitOn(r, SMALL_PAPER), r.zf.showsFit(), /^Fit /.test(r.zf.label())], [1, true, true, true]);
+  r.wheel(512, 352, -120);
+  eq('...so a notch out there is refused at Fit, not taken', r.vp.zoom === fitOn(r, SMALL_PAPER), true);
+}
+{
+  // Next, then that sheet's card while it decodes: the small sheet raised.
+  const r = await opened([SHEET, SMALL_PAPER, SHEET]);
+  r.wheel(512, 352, 120);
+  const his = r.vp.zoom;
+  const h = holding(r, () => [r.env.stepSheet(1), r.env.pickCard(1)]);
+  h.release();
+  await Promise.all(h.out);
+  eq('Next, then that sheet\'s card while it decodes: raised to its Fit, centred, his zoom kept aside',
+    [r.st.page, r.zf.showsFit(), r.zf.raise !== null, r.zf.base === his], [1, true, true, true]);
+}
+{
+  // ...and onto paper of the same size, zoomed in and dragged aside: centred.
+  const r = await opened([SHEET, SHEET]);
+  r.wheel(512, 352, 120);
+  r.wheel(512, 352, 120);
+  r.vp.panBy(-400, -300);
+  const his = r.vp.zoom;
+  const h = holding(r, () => [r.env.pickCard(1), r.env.pickCard(1)]);
+  h.release();
+  await Promise.all(h.out);
+  eq('a card tapped twice, zoomed in and dragged aside: the sheet at his zoom, centred',
+    [r.st.page, r.vp.zoom === his, centred(r)], [1, true, true]);
+}
+{
+  // An Items row clicked twice (a double click) while its item's sheet
+  // decodes (F2): the second click is the same jump, ending on the item. It
+  // took the same-sheet branch -- a 'keep', the old view, no zoom on it.
+  const item = { _uid: 'd', type: 'count', points: [[1600, 1000], [1700, 1060]] };
+  const want = Math.min((IPAD[0] - 32) / Math.max(100 * 1.8, SMALL_PAPER[0] * 0.12),
+    (IPAD[1] - 32) / Math.max(60 * 1.8, SMALL_PAPER[1] * 0.12), 8);
+  const onItem = r => [close(r.vp.zoom, want), close(r.vp.toPage(512, 352)[0], 1650, 1e-9, 1e-6),
+    close(r.vp.toPage(512, 352)[1], 1030, 1e-9, 1e-6), [...r.c.selected]];
+  {
+    const r = await opened([SHEET, SMALL_PAPER, SHEET]);
+    r.wheel(512, 352, 120);
+    const h = holding(r, () => {
+      r.env.selectItem(item, 1);
+      const a = r.st.jumped;
+      r.env.selectItem(item, 1);
+      return [a, r.st.jumped];
+    });
+    h.release();
+    await Promise.all(h.out);
+    eq('a row double-clicked while its item\'s sheet decodes: turned to, zoomed and centred on the item, selected',
+      [r.st.page, ...onItem(r)], [1, true, true, true, ['d']]);
+  }
+  {
+    const r = await opened([SHEET, SMALL_PAPER, SHEET]);
+    const h = holding(r, () => {
+      const a = r.env.stepSheet(1);
+      r.env.selectItem(item, 1);
+      return [a, r.st.jumped];
+    });
+    h.release();
+    await Promise.all(h.out);
+    eq('Next, then a row on that sheet while it decodes: zoomed and centred on the item',
+      [r.st.page, ...onItem(r)], [1, true, true, true, ['d']]);
+  }
+}
+{
+  // A turn made while nothing is up is a turn, not a job opening (F3): his
+  // zoom, Shift past Fit included, is not thrown away for the default zoom.
+  const SHEETS = [SHEET, SHEET, SHEET, SHEET];
+  {
+    // ...during a delete's landing decode.
+    const pages = SHEETS.slice();
+    const r = rig({ canvas: IPAD, pages }, { touch: true });
+    Object.assign(r.env, {
+      D: { alertDialog: async () => {}, confirmDialog: async () => true },
+      isTakeoffItem: () => true, takeoffQuantityWords: () => '',
+      countingModel: () => ({ countedQuantities: () => ({}) }), takeoffMoveWords: () => '',
+      sayPrice() {}, calloutPreview: { clearCache() {} },
+    });
+    r.env.thumbs.refresh = () => {};
+    r.env.app.pages.removePage = i => { pages.splice(i, 1); };
+    r.env.app.project.notePageRemoved = () => {};
+    liftMain(['deleteCurrentPage'], r.env);
+    r.env.pageImage = null;
+    await r.env.goToPage(0);
+    await r.env.goToPage(1);
+    r.wheel(512, 352, -120, 0, true);
+    const past = r.vp.zoom;
+    r.env.holdPage = true;
+    r.st.held = [];
+    const gone = r.env.deleteCurrentPage();
+    while (!r.st.held.length) await tick();
+    r.env.holdPage = false;
+    ok('(the sheet after the deleted one still decoding, nothing up)', r.env.pageImage === null);
+    await r.env.stepSheet(1);
+    for (const f of r.st.held.splice(0)) f();
+    await gone;
+    eq('Page Down while a deleted sheet\'s neighbour decodes: his zoom Shift took past Fit, centred, still past Fit',
+      [r.st.page, r.vp.zoom === past, r.zf.pastFit, centred(r)], [2, true, true, true]);
+  }
+  {
+    // ...past a sheet that would not decode.
+    const r = await opened(SHEETS.slice());
+    r.wheel(512, 352, -120, 0, true);
+    const past = r.vp.zoom;
+    r.env.failPage = 1;
+    await r.env.stepSheet(1);
+    ok('(that sheet could not be opened: nothing up)', r.env.pageImage === null
+      && /^Could not open sheet 2/.test(r.st.said.at(-1) || ''), r.st.said.at(-1));
+    r.env.failPage = -1;
+    await r.env.stepSheet(1);
+    eq('Page Down past a sheet that would not decode: his zoom Shift took past Fit, centred, still past Fit',
+      [r.st.page, r.vp.zoom === past, r.zf.pastFit, centred(r)], [2, true, true, true]);
+  }
+  {
+    const r = await opened(SHEETS.slice());
+    r.wheel(512, 352, 120);
+    r.wheel(512, 352, 120);
+    const his = r.vp.zoom;
+    r.env.failPage = 1;
+    await r.env.stepSheet(1);
+    r.env.failPage = -1;
+    await r.env.stepSheet(1);
+    eq('...and zoomed in: his zoom, not the default zoom', [r.st.page, r.vp.zoom === his, r.zf.baseFit, centred(r)],
+      [2, true, false, true]);
+  }
+}
+{
+  // A zoom made on the drawing up while the next sheet decodes is his
+  // choice, asked as the turn lands (F4).
+  {
+    const r = await opened([SHEET, SMALL_PAPER, SHEET]);
+    const h = holding(r, () => r.env.stepSheet(1));
+    r.wheel(512, 352, -120, 0, true);
+    const past = r.vp.zoom;
+    ok('(Shift past Fit on the sheet still up)', past < fitOn(r, SHEET) && r.st.page === 1);
+    h.release();
+    await h.out;
+    eq('Shift past Fit while the small sheet decodes: it comes up at that zoom, centred, not raised, still past Fit',
+      [r.vp.zoom === past, centred(r), r.zf.raise, r.zf.pastFit], [true, true, null, true]);
+    await r.env.stepSheet(1);
+    eq('...and the big sheet after it at that zoom too (not the small sheet\'s Fit)',
+      [r.st.page, r.vp.zoom === past, r.zf.pastFit], [2, true, true]);
+  }
+  {
+    // ...a fresh pinch from Fit, the touch Shift.
+    const r = await opened([SHEET, SMALL_PAPER, SHEET]);
+    const h = holding(r, () => r.env.stepSheet(1));
+    const f = hand(r).down(512, 352, 300);
+    for (let d = 280; d >= 140; d -= 20) f.to(d);
+    f.up();
+    const past = r.vp.zoom;
+    ok('(a fresh pinch from Fit went past it on the sheet still up)', past < fitOn(r, SHEET) * 0.7 && r.zf.pastFit);
+    h.release();
+    await h.out;
+    eq('a fresh pinch past Fit while the small sheet decodes: kept there, not raised to its Fit',
+      [r.vp.zoom === past, r.zf.raise, r.zf.pastFit], [true, null, true]);
+    await r.env.stepSheet(1);
+    ok('...and the big sheet after it at his zoom, not the small sheet\'s Fit', r.vp.zoom === past && centred(r),
+      String(r.vp.zoom / past));
+  }
+  {
+    // A notch in and out on a raised sheet while the next one decodes: his
+    // zoom back (isTurnRaise asks the sheet up), so the next big sheet has it.
+    const r = await opened([SHEET, SMALL_PAPER, SHEET]);
+    r.wheel(512, 352, 120);
+    const his = r.vp.zoom;
+    await r.env.stepSheet(1);
+    ok('(the small sheet raised)', r.zf.raise !== null && r.zf.showsFit());
+    const h = holding(r, () => r.env.stepSheet(1));
+    r.wheel(512, 352, 120);
+    r.wheel(512, 352, -120);
+    eq('a notch in and out on the raised sheet while the next decodes: his zoom again, a number',
+      [r.zf.base === his, r.zf.baseFit], [true, false]);
+    h.release();
+    await h.out;
+    eq('...so the big sheet after it comes up at his zoom, centred', [r.st.page, r.vp.zoom === his, centred(r)],
+      [2, true, true]);
+  }
+}
+{
+  // The sheet on screen picked again (its card, a callout to it): centred and
+  // settled again, as the desktop's go_to_page does (F5; the differential has
+  // it too) -- while a row on this sheet, which flips at most, keeps the view.
+  const r = await opened([SHEET, SMALL_PAPER]);
+  r.wheel(512, 352, 120);
+  r.vp.panBy(150, 80);
+  const his = r.vp.zoom;
+  await r.env.pickCard(0);
+  eq('the card of the sheet on screen: centred at his zoom', [r.st.page, r.vp.zoom === his, centred(r)], [0, true, true]);
+  r.vp.panBy(150, 80);
+  const before = r.pan();
+  r.env.selectItem({ _uid: 'h', type: 'count', points: [[3600, 2400], [3700, 2450]] }, 0);
+  for (let k = 0; k < 5; k += 1) await tick();
+  ok('...a row on it: the view he has', close(r.pan()[0], before[0], 1e-9, 1e-6) && close(r.pan()[1], before[1], 1e-9, 1e-6));
+}
+{
+  // Zoom to item from a row's menu, the item traced on a reissue of the
+  // sheet up: that drawing put up first, as a click on the row puts it up --
+  // it was zoomed to on the sheet's own drawing, where it is not painted.
+  const pts = [[1000, 700], [1200, 800]];
+  const want = Math.min((IPAD[0] - 32) / Math.max(200 * 1.8, SMALL_PAPER[0] * 0.12),
+    (IPAD[1] - 32) / Math.max(100 * 1.8, SMALL_PAPER[1] * 0.12), 8);
+  const r = rig({ canvas: IPAD, pages: [SHEET, SHEET], revs: { 0: [['r1', SMALL_PAPER]] } }, { touch: true });
+  r.env.pageImage = null;
+  await r.env.goToPage(0, { version: '' });
+  r.env.itemAt = () => ({ pageKey: 0 });
+  r.env.from = 'list';
+  r.st.jumped = null;
+  r.item(pts, 'count', { _uid: 'q', rev_id: 'r1' });
+  await r.st.jumped;
+  eq('Zoom to item from a row, its item on a reissue of the sheet up: the reissue up, zoomed and centred on the item',
+    [r.env.versionView.revId, close(r.vp.zoom, want), close(r.vp.toPage(512, 352)[0], 1100, 1e-9, 1e-6), [...r.c.selected]],
+    ['r1', true, true, ['q']]);
+  r.env.from = 'canvas';
+  await r.env.showSheetVersion(0, '', { announce: false });
+  r.st.jumped = null;
+  r.item(pts, 'count', { _uid: 'q', rev_id: 'r1' });
+  eq('...from the drawing, what was pressed is on the drawing up: no flip', [r.st.jumped, r.env.versionView.revId], [null, '']);
+}
+{
+  // Past Fit by choice, then a turn onto a sheet whose newest drawing is on
+  // smaller paper: kept there too -- the second settle, for the reissue,
+  // is asked with the turn's `chose` (the differential has it as well).
+  const r = await opened([SHEET, SHEET], { revs: { 1: [['r1', SMALL_PAPER]] } });
+  r.wheel(512, 352, -120, 0, true);
+  const past = r.vp.zoom;
+  await r.env.stepSheet(1);
+  eq('Shift past Fit, then a sheet whose newest drawing is smaller paper: the reissue up at that zoom, not raised',
+    [r.env.versionView.revId, r.vp.zoom === past, r.zf.raise, r.zf.pastFit], ['r1', true, null, true]);
+}
+{
+  // Nothing is drawn on the last sheet's drawing while the next one decodes
+  // (F7): a stroke there was filed under the NEW sheet, at the old drawing's
+  // place. Looking goes on: Pan pans.
+  const r = await opened([SHEET, SMALL_PAPER]);
+  r.c.addEventListener('status', e => r.st.said.push(e.detail.text));
+  r.c.readOnly = false;
+  r.c.setMode('draw');
+  const ev = (type, x, y) => ({ pointerId: 7, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1,
+    clientX: x, clientY: y, type, preventDefault() {}, stopPropagation() {}, shiftKey: false, ctrlKey: false,
+    metaKey: false, altKey: false, detail: 1 });
+  const stroke = () => {
+    r.on.pointerdown(ev('pointerdown', 300, 300));
+    for (let k = 1; k <= 6; k += 1) r.on.pointermove(ev('pointermove', 300 + 20 * k, 300 + 10 * k));
+    r.on.pointerup(ev('pointerup', 420, 360));
+  };
+  const filed = () => Object.fromEntries(Object.entries(r.c.project.annotations || {})
+    .filter(([, v]) => v.length).map(([k, v]) => [k, v.length]));
+  const h = holding(r, () => r.env.stepSheet(1));
+  stroke();
+  eq('a stroke drawn on the last sheet\'s drawing while the next decodes: filed nowhere, and he is told why',
+    [filed(), r.st.said.at(-1)], [{}, 'X1 is still opening — draw on it once it is on screen']);
+  r.c.setMode('pan');
+  const o = { ...r.vp.origin };
+  r.on.pointerdown(ev('pointerdown', 300, 300));
+  r.on.pointermove(ev('pointermove', 360, 330));
+  r.on.pointerup(ev('pointerup', 360, 330));
+  ok('...a drag in Pan still pans the drawing up', r.vp.origin.x !== o.x && r.vp.origin.y !== o.y);
+  h.release();
+  await h.out;
+  r.c.setMode('draw');
+  stroke();
+  eq('...and once the sheet is up, the stroke is its', filed(), { 1: 1 });
+}
+{
+  // Page Down, then back before the next sheet is up: a turn back, centred
+  // at his zoom -- the desktop's prev_page, and what the same keys give
+  // when the decode is quick. It was a 'keep' (the drawing up is the sheet
+  // he went back to), left where he had dragged it, while the card of that
+  // sheet centred it. The keys (stepSheet) and runAction's own page cases
+  // (the arrows, the mobile bar), the box on and off, either decode done
+  // first. (The differential runs the desktop's next_page / prev_page on it.)
+  const PAGE_CASES = between("    case 'prev-page':", "    case 'next-page':");
+  ok('(runAction\'s page cases, word for word)', /goToPage\(app\.currentPage - 1\)[\s\S]*goToPage\(app\.currentPage \+ 1\)/
+    .test(PAGE_CASES || ''), PAGE_CASES);
+  /** Sheet `pages`, zoomed in two notches and dragged aside; `turn` then `back` with every decode held. */
+  async function andBack(pages, { box = true, keys = true, backFirst = false, before } = {}) {
+    const r = await opened(pages, { settings: { zoom_out_stops_at_fit: box } });
+    r.wheel(512, 352, 120);
+    r.wheel(512, 352, 120);
+    const his = r.vp.zoom;
+    await before?.(r);
+    r.vp.panBy(150, 80);
+    const turns = [];
+    const go = r.env.goToPage;
+    r.env.goToPage = (...a) => { const p = go(...a); turns.push(p); return p; };
+    // eslint-disable-next-line no-new-func
+    const arrow = new Function('env', `with (env) { return function arrow(a) { switch (a) {\n${PAGE_CASES}\n} }; }`)(r.env);
+    r.env.holdPage = true;
+    r.st.held = [];
+    if (keys) { r.env.stepSheet(1); r.env.stepSheet(-1); } else { arrow('next-page'); arrow('prev-page'); }
+    r.env.holdPage = false;
+    const held = r.st.held.splice(0);
+    ok('(both decodes held: the turn and the turn back)', held.length === 2 && turns.length === 2);
+    for (const f of backFirst ? held.reverse() : held) f();
+    await Promise.all(turns);
+    return { r, his };
+  }
+  for (const box of [true, false]) {
+    for (const keys of [true, false]) {
+      for (const backFirst of [false, true]) {
+        const { r, his } = await andBack([SHEET, SHEET, SHEET], { box, keys, backFirst });
+        eq(`the box ${box ? 'on' : 'off'}: ${keys ? 'Page Down then Page Up' : 'the next arrow then the back arrow'} `
+          + `before the next sheet is up${backFirst ? ' (the sheet left decoding first)' : ''}: back at his zoom, centred`,
+        [r.st.page, r.vp.zoom === his, centred(r)], [0, true, true]);
+      }
+    }
+  }
+  {
+    // ...from a small sheet raised to its Fit: raised again, centred, his zoom kept aside.
+    const { r, his } = await andBack([SHEET, SMALL_PAPER, SHEET], { before: r => r.env.stepSheet(1) });
+    eq('Page Down then Page Up before the next sheet is up, from a small sheet raised: raised again, centred',
+      [r.st.page, r.zf.showsFit(), r.zf.raise !== null, r.zf.base === his, centred(r)], [1, true, true, true, true]);
+  }
+}
+{
+  // An item on the sheet being LEFT, while the next one decodes: a row
+  // clicked, and Zoom to item from a row's menu, are each a jump back to it,
+  // zoomed and centred on the item, selected, the zoom a number -- what a
+  // quick decode gives, and the desktop's _on_item_activated (current_page
+  // already the next; the differential runs it). The row took the 'this
+  // sheet' path (the old zoom, nothing zoomed on), and the menu zoomed on
+  // the drawing still up, the turn going on: the next sheet came up at the
+  // item's zoom, centred on its middle, the item not there.
+  const pts = [[5000, 3000], [5400, 3300]];
+  const want = Math.min((IPAD[0] - 32) / Math.max(400 * 1.8, SHEET[0] * 0.12),
+    (IPAD[1] - 32) / Math.max(300 * 1.8, SHEET[1] * 0.12), 8);
+  const onItem = (r, id) => [r.st.page, close(r.vp.zoom, want), close(r.vp.toPage(512, 352)[0], 5200, 1e-9, 1e-6),
+    close(r.vp.toPage(512, 352)[1], 3150, 1e-9, 1e-6), [...r.c.selected], r.zf.baseFit, r.zf.base === r.vp.zoom];
+  for (const via of ['a row clicked', 'Zoom to item from a row\'s menu']) {
+    const got = {};
+    for (const held of [false, true]) {
+      const r = await opened([SHEET, SHEET]);
+      r.env.itemAt = () => ({ pageKey: 0 });
+      r.env.from = 'list';
+      r.st.jumped = null;
+      const h = held ? holding(r, () => r.env.stepSheet(1)) : null;
+      if (!held) await r.env.stepSheet(1);
+      if (via === 'a row clicked') r.env.selectItem({ _uid: 'w', type: 'count', points: pts, rev_id: '' }, 0);
+      else r.item(pts, 'count', { _uid: 'w', rev_id: '' });
+      h?.release();
+      await h?.out;
+      await r.st.jumped;
+      for (let k = 0; k < 5; k += 1) await tick();
+      got[held] = onItem(r, 'w');
+    }
+    eq(`${via}, its item on the sheet just left, quick decode: back on it, zoomed and centred on the item, a number`,
+      got.false, [0, true, true, true, ['w'], false, true]);
+    eq(`...and the same while the next sheet is still decoding (${via})`, got.true, got.false);
+  }
+}
+{
+  // A pinch in a takeoff or markup tool while the next sheet decodes is
+  // looking: it zooms, and nothing is said -- its first finger's press was
+  // refused with 'draw on it once it is on screen'. A finger that is not a
+  // pinch is refused on its lift, and told why; nothing goes on the drawing
+  // up. Through the controller's own pointer handlers, touch events.
+  const r = await opened([SHEET, SMALL_PAPER]);
+  r.c.addEventListener('status', e => r.st.said.push(e.detail.text));
+  r.c.readOnly = false;
+  const taps = [];
+  r.c._collectPoint = (ev, pt) => { taps.push(pt); };
+  const filed = () => Object.fromEntries(Object.entries(r.c.project.annotations || {})
+    .filter(([, v]) => v.length).map(([k, v]) => [k, v.length]));
+  const WHY = 'X1 is still opening — draw on it once it is on screen';
+  const pinchOut = () => {
+    const f = hand(r, [21, 22]).down(512, 352, 200);
+    for (let d = 220; d <= 400; d += 20) f.to(d);
+    f.up();
+  };
+  const stroke = id => {
+    r.finger('pointerdown', id, 300, 300);
+    for (let k = 1; k <= 6; k += 1) r.finger('pointermove', id, 300 + 20 * k, 300 + 10 * k);
+    r.finger('pointerup', id, 420, 360);
+  };
+  await r.c.setMode('count', { ask: false });
+  const h = holding(r, () => r.env.stepSheet(1));
+  for (const mode of ['count', 'draw']) {
+    await r.c.setMode(mode, { ask: false });
+    r.st.said.length = 0;
+    const z0 = r.vp.zoom;
+    pinchOut();
+    eq(`a pinch in ${mode === 'count' ? 'Count' : 'Draw'} while the next sheet decodes: it zooms, and nothing is said`,
+      [r.vp.zoom > z0 * 1.5, r.st.said], [true, []]);
+  }
+  await r.c.setMode('count', { ask: false });
+  r.st.said.length = 0;
+  r.finger('pointerdown', 5, 300, 300);
+  eq('...a finger down in Count says nothing yet (it may be the first of a pinch)', r.st.said, []);
+  r.finger('pointerup', 5, 300, 300);
+  eq('...lifted, a tap: nothing counted, and he is told why', [taps.length, r.st.said], [0, [WHY]]);
+  await r.c.setMode('draw', { ask: false });
+  r.st.said.length = 0;
+  stroke(6);
+  eq('...a finger stroke in Draw: filed nowhere, and he is told why, once', [filed(), r.st.said], [{}, [WHY]]);
+  r.st.said.length = 0;
+  r.finger('pointerdown', 8, 300, 300);
+  r.on.pointercancel({ pointerId: 8, pointerType: 'touch', button: 0, clientX: 300, clientY: 300, type: 'pointercancel',
+    preventDefault() {}, shiftKey: false, ctrlKey: false, metaKey: false });
+  eq('...a finger the browser took back (pointercancel): nothing said', r.st.said, []);
+  h.release();
+  await h.out;
+  r.st.said.length = 0;
+  stroke(9);
+  eq('...and once the sheet is up, the finger\'s stroke is its, nothing said', [filed(), r.st.said], [{ 1: 1 }, []]);
+  await r.c.setMode('count', { ask: false });
+  r.finger('pointerdown', 10, 300, 300);
+  r.finger('pointerup', 10, 300, 300);
+  eq('...and a tap in Count is a tap', taps.length, 1);
 }
 
 // ═══ 9. the live differential ═══════════════════════════════════════════

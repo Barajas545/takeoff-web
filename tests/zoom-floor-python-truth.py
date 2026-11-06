@@ -12,12 +12,21 @@ desktop's own code rather than to a transcription of it:
     wants_zoom_floor, zoom_floor, at_zoom_floor, shows_fit, land_on_fit,
     floor_takes_notch, _floor_refused_notch, _note_past_fit,
     below_fit_by_choice, _zoom_chosen, _is_turn_raise, _zoom_about,
-    _canvas_resized, zoom_to_measurement, wheelEvent and _FIT_EPS;
+    _canvas_resized, zoom_to_measurement, wheelEvent and _FIT_EPS -- and
+    set_page, whose turn forgets the last raise and puts the pan back in
+    the middle;
   * PDFCacheViewer: _apply_default_zoom, _turn_zoom_settle, zoom_in,
     zoom_out, update_zoom_label, _say_zoom_floor_once, _zoom_out_tip,
     _hold_turn_zoom, _settle_held_turn_zoom, _zoom_label_refresh, zoom_fit,
     _set_zoom_100, and the wheel line of _show_shortcuts (_wheel_help, its
     own three statements);
+  * ...and the page turns, whole: next_page, prev_page (Page Down / Up),
+    go_to_page (a thumbnail, a jump), the Newest landing every one of them
+    makes (_land_on_page), show_sheet_version (the version bar, the matrix:
+    a turn HELD until the revision it asked for is up, then settled once),
+    go_to_page_own_version, hide_revision_preview, and the Items list's jump
+    to an item (_on_item_activated, go_to_item: the turn first, THEN
+    zoom_to_measurement -- the item zoom is his, a number);
   * SettingsDialog._zoom_floor_words and the zoom-stop box's tooltip;
   * _RefCanvas.wheelEvent: the picture windows (a revision page on its own,
     the Diff), which stop at their picture's Fit and go on to half with Shift;
@@ -68,7 +77,7 @@ GL_METHODS = [
     "land_on_fit", "floor_takes_notch", "_floor_refused_notch",
     "_note_past_fit", "below_fit_by_choice", "_zoom_chosen",
     "_is_turn_raise", "_zoom_about", "_canvas_resized",
-    "zoom_to_measurement", "wheelEvent",
+    "zoom_to_measurement", "wheelEvent", "set_page",
 ]
 GL_CLASS_ATTRS = ["_FIT_EPS"]
 # The stand-in's data, and the canvas's other business: the photo-marker
@@ -80,12 +89,27 @@ GL_STUBS = {
     "_zoom_base_fit", "_raise_rec", "_canvas_seen", "current_page",
     "preview_key", "_wheel_mode",
     "_photo_hover_step", "_photo_hover_cancel", "_scale_tip_hide",
+    # set_page's other business: the drawing list it checks the index
+    # against, the revision it takes down (clear_page_preview: only the
+    # picture), and the selection and CAD state it drops with the sheet.
+    "_images", "_preview_tex", "clear_page_preview",
+    "_current_measurement", "_sel_meas", "_sel_vert_idx", "_cad_sel",
+    "_cad_hover", "_cad_vert_drag", "_pre_drag_committed",
+    "annotations_changed", "_cad_grip_base", "_cad_grip_grab",
+    "_cad_rot_arm", "_cad_tab_cycle", "_sel_stroke", "sheet_shown",
+    # ...and what the page turns ask of the canvas.
+    "page_count", "_overlay_page", "_overlay_shown",
+    "_measurement_group", "select_measurement", "version_items",
 }
 WIN_METHODS = [
     "_apply_default_zoom", "_turn_zoom_settle", "zoom_in", "zoom_out",
     "update_zoom_label", "_say_zoom_floor_once", "_zoom_out_tip",
     "_hold_turn_zoom", "_settle_held_turn_zoom", "_zoom_label_refresh",
     "zoom_fit", "_set_zoom_100",
+    # the page turns, whole
+    "next_page", "prev_page", "go_to_page", "go_to_page_own_version",
+    "show_sheet_version", "_land_on_page", "hide_revision_preview",
+    "go_to_item", "_on_item_activated",
 ]
 # The window's data and the furniture the zoom only reports to: the status
 # strip (recorded), the readout (recorded), full screen (never, on the web).
@@ -93,6 +117,22 @@ WIN_STUBS = {
     "gl_widget", "settings", "_flash_status", "zoom_label",
     "is_focus_mode", "focus_layout", "canvas_free_rect",
     "_turn_zoom_hold", "_zoom_floor_said",
+    # A page turn's other business: the overlay it saves and restores, the
+    # page label, the photo Back button, the detail-marking run it ends.
+    "_flush_overlay_save", "_update_page_label", "_restore_overlay_for_page",
+    "_say_kept_overlay_pictures", "_photo_nav", "_clear_photo_back",
+    "marking_details", "_detail_mark_page", "refresh_detail_zones",
+    "_detail_next", "_end_manual_details", "status_label",
+    "_counts_here_clause", "_refresh_version_bar", "_sync_revision_highlight",
+    # The sheet's drawings, as the scenario gives them: which is newest, its
+    # paper, and putting one up (show_revision_in_main: set_page_preview,
+    # which keeps zoom and pan -- its own words).
+    "images", "_newest_swap", "_newest_version_view", "_visible_revisions",
+    "newest_version_of", "sheet_versions", "show_revision_in_main",
+    # The Items list: where an item is drawn, and the rows that do not turn.
+    "mark_version", "item_on_drawing", "_activate_on_this_sheet",
+    "_edit_group_item", "_edit_standalone_item",
+    "_shape_cycle_gid", "_shape_cycle_idx",
 }
 SET_METHODS = ["_zoom_floor_words"]
 REF_METHODS = ["wheelEvent"]
@@ -350,6 +390,11 @@ class Label:
         self.text = t
 
 
+class _Signal:
+    def emit(self, *a):
+        pass
+
+
 class GL(NS["GLBase"]):
     def __init__(self, win, w, h):
         self._win = win
@@ -362,9 +407,18 @@ class GL(NS["GLBase"]):
         self._raise_rec = None
         self._canvas_seen = None
         self._page_sizes = {}
+        self._images = []
         self._current_page = -1
         self._wheel_mode = "zoom"
         self._preview = None
+        self._preview_key = None
+        self._preview_tex = None
+        self._overlay_page = None
+        self._overlay_shown = False
+        self._cad_vert_drag = None
+        self._pre_drag_committed = False
+        self.annotations_changed = _Signal()
+        self.sheet_shown = _Signal()
 
     def width(self):
         return self._w
@@ -382,7 +436,19 @@ class GL(NS["GLBase"]):
         return self._current_page
 
     def preview_key(self):
-        return None if self._preview is None else "rev"
+        return self._preview_key
+
+    def page_count(self):
+        return len(self._images)
+
+    def _measurement_group(self, gid):
+        return []
+
+    def select_measurement(self, m):
+        pass
+
+    def version_items(self):        # what show_sheet_version announces
+        return []
 
     # The desktop's _page_size, as it answers: the drawing ON SCREEN -- a
     # revision up for comparison (_preview_size) before the sheet's own.
@@ -400,26 +466,35 @@ class GL(NS["GLBase"]):
     def _scale_tip_hide(self):
         pass
 
-    # What the real set_page does to the view: the pan back to the middle,
-    # the zoom kept, the last turn's raise forgotten.
-    def set_page(self, i):
-        self._current_page = i
-        self._raise_rec = None
-        self._pan_x = self._pan_y = 0.0
-
     # A flip between versions (set_page_preview / clear_page_preview): only
     # the drawing changes -- "Zoom and pan are untouched", its own words.
-    def flip(self, size):
+    # (set_page, lifted, takes a revision down through clear_page_preview.)
+    def flip(self, size, key=("flip", 0)):
         self._preview = tuple(size) if size else None
+        self._preview_key = tuple(key) if size else None
+        self._preview_tex = self._preview_key
+
+    def clear_page_preview(self, update=True):
+        self.flip(None)
 
 
 class Win(NS["WinBase"]):
-    def __init__(self, w, h, **settings):
+    def __init__(self, w, h, revs=None, newest=True, **settings):
         self.settings = Settings(**settings)
         self.zoom_label = Label()
+        self.status_label = Label()
         self.said = []
         self.gl_widget = GL(self, w, h)
         self.gl_widget._wheel_mode = self.settings.get("wheel_mode") or "zoom"
+        self.images = self.gl_widget._images
+        # {page: [(rev_id, (w, h)), ...]}, oldest first: the sheet's other
+        # drawings, each on its own paper; the last one is the newest.
+        self.revs = {int(k): [(str(r), tuple(sz)) for r, sz in v]
+                     for k, v in (revs or {}).items()}
+        self.newest = newest
+        self._newest_swap = False
+        self._detail_next = ""
+        self._photo_nav = False
 
     def _flash_status(self, t):
         self.said.append(t)
@@ -433,12 +508,78 @@ class Win(NS["WinBase"]):
     def canvas_free_rect(self, canvas=None):
         return None
 
-    # A page turn, as go_to_page runs it, minus the overlay and the Newest
-    # landing (no revisions here).
-    def go_to_page(self, idx):
-        chose = self.gl_widget.below_fit_by_choice()
-        self.gl_widget.set_page(idx)
-        self._turn_zoom_settle(chose)
+    # A page turn's other business, none of it the view's.
+    def _flush_overlay_save(self):
+        pass
+
+    def _update_page_label(self):
+        pass
+
+    def _restore_overlay_for_page(self, page):
+        pass
+
+    def _say_kept_overlay_pictures(self):
+        pass
+
+    def _clear_photo_back(self):
+        pass
+
+    def marking_details(self):
+        return False
+
+    def refresh_detail_zones(self):
+        pass
+
+    def _end_manual_details(self, why=""):
+        pass
+
+    def _refresh_version_bar(self):
+        pass
+
+    def _sync_revision_highlight(self):
+        pass
+
+    def _counts_here_clause(self, page, rev_id):
+        return ""
+
+    # The sheet's drawings, as sheet_versions lists them: (rev_id, name,
+    # date, set, rev, rev_page), the sheet's own first.
+    def sheet_versions(self, page):
+        out = [("", "ORIGINAL", "", "", None, page)]
+        for rid, size in self.revs.get(page, []):
+            out.append((rid, rid, "", "", {"id": rid, "size": size}, page))
+        return out
+
+    def newest_version_of(self, page):
+        vers = self.revs.get(page, [])
+        return vers[-1][0] if vers else ""
+
+    def _newest_version_view(self):
+        return self.newest
+
+    def _visible_revisions(self):
+        return [r for v in self.revs.values() for r in v]
+
+    # set_page_preview: the revision's picture up, zoom and pan untouched.
+    def show_revision_in_main(self, rev, rev_page, offer_add=False):
+        self.gl_widget.flip(rev["size"], (rev["id"], rev_page))
+        return (rev["id"], rev_page)
+
+    # The Items list: an item is shown on the drawing it was traced on.
+    def mark_version(self, page, m):
+        return (str(m.get("rev_id") or ""), None)
+
+    def item_on_drawing(self, page, rev_id, m):
+        return True
+
+    def _activate_on_this_sheet(self, page_idx, m):
+        return False                # the list shows every sheet
+
+    def _edit_group_item(self, m):
+        pass
+
+    def _edit_standalone_item(self, m):
+        pass
 
 
 class _XY:
@@ -474,18 +615,49 @@ def _mods(shift, ctrl):
 
 
 def run(scn):
-    win = Win(scn["canvas"][0], scn["canvas"][1], **scn.get("settings", {}))
+    win = Win(scn["canvas"][0], scn["canvas"][1], revs=scn.get("revs"),
+              newest=scn.get("newest", True), **scn.get("settings", {}))
     gl = win.gl_widget
     for i, size in enumerate(scn["pages"]):
         gl._page_sizes[i] = tuple(size)
+        gl._images.append(tuple(size))
     gl._current_page = 0
     gl._canvas_seen = (gl._w, gl._h)
     trace = []
-    for step in scn["steps"]:
+    # ["during", turn, step...]: on the web the steps are made while the
+    # sheet the turn asked for is still being decoded (seconds on an iPad);
+    # the desktop's turns are synchronous, so here they are one after the
+    # other -- one trace entry for the lot, after the last.
+    flat = []
+    for s in scn["steps"]:
+        subs = s[1:] if s[0] == "during" else [s]
+        flat += [(sub, k == len(subs) - 1) for k, sub in enumerate(subs)]
+    for step, last in flat:
         op = step[0]
-        if op == "open":                    # the job opens: load's own two calls
+        if op == "open":                    # ["open"[, page]]: the job opens on a sheet,
+            # as load runs it: set_page(last viewed), _apply_default_zoom, the
+            # Newest landing, then the settle for THAT drawing.
+            at = step[1] if len(step) > 1 else 0
+            gl.set_page(at)
             win._apply_default_zoom()
+            win._land_on_page(at)
             win._turn_zoom_settle(False)
+        elif op == "turn":                  # a thumbnail, a jump, the Go box
+            win.go_to_page(step[1])
+        elif op == "turns":                 # ["turns", [a, b]]: on the web b is turned to
+            for i in step[1]:               # while a's newest drawing is decoding
+                win.go_to_page(i)
+        elif op == "next":                  # Page Down
+            win.next_page()
+        elif op == "prev":                  # Page Up
+            win.prev_page()
+        elif op == "version":               # ["version", page, rev_id]: the version bar, the matrix
+            win.show_sheet_version(step[1], step[2], announce=False)
+        elif op == "jump":                  # ["jump", page, points[, type[, rev_id]]]: the Items list
+            m = {"type": step[3] if len(step) > 3 else "count", "points": step[2]}
+            if len(step) > 4 and step[4]:
+                m["rev_id"] = step[4]
+            win._on_item_activated(step[1], m)
         elif op == "wheel":                 # ["wheel", x, y, dy, dx, shift, ctrl]
             mods = _mods(len(step) > 5 and step[5], len(step) > 6 and step[6])
             _QApplication.mods = mods
@@ -505,8 +677,6 @@ def run(scn):
         elif op == "pan":
             gl._pan_x += step[1]
             gl._pan_y += step[2]
-        elif op == "turn":
-            win.go_to_page(step[1])
         elif op == "resize":
             gl._w, gl._h = step[1], step[2]
             gl._canvas_resized()
@@ -521,8 +691,10 @@ def run(scn):
         else:
             raise SystemExit("unknown step %r" % (step,))
         win.update_zoom_label()
+        if not last:
+            continue
         trace.append({
-            "page": gl._current_page,
+            "page": gl._current_page, "shown": list(gl._page_size()),
             "zoom": gl._zoom, "pan": [gl._pan_x, gl._pan_y],
             "label": win.zoom_label.text,
             "atFloor": gl.at_zoom_floor(), "showsFit": gl.shows_fit(),
@@ -531,10 +703,16 @@ def run(scn):
             "raised": gl._raise_rec is not None,
             "said": list(win.said),
         })
-    return {"name": scn["name"], "trace": trace,
-            "canvas": list(scn["canvas"]), "pages": [list(x) for x in scn["pages"]],
-            "settings": scn.get("settings", {}), "steps": scn["steps"],
-            "minusTip": win._zoom_out_tip()}
+    out = {"name": scn["name"], "trace": trace,
+           "canvas": list(scn["canvas"]), "pages": [list(x) for x in scn["pages"]],
+           "settings": scn.get("settings", {}), "steps": scn["steps"],
+           "minusTip": win._zoom_out_tip()}
+    if scn.get("revs"):
+        out["revs"] = {str(k): [[r, list(sz)] for r, sz in v]
+                       for k, v in scn["revs"].items()}
+    if scn.get("newest", True) is False:
+        out["newest"] = False           # the Newest tick off: a turn lands on the sheet's own drawing
+    return out
 
 
 # ── the picture windows: _RefCanvas.wheelEvent ───────────────────────────
@@ -744,6 +922,137 @@ SCENARIOS = [
      "settings": {"default_zoom_mode": "100"},
      "steps": [["open"], ["minus"], ["minus"], ["minus"], ["minus"], ["minus"],
                ["minus"], ["minus"], ["minus"], ["minus"], ["minus"], ["minus"]]},
+    # ── page turns (desktop 3.06), each one through the desktop's own
+    # next_page / prev_page / go_to_page / show_sheet_version ──
+    {"name": "turns: Page Down and Page Up at Fit across paper sizes",
+     "canvas": (W, H), "pages": [BIG, SMALL, BIG, LARGE],
+     "steps": [["open"], ["next"], ["next"], ["next"], ["next"], ["prev"],
+               ["prev"], ["prev"], ["prev"]]},
+    {"name": "turns: a notch in, the small sheet raised, a notch in and out on it, the big sheet back",
+     "canvas": (W, H), "pages": [BIG, SMALL, BIG],
+     "steps": [["open"], ["wheel", 500, 300, 120], ["pan", 140, -60], ["next"],
+               ["prev"], ["next"], ["wheel", 1100, 600, 120], ["wheel", 1100, 600, -120],
+               ["next"], ["prev"], ["wheel", 800, 450, -120], ["prev"]]},
+    {"name": "turns: Page Down then Page Up gives the zoom back, centred",
+     "canvas": (W, H), "pages": [BIG, BIG, SMALL],
+     "steps": [["open"], ["plus"], ["plus"], ["pan", -300, 120], ["next"], ["prev"],
+               ["wheel", 900, 200, 120], ["pan", 50, 50], ["next"], ["next"], ["prev"],
+               ["prev"]]},
+    {"name": "turns: Shift past Fit on small paper is kept on bigger paper until a zoom in reaches Fit",
+     "canvas": (W, H), "pages": [SMALL, BIG, LARGE, SMALL],
+     "steps": [["open"], ["wheel", 800, 450, -120, 0, True], ["wheel", 800, 450, -120, 0, True],
+               ["turn", 1], ["turn", 2], ["turn", 3], ["wheel", 800, 450, 120],
+               ["turn", 0], ["wheel", 800, 450, 120], ["turn", 1], ["turn", 2], ["F"],
+               ["turn", 3]]},
+    {"name": "turns: the box off keeps the zoom, centred (3.05)",
+     "canvas": (W, H), "pages": [BIG, SMALL, BIG],
+     "settings": {"zoom_out_stops_at_fit": False},
+     "steps": [["open"], ["plus"], ["pan", 200, 100], ["turn", 1],
+               ["wheel", 800, 450, -120], ["wheel", 800, 450, -120], ["next"], ["prev"],
+               ["F"], ["turn", 2], ["minus"], ["turn", 0],
+               ["settings", {"zoom_out_stops_at_fit": True}], ["turn", 1], ["turn", 2]]},
+    {"name": "turns: a job that opens at Fit Width keeps it as a number",
+     "canvas": (W, H), "pages": [BIG, SMALL, BIG],
+     "settings": {"default_zoom_mode": "width"},
+     "steps": [["open"], ["turn", 1], ["turn", 2], ["prev"], ["F"], ["turn", 2],
+               ["turn", 0]]},
+    {"name": "turns: a jump to an item on another sheet ends zoomed on it, a number",
+     "canvas": (W, H), "pages": [BIG, SMALL, BIG, LARGE],
+     "steps": [["open"], ["jump", 1, [[1000, 800], [1300, 1000]]], ["turn", 2],
+               ["jump", 1, [[50, 50], [3350, 2150]]], ["turn", 3], ["turn", 0],
+               ["jump", 2, [[3000, 2000]]], ["wheel", 800, 450, -120],
+               ["jump", 0, [[-1000, -1000], [9000, 6000]]], ["turn", 1]]},
+    {"name": "turns: a job that opens on a sheet whose newest drawing is on smaller paper",
+     "canvas": (W, H), "pages": [BIG, BIG],
+     "revs": {0: [["r1", SMALL]]},
+     "steps": [["open"], ["turn", 1], ["turn", 0], ["plus"], ["turn", 1], ["turn", 0],
+               ["turn", 1], ["jump", 0, [[3000, 2000], [3200, 2100]]], ["turn", 1],
+               ["prev"]]},
+    {"name": "turns: opening at Fit Width on a sheet whose newest drawing is on smaller paper",
+     "canvas": (W, H), "pages": [BIG, BIG],
+     "settings": {"default_zoom_mode": "width"},
+     "revs": {1: [["r1", SMALL]]},
+     "steps": [["open", 1], ["turn", 0], ["turn", 1]]},
+    {"name": "turns: a revision-bar landing on another sheet settles on the revision",
+     "canvas": (W, H), "pages": [BIG, BIG],
+     "revs": {1: [["r1", SMALL], ["r2", LARGE]]},
+     "steps": [["open"], ["version", 1, "r1"], ["version", 1, "r2"], ["version", 0, ""],
+               ["plus"], ["version", 1, "r2"], ["version", 1, "r1"], ["version", 0, ""],
+               ["version", 1, ""], ["turn", 0], ["turn", 1]]},
+    {"name": "turns: a turn while the newest drawing is still being decoded",
+     "canvas": (W, H), "pages": [BIG, BIG, SMALL, BIG],
+     "revs": {1: [["r1", SMALL]], 3: [["r3", LARGE]]},
+     "steps": [["open"], ["turns", [1, 2]], ["turn", 1], ["turns", [3, 0]], ["plus"],
+               ["turns", [1, 3]], ["turns", [1, 0]]]},
+    {"name": "turns: a job that opens at 100% on a sheet smaller than the screen",
+     "canvas": (W, H), "pages": [(500, 300), BIG],
+     "settings": {"default_zoom_mode": "100"},
+     "steps": [["open"], ["turn", 1], ["prev"], ["wheel", 800, 450, 120],
+               ["wheel", 800, 450, -120], ["next"], ["one"], ["prev"]]},
+    {"name": "turns: a flip between versions keeps the zoom, a turn does not keep the flip",
+     "canvas": (W, H), "pages": [BIG, SMALL],
+     "revs": {0: [["r1", LARGE]]},
+     "newest": False,
+     "steps": [["open"], ["version", 0, "r1"], ["wheel", 800, 450, -120],
+               ["version", 0, ""], ["turn", 1], ["turn", 0], ["version", 0, "r1"],
+               ["turn", 1]]},
+    # go_to_page onto the sheet on screen: set_page centres it and forgets
+    # the raise, then the settle (a card clicked again, a callout to it)
+    {"name": "turns: the card of the sheet on screen clicked again after a zoom and a drag",
+     "canvas": (W, H), "pages": [BIG, SMALL, BIG],
+     "steps": [["open"], ["plus"], ["pan", 200, -100], ["turn", 0], ["next"],
+               ["pan", 150, 80], ["turn", 1], ["wheel", 800, 450, 120], ["pan", -60, 40],
+               ["turn", 1], ["next"]]},
+    {"name": "turns: the box off, the card of the sheet on screen clicked again after a drag",
+     "canvas": (W, H), "pages": [BIG, SMALL],
+     "settings": {"zoom_out_stops_at_fit": False},
+     "steps": [["open"], ["plus"], ["pan", 200, -100], ["turn", 0], ["next"],
+               ["pan", 150, 80], ["turn", 1]]},
+    # the held turn's settle, once the reissue is up, keeps a zoom Shift took
+    # past Fit (_settle_held_turn_zoom hands it the turn's `chose`)
+    {"name": "turns: Shift past Fit, then a sheet whose newest drawing is on smaller paper",
+     "canvas": (W, H), "pages": [BIG, BIG, BIG],
+     "revs": {1: [["r1", SMALL]]},
+     "steps": [["open"], ["wheel", 800, 450, -120, 0, True], ["next"], ["next"], ["prev"],
+               ["wheel", 800, 450, 120], ["wheel", 800, 450, 120], ["prev"], ["next"],
+               ["F"], ["next"]]},
+    # 1 after a drag: the desktop's set_zoom keeps the pan, the web centres
+    # (zoom-floor.mjs KNOWN); from the next turn on both are centred
+    {"name": "1 (100%) after a drag, then a walk",
+     "canvas": (W, H), "pages": [BIG, SMALL, LARGE],
+     "steps": [["open"], ["pan", 120, -70], ["one"], ["next"], ["next"], ["prev"],
+               ["prev"]]},
+    # A step made while the sheet a turn asked for is still being decoded
+    # (["during", ...]): Page Down then Page Up, the card, Page Down twice --
+    # each a turn, centred, whatever the drawing still up is; a drag there is
+    # the sheet left's. The box on, and off (3.05: the zoom kept, centred).
+    {"name": "turns: a step made while the sheet turned to is still being decoded",
+     "canvas": (W, H), "pages": [BIG, SMALL, BIG],
+     "steps": [["open"], ["plus"], ["plus"], ["pan", -300, 120],
+               ["during", ["next"], ["prev"]], ["pan", 150, 80],
+               ["during", ["next"], ["turn", 0]], ["pan", -90, 60],
+               ["during", ["next"], ["next"]], ["pan", 40, 40],
+               ["during", ["prev"], ["next"]], ["prev"], ["pan", 70, -30],
+               ["during", ["next"], ["prev"]], ["during", ["prev"], ["prev"]]]},
+    {"name": "turns: the box off, a step made while the sheet turned to is still being decoded",
+     "canvas": (W, H), "pages": [BIG, SMALL, BIG],
+     "settings": {"zoom_out_stops_at_fit": False},
+     "steps": [["open"], ["plus"], ["plus"], ["pan", -300, 120],
+               ["during", ["next"], ["prev"]], ["pan", 150, 80],
+               ["during", ["next"], ["turn", 0]], ["pan", -90, 60],
+               ["during", ["next"], ["next"]], ["pan", 40, 40],
+               ["during", ["prev"], ["next"]], ["prev"], ["pan", 70, -30],
+               ["during", ["next"], ["prev"]], ["during", ["prev"], ["prev"]]]},
+    # ...and an Items-list row clicked then (_on_item_activated, current_page
+    # already the sheet turned to): its item on the sheet being LEFT is a
+    # jump back to it, zoomed on the item; on the sheet turned to, the jump.
+    {"name": "turns: a row clicked while the sheet turned to is still being decoded",
+     "canvas": (W, H), "pages": [BIG, BIG, SMALL],
+     "steps": [["open"], ["during", ["next"], ["jump", 0, [[5000, 3000], [5400, 3300]]]],
+               ["turn", 1], ["during", ["next"], ["jump", 1, [[1000, 800], [1300, 1000]]]],
+               ["during", ["prev"], ["jump", 1, [[2000, 1500], [2100, 1600]]]],
+               ["during", ["next"], ["jump", 2, [[100, 100], [300, 200]]]],
+               ["during", ["prev"], ["prev"]]]},
 ]
 
 PICTURE = (3000, 2000)
