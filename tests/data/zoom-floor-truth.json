@@ -1,0 +1,7999 @@
+{
+ "lifted": {
+  "module": [
+   "DEFAULT_SETTINGS",
+   "_zoom_stops_at_fit",
+   "CALLOUT_DEFAULT_IN",
+   "CALLOUT_FILL_DEFAULT"
+  ],
+  "GLPageWidget": [
+   "set_zoom",
+   "get_zoom",
+   "zoom_fit",
+   "fit_view",
+   "fit_zoom",
+   "wants_zoom_floor",
+   "zoom_floor",
+   "at_zoom_floor",
+   "shows_fit",
+   "land_on_fit",
+   "floor_takes_notch",
+   "_floor_refused_notch",
+   "_note_past_fit",
+   "below_fit_by_choice",
+   "_zoom_chosen",
+   "_is_turn_raise",
+   "_zoom_about",
+   "_canvas_resized",
+   "zoom_to_measurement",
+   "wheelEvent",
+   "_FIT_EPS"
+  ],
+  "PDFCacheViewer": [
+   "_apply_default_zoom",
+   "_turn_zoom_settle",
+   "zoom_in",
+   "zoom_out",
+   "update_zoom_label",
+   "_say_zoom_floor_once",
+   "_zoom_out_tip",
+   "_hold_turn_zoom",
+   "_settle_held_turn_zoom",
+   "_zoom_label_refresh",
+   "zoom_fit",
+   "_set_zoom_100",
+   "_show_shortcuts:_wheel_help"
+  ],
+  "SettingsDialog": [
+   "_zoom_floor_words",
+   "__init__:zoom_floor_check tooltip"
+  ],
+  "_RefCanvas": [
+   "wheelEvent"
+  ]
+ },
+ "FIT_EPS": 1e-06,
+ "default": true,
+ "scenarios": [
+  {
+   "name": "wheel out lands on Fit, refuses, Shift goes on",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      59.999999999999886,
+      22.5
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.24796874999999996,
+     "pan": [
+      128.99999999999994,
+      48.374999999999886
+     ],
+     "label": "24%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.24796874999999996,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      59.999999999999886,
+      22.5
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      -52.17391304347822,
+      -19.565217391304373
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      -52.17391304347822,
+      -19.565217391304373
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      -97.54253308128543,
+      -36.578449905482046
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     120
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     120
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120,
+     0,
+     true
+    ],
+    [
+     "F"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "sideways wheel never zooms",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     0,
+     120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     0,
+     -120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     0,
+     -120,
+     false,
+     true
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "dragged aside at Fit: a notch out centres it",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      200.0,
+      -80.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      -50.0,
+      30.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "pan",
+     200,
+     -80
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "pan",
+     -50,
+     30
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "minus from zoomed in: lands on Fit, never past",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.26999999999999996,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "26%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.26999999999999996,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.32399999999999995,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "32%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.32399999999999995,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.26999999999999996,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "26%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.26999999999999996,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "minus"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "below Fit by choice: plain notches and minus refuse, zooming in comes back",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      -13.043478260869506,
+      -6.52173913043481
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      -24.385633270321364,
+      -12.192816635160682
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      -24.385633270321364,
+      -12.192816635160682
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      -24.385633270321364,
+      -12.192816635160682
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      -13.043478260869506,
+      -6.52173913043481
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      15.0,
+      7.5
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     700,
+     400,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     700,
+     400,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     700,
+     400,
+     -120
+    ],
+    [
+     "minus"
+    ],
+    [
+     "wheel",
+     700,
+     400,
+     120
+    ],
+    [
+     "wheel",
+     700,
+     400,
+     120
+    ],
+    [
+     "wheel",
+     700,
+     400,
+     120
+    ],
+    [
+     "wheel",
+     700,
+     400,
+     -120
+    ],
+    [
+     "wheel",
+     700,
+     400,
+     -120
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "Shift all the way down stops at the zoom limit",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      -5.684341886080802e-14,
+      0.0
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.12328429358099781,
+     "pan": [
+      -5.684341886080802e-14,
+      0.0
+     ],
+     "label": "12%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.12328429358099781,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.10720373354869375,
+     "pan": [
+      -5.684341886080802e-14,
+      0.0
+     ],
+     "label": "10%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.10720373354869375,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.09322063786842937,
+     "pan": [
+      -5.684341886080802e-14,
+      0.0
+     ],
+     "label": "9%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.09322063786842937,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.08106142423341685,
+     "pan": [
+      -5.684341886080802e-14,
+      0.0
+     ],
+     "label": "8%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.08106142423341685,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.07048819498557987,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "7%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.07048819498557987,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.061294082596156416,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "6%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.061294082596156416,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.05329920225752732,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "5%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.05329920225752732,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.05,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "5%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.05,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.05,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "5%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.05,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.05,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "5%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.05,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "F"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "zooming in to the limit, then back out to Fit",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.4909090909090909,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "49%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.4909090909090909,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.5890909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "58%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.5890909090909091,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.7069090909090909,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "70%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.7069090909090909,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.8482909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "84%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.8482909090909091,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.017949090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "101%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.017949090909091,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.221538909090909,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "122%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.221538909090909,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.4658466909090908,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "146%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.4658466909090908,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.759016029090909,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "175%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.759016029090909,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 2.1108192349090906,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "211%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 2.1108192349090906,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 2.5329830818909085,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "253%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 2.5329830818909085,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 3.03957969826909,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "303%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 3.03957969826909,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 3.6474956379229075,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "364%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 3.6474956379229075,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 4.376994765507489,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "437%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 4.376994765507489,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 5.252393718608987,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "525%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 5.252393718608987,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 6.302872462330784,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "630%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 6.302872462330784,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 7.563446954796941,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "756%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 7.563446954796941,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 9.076136345756328,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "907%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 9.076136345756328,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "1000%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 10.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "1000%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 10.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "1000%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 10.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "1000%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 10.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "1000%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 10.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "1000%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 10.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 8.695652173913045,
+     "pan": [
+      -65.21739130434798,
+      -32.60869565217399
+     ],
+     "label": "869%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 8.695652173913045,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 7.561436672967866,
+     "pan": [
+      -121.9281663516067,
+      -60.96408317580335
+     ],
+     "label": "756%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 7.561436672967866,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 6.5751623243198845,
+     "pan": [
+      -171.24188378400686,
+      -85.62094189200343
+     ],
+     "label": "657%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 6.5751623243198845,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 5.717532455930335,
+     "pan": [
+      -214.12337720348296,
+      -107.06168860174148
+     ],
+     "label": "571%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 5.717532455930335,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 4.9717673529829005,
+     "pan": [
+      -251.41163235085332,
+      -125.70581617542757
+     ],
+     "label": "497%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 4.9717673529829005,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 4.323275959115566,
+     "pan": [
+      -283.83620204421914,
+      -141.91810102211093
+     ],
+     "label": "432%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 4.323275959115566,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 3.7593703992309275,
+     "pan": [
+      -312.03148003845126,
+      -156.01574001922654
+     ],
+     "label": "375%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 3.7593703992309275,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 3.2690177384616765,
+     "pan": [
+      -336.5491130769133,
+      -168.274556538458
+     ],
+     "label": "326%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 3.2690177384616765,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 2.842624120401458,
+     "pan": [
+      -357.8687939799256,
+      -178.93439698996372
+     ],
+     "label": "284%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 2.842624120401458,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 2.4718470612186594,
+     "pan": [
+      -376.40764693906567,
+      -188.20382346953375
+     ],
+     "label": "247%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 2.4718470612186594,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 2.1494322271466606,
+     "pan": [
+      -392.5283886426655,
+      -196.26419432133343
+     ],
+     "label": "214%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 2.1494322271466606,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.8690715018666615,
+     "pan": [
+      -406.54642490666583,
+      -203.2732124533336
+     ],
+     "label": "186%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.8690715018666615,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.6252795668405753,
+     "pan": [
+      -418.73602165797,
+      -209.36801082898546
+     ],
+     "label": "162%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.6252795668405753,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.4132865798613699,
+     "pan": [
+      -429.3356710069306,
+      -214.66783550346577
+     ],
+     "label": "141%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.4132865798613699,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.2289448520533652,
+     "pan": [
+      -438.5527573973309,
+      -219.2763786986659
+     ],
+     "label": "122%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.2289448520533652,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.068647697437709,
+     "pan": [
+      -446.56761512811386,
+      -223.28380756405727
+     ],
+     "label": "106%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.068647697437709,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.9292588673371384,
+     "pan": [
+      -453.5370566331426,
+      -226.76852831657152
+     ],
+     "label": "92%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.9292588673371384,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.808051188988816,
+     "pan": [
+      -459.59744055055876,
+      -229.7987202752796
+     ],
+     "label": "80%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.808051188988816,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.7026532078163619,
+     "pan": [
+      -464.8673396091815,
+      -232.43366980459098
+     ],
+     "label": "70%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.7026532078163619,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.6110027894055321,
+     "pan": [
+      -469.4498605297231,
+      -234.72493026486165
+     ],
+     "label": "61%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.6110027894055321,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.5313067733961149,
+     "pan": [
+      -473.4346613301939,
+      -236.71733066509717
+     ],
+     "label": "53%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.5313067733961149,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.4620058899096652,
+     "pan": [
+      -476.8997055045164,
+      -238.44985275225838
+     ],
+     "label": "46%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.4620058899096652,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     3400,
+     2200
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     200,
+     -120
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "a pinch stops at Fit like the wheel",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.30000000000000004,
+     "pan": [
+      180.0000000000001,
+      90.00000000000006
+     ],
+     "label": "30%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.30000000000000004,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.24000000000000005,
+     "pan": [
+      88.00000000000006,
+      44.00000000000006
+     ],
+     "label": "24%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.24000000000000005,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.19200000000000006,
+     "pan": [
+      14.400000000000091,
+      7.2000000000000455
+     ],
+     "label": "19%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.19200000000000006,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.19125,
+     "pan": [
+      3.999999999999943,
+      -1.0
+     ],
+     "label": "19%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.19125,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "pinch",
+     500,
+     300,
+     1.6
+    ],
+    [
+     "pinch",
+     520,
+     310,
+     0.8
+    ],
+    [
+     "pinch",
+     520,
+     310,
+     0.8
+    ],
+    [
+     "pinch",
+     520,
+     310,
+     0.95
+    ],
+    [
+     "pinch",
+     520,
+     310,
+     0.9
+    ],
+    [
+     "pinch",
+     600,
+     500,
+     1.02
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "Fit remembered as Fit across paper sizes",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 2,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     3400,
+     2200
+    ],
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "turn",
+     1
+    ],
+    [
+     "turn",
+     2
+    ],
+    [
+     "turn",
+     1
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "small sheet raised, big sheet back at his zoom",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": true,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.47045454545454546,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "47%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.47045454545454546,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": true,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": true,
+     "said": []
+    },
+    {
+     "page": 2,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": true,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     3400,
+     2200
+    ],
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "turn",
+     1
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "turn",
+     2
+    ],
+    [
+     "turn",
+     1
+    ],
+    [
+     "turn",
+     0
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "Shift past Fit is kept across turns until he zooms back",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 2,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 2,
+     "zoom": 0.1875,
+     "pan": [
+      -1.1368683772161603e-13,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 2,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      -1.1368683772161603e-13,
+      0.0
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     3400,
+     2200
+    ],
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "turn",
+     1
+    ],
+    [
+     "turn",
+     2
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120
+    ],
+    [
+     "turn",
+     0
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "resize at Fit stays Fit; elsewhere the centre is kept",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1388888888888889,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 13%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16666666666666666,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16666666666666666,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16666666666666666,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16666666666666666,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16666666666666666,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16666666666666666,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      120.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      120.0,
+      0.0
+     ],
+     "label": "18%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.18055555555555555,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.18055555555555555,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1570048309178744,
+     "pan": [
+      19.565217391304373,
+      0.0
+     ],
+     "label": "15%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1570048309178744,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1570048309178744,
+     "pan": [
+      19.565217391304373,
+      0.0
+     ],
+     "label": "15%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1570048309178744,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "resize",
+     1000,
+     1300
+    ],
+    [
+     "plus"
+    ],
+    [
+     "resize",
+     1600,
+     900
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "F"
+    ],
+    [
+     "pan",
+     120,
+     0
+    ],
+    [
+     "resize",
+     1300,
+     900
+    ],
+    [
+     "F"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "resize",
+     1000,
+     700
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "an iPad turned at Fit, and turned back",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.14222222222222222,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 14%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.14222222222222222,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.10666666666666667,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 10%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.14222222222222222,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14222222222222222,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 14%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.14222222222222222,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.09777777777777778,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 9%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.14222222222222222,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.13333333333333333,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 13%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.14222222222222222,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.15333333333333332,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "15%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.15333333333333332,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.15333333333333332,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "15%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.15333333333333332,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.13333333333333333,
+     "pan": [
+      -16.69565217391306,
+      16.695652173913004
+     ],
+     "label": "13%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.13333333333333333,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1024,
+    704
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     4800,
+     7200
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "resize",
+     768,
+     960
+    ],
+    [
+     "resize",
+     1024,
+     704
+    ],
+    [
+     "turn",
+     1
+    ],
+    [
+     "resize",
+     768,
+     960
+    ],
+    [
+     "wheel",
+     384,
+     480,
+     120
+    ],
+    [
+     "resize",
+     1024,
+     704
+    ],
+    [
+     "wheel",
+     384,
+     480,
+     -120
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "a raised Fit stays the turn's through a resize",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": true,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.38235294117647056,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 38%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": true,
+     "said": []
+    },
+    {
+     "page": 2,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.38235294117647056,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 38%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": true,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": true,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     3400,
+     2200
+    ],
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "turn",
+     1
+    ],
+    [
+     "resize",
+     1300,
+     1000
+    ],
+    [
+     "turn",
+     2
+    ],
+    [
+     "turn",
+     1
+    ],
+    [
+     "resize",
+     1600,
+     900
+    ],
+    [
+     "turn",
+     0
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "item zoom never out past Fit",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.26999999999999996,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "26%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.26999999999999996,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 1.5625,
+     "pan": [
+      859.375,
+      585.9375
+     ],
+     "label": "156%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.5625,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "item",
+     [
+      [
+       100,
+       100
+      ],
+      [
+       7100,
+       4700
+      ]
+     ]
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "item",
+     [
+      [
+       3000,
+       2000
+      ],
+      [
+       3100,
+       2050
+      ]
+     ]
+    ],
+    [
+     "item",
+     [
+      [
+       10,
+       2400
+      ],
+      [
+       7190,
+       2400
+      ]
+     ]
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "an item zoom that landed on Fit, then the window changes size",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16666666666666666,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 16%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.16666666666666666,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.35294117647058826,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 35%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.16666666666666666,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": true,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16666666666666666,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 16%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.16666666666666666,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.20833333333333334,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 20%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.20833333333333334,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.20833333333333334,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 20%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.20833333333333334,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     3400,
+     2200
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "item",
+     [
+      [
+       100,
+       100
+      ],
+      [
+       7100,
+       4700
+      ]
+     ]
+    ],
+    [
+     "resize",
+     1200,
+     900
+    ],
+    [
+     "turn",
+     1
+    ],
+    [
+     "turn",
+     0
+    ],
+    [
+     "resize",
+     1600,
+     1000
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "a sheet whose Fit is past the maximum stops at the maximum",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 1000%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 22.5,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 1000%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 22.5,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 1000%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 22.5,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 8.695652173913045,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "869%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 8.695652173913045,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 1000%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 10.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 1000%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 10.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     50,
+     40
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "minus"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "plus"
+    ],
+    [
+     "minus"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "a bare F on a sheet whose Fit is past the maximum",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 22.5,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "2250%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 22.5,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 18.75,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "1875%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 18.75,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 10.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 1000%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 10.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 22.5,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "2250%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 22.5,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     50,
+     40
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "F"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "F"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "a sheet whose Fit is below the minimum",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.05,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 5%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.03,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.05,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 5%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.03,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.057499999999999996,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "5%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.057499999999999996,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.05,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 5%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.05,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.03,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "3%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.03,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     40000,
+     30000
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "F"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "half a pixel: dragged 0.4 px aside at Fit is Fit, 0.6 px is not",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.4,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.4,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.6000000000000001,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      -0.45
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      -0.45
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      -0.55
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "pan",
+     0.4,
+     0
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "pan",
+     0.2,
+     0
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "pan",
+     0,
+     -0.45
+    ],
+    [
+     "minus"
+    ],
+    [
+     "pan",
+     0,
+     -0.1
+    ],
+    [
+     "minus"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "half a pixel across a resize",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.4,
+      -0.3
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16666666666666666,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 16%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16666666666666666,
+     "pan": [
+      0.6,
+      0.0
+     ],
+     "label": "Fit 16%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16666666666666666,
+     "pan": [
+      0.6,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.55
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.55
+     ],
+     "label": "18%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "pan",
+     0.4,
+     -0.3
+    ],
+    [
+     "resize",
+     1300,
+     800
+    ],
+    [
+     "pan",
+     0.6,
+     0
+    ],
+    [
+     "resize",
+     1600,
+     900
+    ],
+    [
+     "F"
+    ],
+    [
+     "pan",
+     0,
+     0.55
+    ],
+    [
+     "resize",
+     1300,
+     800
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "a zoom past Fit is not revived once he zoomed back to Fit",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      -1.1368683772161603e-13,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      -1.1368683772161603e-13,
+      0.0
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      -1.1368683772161603e-13,
+      0.0
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      32.608695652173765,
+      7.826086956521749
+     ],
+     "label": "18%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      60.96408317580335,
+      14.631379962192796
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1527777777777778,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 15%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1527777777777778,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120
+    ],
+    [
+     "resize",
+     1100,
+     780
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "item zoom: the desktop's box -- a tiny shape, a single count, a straight run, a note",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.5625,
+     "pan": [
+      934.375,
+      622.65625
+     ],
+     "label": "156%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.5625,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.5625,
+     "pan": [
+      890.625,
+      601.5625
+     ],
+     "label": "156%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.5625,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.5625,
+     "pan": [
+      937.5,
+      625.0
+     ],
+     "label": "156%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.5625,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 1.5625,
+     "pan": [
+      -2187.5,
+      -937.5
+     ],
+     "label": "156%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.5625,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "item",
+     [
+      [
+       3000,
+       2000
+      ],
+      [
+       3004,
+       2003
+      ]
+     ]
+    ],
+    [
+     "item",
+     [
+      [
+       3000,
+       2000
+      ],
+      [
+       3060,
+       2030
+      ]
+     ]
+    ],
+    [
+     "item",
+     [
+      [
+       3000,
+       2000
+      ]
+     ]
+    ],
+    [
+     "item",
+     [
+      [
+       500,
+       2400
+      ],
+      [
+       6500,
+       2400
+      ]
+     ]
+    ],
+    [
+     "item",
+     [
+      [
+       3600,
+       300
+      ],
+      [
+       3600,
+       4500
+      ]
+     ]
+    ],
+    [
+     "item",
+     [
+      [
+       1000,
+       1000
+      ],
+      [
+       5000,
+       3000
+      ]
+     ],
+     "textnote"
+    ],
+    [
+     "item",
+     [
+      [
+       -2000,
+       -1000
+      ],
+      [
+       9000,
+       6000
+      ]
+     ]
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "a revision on smaller paper: the flip keeps the zoom and the pan",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "18%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "18%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "40%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.4090909090909091,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.35573122529644274,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "35%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.35573122529644274,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.42687747035573126,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "42%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.42687747035573126,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.42687747035573126,
+     "pan": [
+      120.0,
+      -60.0
+     ],
+     "label": "42%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.42687747035573126,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.42687747035573126,
+     "pan": [
+      120.0,
+      -60.0
+     ],
+     "label": "42%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.42687747035573126,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.42687747035573126,
+     "pan": [
+      120.0,
+      -60.0
+     ],
+     "label": "42%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.42687747035573126,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "rev",
+     [
+      3400,
+      2200
+     ]
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "F"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "rev",
+     null
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "plus"
+    ],
+    [
+     "pan",
+     120,
+     -60
+    ],
+    [
+     "rev",
+     [
+      3400,
+      2200
+     ]
+    ],
+    [
+     "rev",
+     null
+    ],
+    [
+     "F"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "a revision on bigger paper: a notch out lands on its Fit",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "18%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      0.0,
+      -5.684341886080802e-14
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      0.0,
+      -5.684341886080802e-14
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      0.0,
+      -5.684341886080802e-14
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "rev",
+     [
+      10800,
+      7200
+     ]
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "rev",
+     null
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "box off: as 3.05",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "18%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.13586956521739132,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "13%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.13586956521739132,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.13586956521739132,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "13%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.13586956521739132,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.13586956521739132,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "13%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.13586956521739132,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.1736111111111111,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "17%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1736111111111111,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "zoom": 0.1736111111111111,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "17%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1736111111111111,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     3400,
+     2200
+    ]
+   ],
+   "settings": {
+    "zoom_out_stops_at_fit": false
+   },
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "minus"
+    ],
+    [
+     "turn",
+     1
+    ],
+    [
+     "resize",
+     1000,
+     1300
+    ],
+    [
+     "item",
+     [
+      [
+       100,
+       100
+      ],
+      [
+       3300,
+       2100
+      ]
+     ]
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     0,
+     120
+    ]
+   ],
+   "minusTip": "Zoom out"
+  },
+  {
+   "name": "box ticked off and on again mid-job",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "18%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      -5.684341886080802e-14,
+      0.0
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      -5.684341886080802e-14,
+      0.0
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      -5.684341886080802e-14,
+      0.0
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.14177693761814747,
+     "pan": [
+      -5.684341886080802e-14,
+      0.0
+     ],
+     "label": "14%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.14177693761814747,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      -1.1368683772161603e-13,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      -1.1368683772161603e-13,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "settings",
+     {
+      "zoom_out_stops_at_fit": false
+     }
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "settings",
+     {
+      "zoom_out_stops_at_fit": true
+     }
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "minus"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "scroll mode: Ctrl+wheel stops, Ctrl+Shift goes past, its words",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.21562499999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "21%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.21562499999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Ctrl+Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Ctrl+Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.16304347826086957,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "16%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.16304347826086957,
+     "baseFit": false,
+     "pastFit": true,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Ctrl+Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {
+    "wheel_mode": "scroll"
+   },
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     120,
+     0,
+     false,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     false,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     false,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true,
+     true
+    ],
+    [
+     "minus"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Ctrl+Shift while you scroll to go further."
+  },
+  {
+   "name": "the wheel set to scroll in the middle of a job",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Ctrl+Shift while you scroll to zoom out further"
+     ]
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Ctrl+Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "settings",
+     {
+      "wheel_mode": "scroll"
+     }
+    ],
+    [
+     "minus"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     false,
+     true
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Ctrl+Shift while you scroll to go further."
+  },
+  {
+   "name": "a job that opens at 100%",
+   "trace": [
+    {
+     "page": 0,
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.8333333333333334,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "83%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.8333333333333334,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.6944444444444445,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "69%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.6944444444444445,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.5787037037037038,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "57%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.5787037037037038,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.48225308641975323,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "48%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.48225308641975323,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.401877572016461,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "40%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.401877572016461,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.3348979766803842,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "33%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.3348979766803842,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.2790816472336535,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "27%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.2790816472336535,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.2325680393613779,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "23%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.2325680393613779,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.19380669946781492,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "19%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.19380669946781492,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": [
+      "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+     ]
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {
+    "default_zoom_mode": "100"
+   },
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  }
+ ],
+ "pictures": [
+  {
+   "name": "a picture window stops at its Fit; Shift goes on to half",
+   "box": [
+    800,
+    600
+   ],
+   "picture": [
+    3000,
+    2000
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "wheel",
+     200,
+     150,
+     120
+    ],
+    [
+     "wheel",
+     200,
+     150,
+     120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     120
+    ],
+    [
+     "wheel",
+     600,
+     400,
+     -120
+    ]
+   ],
+   "trace": [
+    {
+     "vz": 1.15,
+     "pan": [
+      30.00000000000003,
+      22.450000000000017
+     ]
+    },
+    {
+     "vz": 1.3224999999999998,
+     "pan": [
+      64.5,
+      47.75
+     ]
+    },
+    {
+     "vz": 1.15,
+     "pan": [
+      81.73913043478262,
+      53.95652173913044
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 0.8695652173913044,
+     "pan": [
+      26.260869565217376,
+      12.869565217391255
+     ]
+    },
+    {
+     "vz": 0.8695652173913044,
+     "pan": [
+      26.260869565217376,
+      12.869565217391255
+     ]
+    },
+    {
+     "vz": 0.7561436672967865,
+     "pan": [
+      48.086956521739125,
+      23.739130434782624
+     ]
+    },
+    {
+     "vz": 0.6575162324319883,
+     "pan": [
+      68.21739130434781,
+      32.391304347826065
+     ]
+    },
+    {
+     "vz": 0.5717532455930334,
+     "pan": [
+      85.5217391304347,
+      40.695652173913004
+     ]
+    },
+    {
+     "vz": 0.5,
+     "pan": [
+      99.17092500000012,
+      47.60533750000005
+     ]
+    },
+    {
+     "vz": 0.5,
+     "pan": [
+      99.17092500000012,
+      47.60533750000005
+     ]
+    },
+    {
+     "vz": 0.575,
+     "pan": [
+      83.85000000000002,
+      39.10000000000002
+     ]
+    },
+    {
+     "vz": 0.6612499999999999,
+     "pan": [
+      64.95000000000005,
+      29.900000000000006
+     ]
+    },
+    {
+     "vz": 0.7604374999999998,
+     "pan": [
+      44.000000000000114,
+      18.950000000000102
+     ]
+    },
+    {
+     "vz": 0.8745031249999997,
+     "pan": [
+      21.0,
+      5.25
+     ]
+    },
+    {
+     "vz": 1.0056785937499997,
+     "pan": [
+      -6.349999999999909,
+      -9.199999999999989
+     ]
+    },
+    {
+     "vz": 1.1565303828124995,
+     "pan": [
+      -36.19999999999993,
+      -25.549999999999955
+     ]
+    },
+    {
+     "vz": 1.0056785937499997,
+     "pan": [
+      -5.826086956521749,
+      -8.521739130434753
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a picture dragged aside at its Fit: a notch out centres it",
+   "box": [
+    800,
+    600
+   ],
+   "picture": [
+    3000,
+    2000
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "pan",
+     90,
+     -40
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     120
+    ],
+    [
+     "pan",
+     30,
+     30
+    ],
+    [
+     "wheel",
+     400,
+     300,
+     -120
+    ]
+   ],
+   "trace": [
+    {
+     "vz": 1.0,
+     "pan": [
+      90.0,
+      -40.0
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 1.15,
+     "pan": [
+      5.684341886080802e-14,
+      -0.049999999999954525
+     ]
+    },
+    {
+     "vz": 1.15,
+     "pan": [
+      30.000000000000057,
+      29.950000000000045
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a picture window: sideways never zooms, the box off goes to half",
+   "box": [
+    640,
+    900
+   ],
+   "picture": [
+    2000,
+    2400
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "wheel",
+     300,
+     300,
+     0,
+     120
+    ],
+    [
+     "wheel",
+     300,
+     300,
+     0,
+     -120
+    ],
+    [
+     "settings",
+     {
+      "zoom_out_stops_at_fit": false
+     }
+    ],
+    [
+     "wheel",
+     300,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     300,
+     -120
+    ],
+    [
+     "wheel",
+     300,
+     300,
+     -120
+    ]
+   ],
+   "trace": [
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 0.8695652173913044,
+     "pan": [
+      -2.8695652173913686,
+      -19.478260869565275
+     ]
+    },
+    {
+     "vz": 0.7561436672967865,
+     "pan": [
+      -4.0869565217391255,
+      -36.52173913043478
+     ]
+    },
+    {
+     "vz": 0.6575162324319883,
+     "pan": [
+      -6.52173913043481,
+      -51.04347826086959
+     ]
+    },
+    {
+     "vz": 0.5717532455930334,
+     "pan": [
+      -7.434782608695684,
+      -63.04347826086959
+     ]
+    },
+    {
+     "vz": 0.5,
+     "pan": [
+      -8.66553124999993,
+      -74.30891562499994
+     ]
+    },
+    {
+     "vz": 0.5,
+     "pan": [
+      -8.66553124999993,
+      -74.30891562499994
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a picture window zoomed in to its limit",
+   "box": [
+    800,
+    600
+   ],
+   "picture": [
+    3000,
+    2000
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ],
+    [
+     "wheel",
+     100,
+     500,
+     -120
+    ]
+   ],
+   "trace": [
+    {
+     "vz": 1.15,
+     "pan": [
+      45.000000000000014,
+      -30.049999999999955
+     ]
+    },
+    {
+     "vz": 1.3224999999999998,
+     "pan": [
+      96.75,
+      -64.54999999999995
+     ]
+    },
+    {
+     "vz": 1.5208749999999995,
+     "pan": [
+      155.05000000000004,
+      -103.54999999999984
+     ]
+    },
+    {
+     "vz": 1.7490062499999994,
+     "pan": [
+      224.05,
+      -149.3499999999999
+     ]
+    },
+    {
+     "vz": 2.0113571874999994,
+     "pan": [
+      302.6,
+      -201.2499999999999
+     ]
+    },
+    {
+     "vz": 2.313060765624999,
+     "pan": [
+      391.55,
+      -260.54999999999995
+     ]
+    },
+    {
+     "vz": 2.6600198804687487,
+     "pan": [
+      494.9,
+      -329.5500000000002
+     ]
+    },
+    {
+     "vz": 3.0590228625390607,
+     "pan": [
+      613.5,
+      -407.6999999999996
+     ]
+    },
+    {
+     "vz": 3.5178762919199196,
+     "pan": [
+      749.35,
+      -498.4499999999998
+     ]
+    },
+    {
+     "vz": 4.0455577357079076,
+     "pan": [
+      906.3,
+      -602.4000000000003
+     ]
+    },
+    {
+     "vz": 4.652391396064093,
+     "pan": [
+      1087.2,
+      -722.1499999999996
+     ]
+    },
+    {
+     "vz": 5.350250105473707,
+     "pan": [
+      1294.9,
+      -860.4499999999998
+     ]
+    },
+    {
+     "vz": 6.152787621294762,
+     "pan": [
+      1533.1,
+      -1019.0499999999997
+     ]
+    },
+    {
+     "vz": 7.075705764488976,
+     "pan": [
+      1807.8000000000002,
+      -1201.9999999999995
+     ]
+    },
+    {
+     "vz": 8.137061629162321,
+     "pan": [
+      2123.55,
+      -1411.1999999999998
+     ]
+    },
+    {
+     "vz": 9.35762087353667,
+     "pan": [
+      2486.2,
+      -1653.1500000000005
+     ]
+    },
+    {
+     "vz": 10.0,
+     "pan": [
+      2677.3041535521133,
+      -1779.4801884591561
+     ]
+    },
+    {
+     "vz": 10.0,
+     "pan": [
+      2677.3041535521133,
+      -1779.4801884591561
+     ]
+    },
+    {
+     "vz": 8.695652173913045,
+     "pan": [
+      2288.4347826086955,
+      -1521.000000000001
+     ]
+    },
+    {
+     "vz": 7.561436672967866,
+     "pan": [
+      1951.086956521739,
+      -1297.0434782608695
+     ]
+    },
+    {
+     "vz": 6.5751623243198845,
+     "pan": [
+      1656.9565217391303,
+      -1101.782608695653
+     ]
+    },
+    {
+     "vz": 5.717532455930335,
+     "pan": [
+      1400.9130434782608,
+      -930.652173913044
+     ]
+    },
+    {
+     "vz": 4.9717673529829005,
+     "pan": [
+      1178.5652173913043,
+      -782.6956521739135
+     ]
+    },
+    {
+     "vz": 4.323275959115566,
+     "pan": [
+      984.6521739130434,
+      -653.956521739131
+     ]
+    },
+    {
+     "vz": 3.7593703992309275,
+     "pan": [
+      817.0434782608695,
+      -542.3478260869565
+     ]
+    },
+    {
+     "vz": 3.2690177384616765,
+     "pan": [
+      671.4782608695652,
+      -444.521739130435
+     ]
+    },
+    {
+     "vz": 2.842624120401458,
+     "pan": [
+      543.9565217391304,
+      -360.2608695652175
+     ]
+    },
+    {
+     "vz": 2.4718470612186594,
+     "pan": [
+      433.3478260869565,
+      -287.08695652173924
+     ]
+    },
+    {
+     "vz": 2.1494322271466606,
+     "pan": [
+      337.3913043478261,
+      -223.52173913043475
+     ]
+    },
+    {
+     "vz": 1.8690715018666615,
+     "pan": [
+      254.0869565217391,
+      -168.08695652173924
+     ]
+    },
+    {
+     "vz": 1.6252795668405753,
+     "pan": [
+      181.30434782608694,
+      -120.04347826086962
+     ]
+    },
+    {
+     "vz": 1.4132865798613699,
+     "pan": [
+      118.04347826086956,
+      -77.78260869565213
+     ]
+    },
+    {
+     "vz": 1.2289448520533652,
+     "pan": [
+      64.17391304347825,
+      -40.69565217391312
+     ]
+    },
+    {
+     "vz": 1.068647697437709,
+     "pan": [
+      15.695652173913032,
+      -8.913043478260931
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "vz": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ]
+    }
+   ]
+  }
+ ],
+ "words": {
+  "floorWords": {
+   "zoom": "Stop zooming out when the whole sheet fits the screen (hold Shift while scrolling to go further)",
+   "scroll": "Stop zooming out when the whole sheet fits the screen (hold Ctrl+Shift while scrolling to go further)",
+   "": "Stop zooming out when the whole sheet fits the screen (hold Shift while scrolling to go further)"
+  },
+  "tip": "The wheel, a pinch and the \u2212 button stop at Fit, so a sheet never shrinks past readable by accident.\nShift+wheel goes further (Ctrl+Shift+wheel when the wheel scrolls the page).\nShift is also the 0\u00b0 / 45\u00b0 / 90\u00b0 lock while you draw: a point clicked with it still held snaps.",
+  "minusTip": [
+   {
+    "stops": true,
+    "wheel": "zoom",
+    "text": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+   },
+   {
+    "stops": true,
+    "wheel": "scroll",
+    "text": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Ctrl+Shift while you scroll to go further."
+   },
+   {
+    "stops": false,
+    "wheel": "zoom",
+    "text": "Zoom out"
+   },
+   {
+    "stops": false,
+    "wheel": "scroll",
+    "text": "Zoom out"
+   }
+  ],
+  "wheelHelp": [
+   {
+    "stops": true,
+    "wheel": "zoom",
+    "text": "Scroll wheel \u2014 zoom toward cursor; zooming out stops when the whole sheet fits, Shift+scroll goes further"
+   },
+   {
+    "stops": true,
+    "wheel": "scroll",
+    "text": "Ctrl+scroll \u2014 zoom toward cursor; zooming out stops when the whole sheet fits, Ctrl+Shift+scroll goes further"
+   },
+   {
+    "stops": false,
+    "wheel": "zoom",
+    "text": "Scroll wheel \u2014 zoom toward cursor"
+   },
+   {
+    "stops": false,
+    "wheel": "scroll",
+    "text": "Ctrl+scroll \u2014 zoom toward cursor"
+   }
+  ],
+  "once": [
+   {
+    "wheel": "zoom",
+    "said": [
+     "The whole sheet fits the screen \u2014 hold Shift while you scroll to zoom out further"
+    ]
+   },
+   {
+    "wheel": "scroll",
+    "said": [
+     "The whole sheet fits the screen \u2014 hold Ctrl+Shift while you scroll to zoom out further"
+    ]
+   }
+  ]
+ }
+}
