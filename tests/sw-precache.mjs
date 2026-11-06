@@ -8,8 +8,9 @@
 // file that does not exist would fail every install and leave the app with
 // no offline copy at all — both directions matter.
 //
-// So this walks js/main.js's imports (static, plus literal import() calls),
-// checks PROGRAM against them, checks every listed file exists, and drives
+// So this walks js/main.js's imports (static, plus literal import() calls,
+// plus the workers the program starts, plus the files index.html loads
+// itself), checks PROGRAM against them, checks every listed file exists, and drives
 // the worker's own install and activate handlers against stubbed caches.
 // The lists are read by RUNNING sw.js in a sandbox, not by pattern-matching
 // its text, so what is checked is what the worker actually has.
@@ -90,6 +91,40 @@ const missingStatic = staticGraph.filter(m => !program.has(m));
 const missingDynamic = fullGraph.filter(m => !staticGraph.includes(m) && !program.has(m));
 eq('every module in main.js\'s static import graph is in PROGRAM', missingStatic, []);
 eq('every module main.js imports on demand is in PROGRAM', missingDynamic, []);
+
+// Workers. `new Worker(new URL('./core/x.js', import.meta.url))` is no import,
+// so the walk above never sees one — and a worker left out of PROGRAM is a
+// feature that fails offline with nothing said (Keep on This Device on an
+// iPad: js/core/opfs-write-worker.js). Every worker the program starts by
+// its own module-relative address must be precached. Lines of comment are
+// skipped: a doc comment showing the call is not a worker.
+const WORKER_URL = /^(?![ \t]*(?:\*|\/\*|\/\/)).*?\bnew\s+(?:Shared)?Worker\(\s*new\s+URL\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*,\s*import\.meta\.url\s*\)/gm;
+const runtimeFiles = new Set();
+for (const m of fullGraph) {
+  const src = readFileSync(path.join(APP, m), 'utf8');
+  WORKER_URL.lastIndex = 0;
+  for (let hit; (hit = WORKER_URL.exec(src));) {
+    runtimeFiles.add(rel(path.resolve(path.dirname(path.join(APP, m)), hit[1])));
+  }
+}
+ok('the walk finds the Keep on This Device writer worker', runtimeFiles.has('js/core/opfs-write-worker.js'));
+eq('every worker the program starts is in PROGRAM',
+  [...runtimeFiles].filter(f => !program.has(f)), []);
+eq('… and exists', [...runtimeFiles].filter(f => !existsSync(path.join(APP, f))), []);
+
+// What the page itself loads. index.html's own <script src> and stylesheets
+// are no import either — the layout boot (js/ui-mode-boot.js) runs in its
+// <head>, a file of its own since the portal's copy allows no inline script —
+// and a page that opens offline without them paints the wrong layout, or none.
+const html = readFileSync(path.join(APP, 'index.html'), 'utf8');
+const pageFiles = [
+  ...[...html.matchAll(/<script\b[^>]*\ssrc="([^"]+)"/gi)].map(m => m[1]),
+  ...[...html.matchAll(/<link\b[^>]*\srel="stylesheet"[^>]*\shref="([^"]+)"/gi)].map(m => m[1]),
+].filter(u => !/^[a-z]+:/i.test(u) && !u.startsWith('//'));
+ok('the page\'s own files are found (the layout boot, main.js, the stylesheet)',
+  ['js/ui-mode-boot.js', 'js/main.js', 'css/app.css'].every(u => pageFiles.includes(u)));
+eq('every file index.html loads itself is in PROGRAM', pageFiles.filter(u => !program.has(u)), []);
+ok('the embedded profile is precached (inside the portal the app must open with no signal too)', program.has('js/core/embedded.js'));
 
 // ── the lists themselves ─────────────────────────────────────────────────
 for (const shell of ['./', 'index.html', 'css/app.css', 'js/main.js']) {

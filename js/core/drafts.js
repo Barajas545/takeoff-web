@@ -14,7 +14,11 @@
  *
  * A draft is keyed to the file it came from (name and byte length), so
  * reopening that file is what offers it back. It is never restored silently.
+ * Inside the portal it is keyed to the person too (draftWho), and to the
+ * plan (draftPlan).
  */
+
+import { WHO_RE, PLAN_RE } from './portal-handoff.js';
 
 const DB_NAME = 'ptt-drafts';
 const STORE = 'drafts';
@@ -54,11 +58,51 @@ function tx(mode, fn) {
 }
 
 /**
- * The key for a project file. Name plus size, because a phone has no path
- * and two jobs can share a name across folders but rarely a byte length too.
+ * The person a draft belongs to, inside the portal: its opaque word for the
+ * person signed in (ptt-open's `who`, js/core/portal-handoff.js WHO_RE — never
+ * an id or an e-mail), or '' for anything else. Everyone on a device shares
+ * this store, and an iPad on a job is often shared by two people who both
+ * see prices: one's unsaved work must never be offered to the other (review
+ * PRICE-4).
  */
-export function draftKey(fileName, fileSize) {
-  return `${fileName || 'untitled'}|${fileSize || 0}`;
+export function draftWho(who) {
+  return typeof who === 'string' && WHO_RE.test(who) ? who : '';
+}
+
+/**
+ * The plan a draft is of, inside the portal: its opaque word for the plan
+ * handed over (ptt-open's `plan`, js/core/portal-handoff.js PLAN_RE — the
+ * same for every version of that plan, another for a plan of the same name
+ * in another folder or job), or '' for anything else. Two lots' folders can
+ * hold one house model's plan, the same name and the same bytes: one lot's
+ * unsaved work is never offered on, dropped by or written over by the
+ * other's (contract addendum 4 E4).
+ */
+export function draftPlan(plan) {
+  return typeof plan === 'string' && PLAN_RE.test(plan) ? plan : '';
+}
+
+/**
+ * The end of a draft's key after the file's name: "|<size>", then "|@<who>"
+ * for a person's (draftWho), and after that "|#<plan>" for a person's draft
+ * of a plan the portal named (draftPlan) — never a plan without a person.
+ */
+export function draftKeyTail(fileSize, who = '', plan = '') {
+  const w = draftWho(who);
+  const p = w ? draftPlan(plan) : '';
+  return `|${fileSize || 0}${w ? `|@${w}` : ''}${p ? `|#${p}` : ''}`;
+}
+
+/**
+ * The key for a project file. Name plus size, because a phone has no path
+ * and two jobs can share a name across folders but rarely a byte length too
+ * — and, inside the portal, the person's word (draftWho) and the plan's
+ * (draftPlan): "<name>|<size>|@<who>|#<plan>", or "<name>|<size>|@<who>"
+ * when the portal named no plan. Its end is never a number, so it can never
+ * be a key without one.
+ */
+export function draftKey(fileName, fileSize, who = '', plan = '') {
+  return `${fileName || 'untitled'}${draftKeyTail(fileSize, who, plan)}`;
 }
 
 /**
@@ -95,6 +139,17 @@ export async function dropDraft(key) {
   try {
     await tx('readwrite', st => st.delete(key));
   } catch { /* nothing to do about it */ }
+}
+
+/** Every draft's key (draftKey's "<name>|<size>[|@<who>[|#<plan>]]"), and nothing of any draft read — for finding the one a file's own
+ *  name does not lead to (a copy the portal made of a save: js/core/save-route.js portalCopyDraftKey). */
+export async function listDraftKeys() {
+  try {
+    const keys = await tx('readonly', st => st.getAllKeys());
+    return Array.isArray(keys) ? keys.filter(k => typeof k === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Every draft, newest first — for a "what was I working on?" list. */

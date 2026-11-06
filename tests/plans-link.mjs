@@ -12,7 +12,7 @@
 // Run: node tests/plans-link.mjs
 import {
   INVALID_LINK, HANDHELD_HINT, COMPUTER_HINT, isPhoneOrTablet, canOpenArchiveFolder, keptCode, portalCode,
-  plansForProject, plansLinkHref, copyText, linkPanelModel, openAfterAsking,
+  plansForProject, plansLinkHref, copyText, linkPanelModel, openAfterAsking, PORTAL_SAFARI_IF_ASKED,
 } from '../js/core/plans-link.js';
 import { parsePlansLink } from '../js/core/plans-folder.js';
 import {
@@ -241,7 +241,19 @@ eq('… the computer\'s hint, no invalid note', [desk.openHint, desk.invalidNote
 const phone = linkPanelModel({ code: 'A274', handheld: true, ...both, pageHref: SITE });
 eq('a phone: the same plans, no Copy link, no "use Edge"', [phone.title, phone.count, phone.href, phone.browserNote], ['Plans for A274', 3, '', '']);
 eq('… and where to pick the plan', phone.openHint, HANDHELD_HINT);
-ok('… the OneDrive app, then Keep on This Device', /OneDrive app/.test(HANDHELD_HINT) && /File › Keep on This Device/.test(HANDHELD_HINT));
+ok('… the OneDrive app\'s files in the Files app, then Keep on This Device',
+  /Files app/.test(HANDHELD_HINT) && /OneDrive app/.test(HANDHELD_HINT) && /File › Keep on This Device/.test(HANDHELD_HINT));
+// Review fix: these words are live on github.io whatever the portal does today. Once the portal opens this app
+// inside itself on an iPhone or iPad (its own copy, in a frame) it never asks for Safari; before that is live, and
+// whenever its switch for the frame is off, its home-screen app says to open the portal in Safari — which works.
+// So: Safari only when the portal asks, and no claim that the tool opens inside the portal.
+ok('… the DCR Portal\'s 📐 menu first, for the people who see prices — and Safari only if the portal asks for it',
+  /^Plans come from the DCR Portal/.test(HANDHELD_HINT) && /📐/.test(HANDHELD_HINT) && /see prices/.test(HANDHELD_HINT)
+  && HANDHELD_HINT.includes(PORTAL_SAFARI_IF_ASKED) && !/opens inside the portal|inside itself/.test(HANDHELD_HINT));
+eq('… in words true either way', PORTAL_SAFARI_IF_ASKED,
+  'On an iPhone or iPad, if the portal asks you to open it in Safari, do that and use 📐 again.');
+ok('… and what Save really does there: a new file through the share sheet',
+  /share sheet/.test(HANDHELD_HINT) && /Save to Files/.test(HANDHELD_HINT));
 
 const bare = linkPanelModel({ code: '', handheld: false, ...both, pageHref: SITE });
 eq('a bare #plans: the Plans Archive, every plan on the device, its own link',

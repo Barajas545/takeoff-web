@@ -4,18 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Professional Takeoff Tools — Web</title>
-<script>
-/* The layout must be decided BEFORE the stylesheet paints, or the app flashes
-   the wrong one on every launch. Inline, tiny, and duplicated from
-   resolveUiMode() in js/ui/settings.js on purpose: a module import cannot run
-   this early, and the two are one line each. Touch unless standard was chosen. */
-try {
-  var st = JSON.parse(localStorage.getItem('ptt.settings.v1') || '{}');
-  document.documentElement.dataset.ui = st.ui_mode === 'standard' ? 'standard' : 'touch';
-} catch (e) {
-  document.documentElement.dataset.ui = 'touch';
-}
-</script>
+<!-- The layout (touch or standard) is decided before the stylesheet paints: js/ui-mode-boot.js. -->
+<script src="js/ui-mode-boot.js"></script>
 <link rel="stylesheet" href="css/app.css">
 
 <!-- Installable to a home screen, and usable with no signal once cached. -->

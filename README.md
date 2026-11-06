@@ -88,8 +88,93 @@ Chrome.
 someone chooses otherwise for their own device in *Settings › Plan files*.
 
 On a phone or a tablet the browser cannot open a folder: use *Open a .takeoff
-project* and pick the file in the OneDrive app; Save hands it back through the
-share sheet.
+project* and pick the file in the Files app (the OneDrive app's files) — or,
+for the people who see prices, open it from the portal's 📐 menu. On an iPhone
+or iPad, if the portal asks for Safari, open the portal in Safari and use 📐
+again: a portal that opens the takeoff tool inside itself (see *Inside the
+portal* below) never asks, from its home-screen icon too. Save there
+gives back a new file under the name it was opened by: through the share sheet
+(*Save to Files*) up to 150 MB, and as a download into *Files › Downloads*
+above that (an app opened from the home-screen icon, which may not download,
+is offered the share sheet beside it). Only a share the person finished marks
+the project saved, and only if nothing was done while the file went out. A
+download on a phone or a tablet cannot be confirmed — nor one anywhere that
+follows a share sheet that could not read the file — so the project stays
+marked unsaved and its draft is kept until a save is confirmed. A draft comes
+back when a file it belongs to is opened again: the plan it was opened from,
+or the file it was last saved into, with the same sheets. A takeoff started
+from a PDF has no such file until its first confirmed save, nor has one whose
+sheets were added since; until then its work is in the open page only, and
+the app says so rather than calling it kept. If Files offers to replace the
+plan of the same name, replacing it writes over anything saved into that plan
+from another computer since it was opened on the device — nothing on an iPad
+can check that yet. A plan picked from OneDrive that is not on the device yet
+can take minutes to come down; it opens when it arrives, and if anything was
+done meanwhile the app asks first.
+
+**Inside the portal.** On a phone or a tablet the employee portal shows its own
+copy of this app (the same files at one reviewed commit, served from the
+portal's site) in a full-screen frame over its page, and hands it the plan its
+Plans Library keeps on the device. The app knows it is there when a page of
+its own site frames it with the portal's hand-over (`js/core/embedded.js`) — a
+frame from any other site, or a tab of its own, is never inside the portal.
+There the portal is the keeper of plans: no Plans Archive folder, no *Keep on
+This Device*, and the start screen says plans come from the 📐 menu. When the
+portal says it will take a save of the plan it handed over, *Save* composes
+the project as ever (its untouched sheets are slices of the portal's own copy,
+so nothing is read into memory) and hands it back to the portal; the project
+is marked saved only once the portal answers that it has the file in its own
+storage — the portal then sends it to OneDrive, and what it says of that send
+is shown while the app is open (sending, being checked against office saves,
+sent, filed as a copy, or not sent yet and sent again — the app goes on
+listening after that, so a later "sent" or "copy" is still heard). If it has no room, or does
+not answer within two minutes, the work stays unsaved and kept on the device,
+the app says so, and offers *Save a copy to Files* instead. If it refuses (a
+save from another window or tab of the plan waits there), the work stays
+unsaved and its draft is kept, but the app only says it is still in the
+window and to keep it with *Save a copy to Files*: reopening the plan hands
+that other save, so it never promises the work comes back (it may, as an
+earlier version's draft: below). A plan
+opened over the internet (the portal had no room to keep it on the device) is
+never handed back; where the portal lets the person save plans back, opening
+it again from the 📐 menu once there is room keeps it on the device, and its
+Save then goes to the portal. On a phone or a tablet, Save does not even try
+to make a file of a plan opened over the internet whose drawings are over
+300 MB (inside the portal or not): every sheet would have to come into the
+device's memory at once, which closes the app. It keeps the work as a draft
+instead and says how to get it saved — from a copy kept on the device.
+Inside the portal the app notes no recent files
+(a list of plan names on the portal's site would outlive the person's prices),
+and a draft of a plan the portal handed over is offered back, never dropped
+because the file is newer: the portal dates a plan it sent by OneDrive's
+upload, after work done since the save. A separate copy the portal made of a
+save (`<plan> - iPad <date> <time>.takeoff`) offers back the work drafted
+under the plan it was saved from — unless the portal names its plans (below):
+the copy is then a plan of its own. When the portal names the copy too, as it
+says the save was filed as one, the work from then on is kept for the copy
+alone: opening the copy offers it back, and the plan (the office's version
+now) never offers it over the office's save. When it does not, that work
+comes back from the plan it was saved from — and not at all if the office's
+save changed the plan's sheet count: the app then says, as the plan opens,
+that it left unsaved work alone. Drafts there are kept per person: the
+portal tells the app an opaque word for who is signed in (never an id or an
+e-mail), so on an iPad two people share, one person's unsaved work is never
+offered to the other; a draft kept before the portal said who is still
+offered, saying it may be someone else's, and never dropped. They are kept
+per plan too: the portal tells the app an opaque word for the plan (the same
+for every version of it, another for a plan of the same name in another
+folder or job), because two lots' folders can hold one house model's plan,
+the same name and the same bytes — one lot's draft is never offered on,
+dropped by or written over by the other's. With no draft of the person's for
+the plan as handed over, their newest draft of the same plan at another size
+(an earlier version of it: another window's save was kept since) is offered,
+saying so; a portal that names no plan gets the file's own draft only.
+*Not now* leaves it for the next opening, and only *Discard them* throws it
+away. Declining or restoring a draft takes the same work kept under the
+person's other files of that plan with it, so work turned down is never
+offered again. The page has no inline
+script (the portal holds its copy to a strict page policy): the layout is set
+before the first paint by `js/ui-mode-boot.js`.
 
 **Only the OneDrive Plans Archive.** A computer that synced the old SharePoint
 library also has a folder called *DCR - Floor Plans - Archive* there, and the
@@ -103,6 +188,11 @@ SharePoint through its sync client.
 open plan — from the Plans Archive, or picked in the OneDrive app on a phone —
 into this browser's own storage, and the start screen lists it under *Plans on
 this device*, to open with no internet and remove when it is no longer needed.
+(Safari before 26 cannot write such a file from the page, so on an iPad the
+copy is written by a small worker, `js/core/opfs-write-worker.js`, a slice at
+a time; it works from Safari 16.4. A copy cut off part-way — the tab closed,
+or the worker lost — leaves nothing that takes room for long: its file is
+removed when the list of plans on this device is next drawn.)
 A kept copy is a snapshot: Save never writes into it. The old portal's Plans
 Library copies are listed there too, for the person who saved them (the last
 portal account seen on the device once nobody signs in there any more); after
@@ -135,9 +225,11 @@ you.
 ## Honest limits
 
 **Very large projects.** Opening is cheap at any size — a 2.3 GB set reads
-about 2 KB to open. Saving is not: on a phone the whole file has to be
-rebuilt in memory to hand back, so jobs in the hundreds of megabytes are
-better saved at a desk. Measuring and marking up a big set on a phone is
+about 2 KB to open. Saving is heavier: the share sheet reads the whole file
+into memory, so on a phone or a tablet a project over 150 MB is downloaded
+instead (streamed, any size), and a plan opened over a portal link is
+downloaded sheet by sheet to be saved. Jobs in the hundreds of megabytes are
+still better saved at a desk. Measuring and marking up a big set on a phone is
 fine; it is the save that is heavy.
 
 **Very large sheets on iPhone and iPad.** Safari refuses a canvas past about

@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import vm from 'node:vm';
 
 const run = promisify(execFile);
 const ROOT = new URL('../js/', import.meta.url);
@@ -28,10 +29,17 @@ const jsDir = path.resolve(ROOT.pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 const tmp = await mkdtemp(path.join(tmpdir(), 'ptt-parse-'));
 let fails = 0;
 let n = 0;
+// A look-behind ((?<= or (?<!) in a regular expression makes Safari before 16.4
+// refuse the WHOLE module — the app would not start there — and the portal's
+// own copy of this app is held to that rule (its code checks). Every shipped
+// file is read for one, sw.js and the vendored pdf.js included.
+const lookBehind = [];
+const LOOK_BEHIND = /\(\?<[=!]/;
 
 for await (const file of walk(jsDir)) {
   n += 1;
   const rel = path.relative(jsDir, file);
+  if (LOOK_BEHIND.test(await readFile(file, 'utf8'))) lookBehind.push(`js/${rel.split(path.sep).join('/')}`);
   const probe = path.join(tmp, rel.replace(/[\\/]/g, '_') + '.mjs');
   await writeFile(probe, await readFile(file));
   try {
@@ -45,6 +53,26 @@ for await (const file of walk(jsDir)) {
 }
 await rm(tmp, { recursive: true, force: true });
 
+const appDir = path.resolve(jsDir, '..');
+const others = [path.join(appDir, 'sw.js')];
+for await (const f of walk(path.join(appDir, 'vendor'))) others.push(f);
+for (const f of others) {
+  if (LOOK_BEHIND.test(await readFile(f, 'utf8'))) lookBehind.push(path.relative(appDir, f).split(path.sep).join('/'));
+}
+if (lookBehind.length) {
+  fails += 1;
+  console.log(`FAIL a look-behind in a shipped file (Safari before 16.4 refuses the whole module):\n    ${lookBehind.join('\n    ')}`);
+}
+
+// The layout boot is no module: index.html loads it as a classic script in
+// its <head>, before the stylesheet. It must parse as one too.
+try {
+  new vm.Script(await readFile(path.join(jsDir, 'ui-mode-boot.js'), 'utf8'), { filename: 'ui-mode-boot.js' });
+} catch (err) {
+  fails += 1;
+  console.log(`FAIL ui-mode-boot.js does not parse as a classic script\n    ${err.message}`);
+}
+
 // The import graph. A module that parses can still reference an export that
 // does not exist — that only shows up when something imports it.
 //
@@ -54,6 +82,7 @@ const BROWSER_ONLY = new Set(['main.js', 'settings.js', 'dialogs.js', 'catalog.j
   'assemblies.js', 'items-panel.js', 'reports.js', 'thumbnails.js', 'plans-archive.js']);
 const IMPORTABLE = [
   'site-config.js', 'core/plans-folder.js', 'core/device-plans.js', 'core/plans-link.js', 'core/portal-handoff.js',
+  'core/save-route.js', 'core/embedded.js',
   'core/takeoff-file.js', 'core/zlib.js', 'core/page-store.js', 'core/project.js',
   'core/geom.js', 'core/units.js', 'core/measure.js', 'core/xlsx.js',
   'core/revisions.js',
@@ -81,6 +110,6 @@ for (const rel of IMPORTABLE) {
 
 console.log(fails
   ? `\n${fails} MODULE(S) FAILED`
-  : `\nAll ${n} modules parse as modules; ${IMPORTABLE.length} import cleanly`
+  : `\nAll ${n} modules parse as modules; ${IMPORTABLE.length} import cleanly; no look-behind in ${n + others.length} shipped files`
     + `\n(${BROWSER_ONLY.size} DOM-bound modules are covered by the browser smoke test)`);
 process.exit(fails ? 1 : 0);

