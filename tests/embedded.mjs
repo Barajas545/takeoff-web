@@ -311,6 +311,15 @@ eq('settings that are not JSON, or a store that refuses: touch', [boot('{not jso
     ok('Add Blank Sheet takes the start card down before it turns to the sheet',
       /hideEmptyState\(\);[\s\S]*await goToPage\(at\);/.test(body));
   }
+  // Work started while the portal's plan was on its way is not replaced without asking.
+  {
+    const i = main.indexOf('async function receiveFromPortal(');
+    const body = i < 0 ? '' : main.slice(i, main.indexOf('\n}\n', i));
+    const ask = body.indexOf('if (app.project.dirty && !(await D.confirmDialog(');
+    ok('the portal\'s plan asks before it replaces unsaved work started while it was on its way',
+      ask > body.indexOf('const { plan, origin } = got;') && ask > 0
+        && ask < body.indexOf('await loadProjectFile(') && /okLabel: 'Discard and open'/.test(body.slice(ask, ask + 600)));
+  }
   // and nothing anywhere in the shipped program names one of the portal's
   const files = [];
   const walk = dir => {
