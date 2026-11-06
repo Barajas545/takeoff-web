@@ -25,8 +25,24 @@
 // words and tooltips; one name per revision; the sentence a move would say;
 // what the first takeoff on each sheet books, and what it says.
 //
+// And what each DELETE takes (desktop delete_item / delete_shapes /
+// _drop_shape, and _on_item_delete's question word for word): every shape
+// of every scenario, and every item of the library, deleted on a fresh copy
+// both ways -- the places emptied and the items changed must be the
+// desktop's, in as many undo levels, and one Undo must give back the job
+// exactly -- a selection of shapes across several sheets included. Plus what
+// a job switch leaves of the count tool's state (_drop_per_project_reads),
+// over every combination of the tool, the Item box, the counted name and
+// what is armed.
+//
+// And the desktop OPENING what this app saved after each of those deletes:
+// it re-adds every multi-shape item on every open (_resync_group_totals) and
+// announces any total that comes out different at all, so a total re-added
+// here must be the one it finds there, to the bit -- with this app's JSON,
+// where a whole number has no point and Python reads an int (pySum).
+//
 // Run: node tests/revision-counting.mjs
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -34,11 +50,13 @@ import { fileURLToPath } from 'node:url';
 import {
   CountingModel, applyBooking, pyFixed, pyRound, pyG, takeoffQtyText,
   takeoffQty, takeoffMoveWords, takeoffQuantityWords, isTakeoffItem,
+  deleteItemQuestion, pySum,
 } from '../js/core/counting.js';
 import {
   revisionShortName, workingVersionOf, newestVersionOf, sheetVersions,
 } from '../js/core/revisions.js';
-import { Project } from '../js/core/project.js';
+import { Project, resyncGroups } from '../js/core/project.js';
+import { ToolController } from '../js/tools/controller.js';
 import { collectItems, collectRows } from '../js/ui/reports.js';
 import {
   LIBRARY, DESKTOP_SRC, DATA, haveLibrary, haveDesktopSource, walkProjects,
@@ -197,7 +215,212 @@ function modelOf(input) {
 
 function rankJson(r) { return [r[0], r[1].slice(), r[2]]; }
 
-function checkScenario(input, truth, label, { words = true } = {}) {
+// ═══ Delete takes what was asked ════════════════════════════════════════
+
+// What this app adds to an item at load and strips on every save: never part
+// of a comparison with the desktop's store (project.js RUNTIME_KEYS).
+const RUNTIME = ['_uid', 'ppf', 'ppf_recovered', 'scale_label', 'self_intersects'];
+
+/** JSON with every object's keys sorted: two stores compare by content. */
+function canon(v) {
+  if (Array.isArray(v)) return v.map(canon);
+  if (v && typeof v === 'object') {
+    return Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])]));
+  }
+  return v;
+}
+const canonStr = v => JSON.stringify(canon(v));
+
+/** The job as the app opens it: the same Project the screens edit. */
+function projectOf(input) {
+  const model = modelOf(input);
+  const p = new Project();
+  p.loadFrom({ metadata: structuredClone(model.md), annotations: {},
+    measurements: structuredClone(input.measurements || {}), pageCount: input.pageCount,
+    revisionCounts: (model.md.revisions || []).map(r => r.pageCount) });
+  return p;
+}
+
+/** An item as the desktop's store would hold it, for one that was `raw` there. */
+function asDesktop(m, raw) {
+  const c = structuredClone(m);
+  for (const k of RUNTIME) delete c[k];
+  // The app gives an item with no `visible` key `visible: true` at load;
+  // the desktop leaves the key out. Both mean shown.
+  if (raw && !('visible' in raw) && c.visible === true) delete c.visible;
+  return c;
+}
+
+/**
+ * {gone, changed} -- what a delete did, told the desktop's way (the Python's
+ * _Before.delta): the places that were emptied, and the items that stayed
+ * but changed, at their place before the delete.
+ */
+function deltaOf(p, was, input) {
+  const here = new Set();
+  const changed = [];
+  for (const [pg, m] of p.allItems()) {
+    const w = was.get(m._uid);
+    if (!w) throw new Error('a delete made an item');
+    here.add(m._uid);
+    const raw = (input.measurements[String(w.pg)] || [])[w.i];
+    const now = canonStr(asDesktop(m, raw));
+    if (now !== w.json) changed.push([pg, w.i, canon(asDesktop(m, raw))]);
+  }
+  const gone = [...was.entries()].filter(([u]) => !here.has(u)).map(([, w]) => [w.pg, w.i])
+    .sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+  changed.sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+  return { gone, changed };
+}
+
+function checkDeletes(input, deletes, label, reopen = null) {
+  for (const d of deletes) {
+    const p = projectOf(input);
+    const was = new Map();
+    const uidAt = new Map();
+    for (const [pg, m] of p.allItems()) {
+      const i = p.measurements[pg].indexOf(m);
+      const raw = (input.measurements[String(pg)] || [])[i];
+      was.set(m._uid, { pg, i, json: canonStr(asDesktop(m, raw)) });
+      uidAt.set(`${pg}:${i}`, m._uid);
+    }
+    const before = JSON.stringify(p.measurements);
+    const at = i => uidAt.get(`${d.page}:${i}`);
+    const got = { undo: 0 };
+    const tag = `${label} · delete ${d.kind}${d.answer ? ` (${d.answer})` : ''} `
+      + (d.kind === 'selection' ? d.at.map(a => a.join(':')).join('+')
+        : `${d.page}:${d.kind === 'shapes' ? d.ids.join('+') : d.i}`);
+    // the items a shape delete re-adds the totals of (the reopen check)
+    const gidsOf = uids => [...new Set(uids.map(u => p.findItem(u)?.item.group_id).filter(Boolean))];
+    let touched = [];
+    if (d.kind === 'shape') {
+      touched = gidsOf([at(d.i)]);
+      p.dropShapes([at(d.i)]);
+    } else if (d.kind === 'item-of-run') {
+      p.removeItems([at(d.i)]);
+    } else if (d.kind === 'shapes') {
+      touched = gidsOf(d.ids.map(at));
+      got.n = p.dropShapes(d.ids.map(at));
+    } else if (d.kind === 'selection') {
+      const uids = d.at.map(([pg, i]) => uidAt.get(`${pg}:${i}`));
+      touched = gidsOf(uids);
+      got.n = p.dropShapes(uids);
+    } else if (d.kind === 'item') {
+      const q = deleteItemQuestion(p.findItem(at(d.i)).item);
+      got.asked = [[q.title, q.text, q.buttons, [q.defaultButton]]];
+      got.said = [];
+      if (d.answer === 'Yes') { p.removeItems([at(d.i)]); got.said = [q.done]; }
+    }
+    got.undo = p._undo.length;
+    if (reopen && touched.length) reopen.push(savedGroups(input, p, touched, tag));
+    Object.assign(got, deltaOf(p, was, input));
+    const want = { undo: d.undo };
+    if ('n' in d) want.n = d.n;
+    if ('asked' in d) { want.asked = d.asked; want.said = d.said; }
+    want.gone = d.gone;
+    want.changed = d.changed.map(([pg, i, m]) => [pg, i, canon(asDesktop(m, m))]);
+    const order = ['undo', 'n', 'asked', 'said', 'gone', 'changed'];
+    const sorted = o => Object.fromEntries(order.filter(k => k in o).map(k => [k, o[k]]));
+    eq(tag, sorted(got), sorted(want));
+    // ...and one Undo gives the job back exactly, one Redo takes it again
+    if (got.undo === 1) {
+      const after = JSON.stringify(p.measurements);
+      p.undo();
+      eq(`${tag} · one Undo gives back every shape, exactly`, JSON.stringify(p.measurements), before);
+      p.redo();
+      eq(`${tag} · and Redo takes them again`, JSON.stringify(p.measurements), after);
+    }
+  }
+}
+
+/**
+ * What the desktop is handed when it opens the browser's save of `p`: the
+ * shapes of the items `gids` names -- all an item's re-add reads, with the
+ * metadata that says which drawings count -- in the JSON this app writes,
+ * where a whole number has no point.
+ */
+function savedGroups(input, p, gids, tag) {
+  const want = new Set(gids);
+  const measurements = {};
+  for (const [pg, m] of p.allItems()) {
+    if (!want.has(m.group_id)) continue;
+    const c = { ...m };
+    for (const k of RUNTIME) delete c[k];
+    (measurements[String(pg)] ||= []).push(c);
+  }
+  return { tag, gids, job: { name: tag, pageCount: input.pageCount,
+    metadata: input.metadata, measurements } };
+}
+
+/**
+ * The desktop OPENING what this app saved: it re-adds every multi-shape
+ * item from its runs on every open (_resync_group_totals, run here as the
+ * desktop's own lifted method) and announces any total that comes out
+ * different at all -- "re-added from its runs on opening". A total this
+ * app re-added must be the one it finds, to the bit. Python's own sum() of
+ * `sums` comes back too, for pySum to be held to.
+ */
+function desktopReopens(saved, sums = [], promote = []) {
+  const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'counting-python-truth.py');
+  const out = execFileSync('python', [script, '--reopen'], {
+    input: JSON.stringify({ jobs: saved.map(s => s.job), sums, promote }),
+    env: { ...process.env, PTT_DESKTOP_SRC: DESKTOP_SRC },
+    maxBuffer: 1 << 28, windowsHide: true, encoding: 'utf-8' });
+  return JSON.parse(out);
+}
+
+function checkReopen(saved, label) {
+  if (!saved.length) return;
+  const { moved } = desktopReopens(saved);
+  let bad = 0;
+  saved.forEach((s, k) => {
+    const mine = moved[k].filter(([gid]) => s.gids.includes(gid));
+    if (mine.length && bad++ < 5) eq(`${s.tag} · the desktop re-adds it on opening the save`, mine, []);
+  });
+  if (bad > 5) eq(`${label} · ${bad - 5} more totals the desktop re-adds on opening`, bad, 0);
+  eq(`${label} · ${saved.length} saves after a delete: the desktop's open re-adds no total the web re-added`,
+    bad, 0);
+}
+
+/** desktop _drop_per_project_reads, as the browser's count tool keeps it. */
+function checkJobSwitch(cases, label) {
+  for (const k of cases) {
+    const p = new Project();
+    const held = { type: 'count', name: 'Outlets', points: [[1, 1]] };
+    p.loadFrom({ metadata: {}, annotations: {}, measurements: { 0: [held] }, pageCount: 1 });
+    const canvas = { addEventListener() {}, setPointerCapture() {}, style: {} };
+    const c = new ToolController({ canvas, viewport: { zoom: 1, toPage: pt => pt },
+      project: p, currentPage: () => 0, host: {} });
+    let told = 0;
+    c.addEventListener('tool-name', () => { told += 1; });
+    c.mode = k.mode;
+    c.options.pendingName = k.box;
+    c.countNamed = k.named;
+    if (k.armed === 'target') c.countTarget = p.measurements[0][0];
+    if (k.armed === 'spec') c.countSpec = { name: 'Outlets', floor_level: 'Level 1' };
+    c._lastFloor = 'Level 3';
+    c._lastSub = 'Rough-in';
+    c._lastCostType = 'labor';
+    p.loadFrom({ metadata: {}, annotations: {}, measurements: {}, pageCount: 1 });
+    const got = {
+      cleared: told > 0,
+      box: c.options.pendingName,
+      armed: c.countTarget ? 'target' : c.countSpec ? 'spec' : 'none',
+      named: c.countNamed,
+      lastFloor: c._lastFloor || '',
+      lastSub: c._lastSub || '',
+      lastCostType: c._lastCostType || 'material',
+    };
+    const w = k.after;
+    got.category = c.options.countCategory;
+    eq(`${label} · ${k.mode}, box ${JSON.stringify(k.box)}, counted as ${JSON.stringify(k.named)}, `
+      + `${k.armed} armed`, got, { cleared: w.cleared, box: w.box, armed: w.armed, named: w.named,
+      lastFloor: w.lastFloor, lastSub: w.lastSub, lastCostType: w.lastCostType,
+      category: w.category });
+  }
+}
+
+function checkScenario(input, truth, label, { words = true, reopen = null } = {}) {
   const model = modelOf(input);
   const n = input.pageCount;
 
@@ -446,6 +669,25 @@ function checkScenario(input, truth, label, { words = true } = {}) {
     };
     eq(`${label} · the Current Set (${order})`, got, truth.latest[order]);
   }
+
+  // ── what each Delete takes ──
+  // A truth from before deletes were lifted has none; that is a stale
+  // snapshot, said as a failure rather than skipped as if it had passed.
+  if (!Array.isArray(truth.deletes)) {
+    eq(`${label} · the truth says what each delete takes (regenerate it)`, false, true);
+  } else {
+    checkDeletes(input, truth.deletes, label, reopen);
+  }
+}
+
+/** The job switch cases, from a truth file -- refusing one without them. */
+function checkJobSwitchOf(truth, label) {
+  if (!Array.isArray(truth.jobSwitch) || !truth.jobSwitch.length) {
+    eq(`${label} · the truth says what a job switch leaves (regenerate it)`, false, true);
+    return;
+  }
+  console.log(`   (${truth.jobSwitch.length} job-switch cases)`);
+  checkJobSwitch(truth.jobSwitch, label);
 }
 
 // ═══ 2. the committed snapshot ══════════════════════════════════════════
@@ -461,6 +703,7 @@ function checkScenario(input, truth, label, { words = true } = {}) {
   if (snap) {
     console.log(`\n-- committed snapshot: ${snap.scenarios.length} scenarios --`);
     for (const s of snap.scenarios) checkScenario(s.input, s.truth, s.truth.name);
+    checkJobSwitchOf(snap, 'job switch');
   }
 }
 
@@ -484,7 +727,12 @@ if (!(await haveDesktopSource())) {
   }
   if (truth) {
     console.log(`   (lifted ${truth.lifted.length} module names as a verified closure)`);
-    for (const s of truth.scenarios) checkScenario(s.input, s.truth, `live ${s.truth.name}`);
+    const saved = [];
+    for (const s of truth.scenarios) {
+      checkScenario(s.input, s.truth, `live ${s.truth.name}`, { reopen: saved });
+    }
+    checkReopen(saved, 'live scenarios');
+    checkJobSwitchOf(truth, 'live job switch');
     live = 'scenarios';
   }
 
@@ -504,6 +752,7 @@ if (!(await haveDesktopSource())) {
     if (lib) {
       let sameOrder = 0;
       let items = 0;
+      const saved = [];
       for (const s of lib.scenarios) {
         // The words list items in the order the store is walked; the desktop
         // walks the file's order, this app walks pages ascending.
@@ -511,12 +760,115 @@ if (!(await haveDesktopSource())) {
         const same = JSON.stringify(js) === JSON.stringify(s.truth.keyOrder);
         if (same) sameOrder += 1;
         items += s.truth.items.length;
-        checkScenario(s.input, s.truth, s.truth.name, { words: same });
+        checkScenario(s.input, s.truth, s.truth.name, { words: same, reopen: saved });
       }
+      checkReopen(saved, 'library');
       console.log(`   (${lib.scenarios.length} projects, ${items} items; words compared on `
         + `${sameOrder} whose store order matches)`);
       live += ' + library';
     }
+  }
+
+  // ═══ 4. the desktop reopening a web save ════════════════════════════════
+  // A run the desktop held as 180.0 is saved here as 180, and the desktop
+  // reads an int back. Python's sum() adds a leading int exactly and the
+  // first float to it with a plain `+`; compensating from the first number
+  // instead missed by a bit, and the desktop then announced on opening that
+  // the item had been "re-added from its runs". Seeded, so a failure repeats.
+  console.log('\n-- live: the desktop opens a web save of whole-number-led runs --');
+  {
+    let seed = 0x5eed;
+    const rnd = () => {          // mulberry32
+      seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    // a whole number of sq ft, or one with every bit of a double in use (a
+    // traced area: 83.13100005532559) -- 32 random bits would add exactly
+    const num = () => (rnd() < 0.4 ? 1 + Math.floor(rnd() * 400)
+      : (rnd() + rnd() * 2 ** -32) * 400);
+    const shape = (v, kw) => ({ type: 'area', name: 'Wall Q', label: 'Wall Q', value: v,
+      points: [[1, 1], [9, 1], [9, 9]], visible: true, ...kw });
+    const saved = [];
+    const untouched = [];
+    for (let k = 0; k < 240; k++) {
+      const runs = [1 + Math.floor(rnd() * 400)];
+      for (let j = 1 + Math.floor(rnd() * 4); j > 0; j--) runs.push(num());
+      const own = num();
+      const input = { name: `whole-number-led ${k}`, pageCount: 2,
+        metadata: { page_labels: ['P1', 'P2'] },
+        measurements: {
+          0: [shape(own, { group_id: 'gq', own_value: own, group_count: runs.length + 1 })],
+          1: runs.map(v => shape(v, { group_id: 'gq', group_child: true })) } };
+      const p = projectOf(input);
+      resyncGroups(p);                      // the item as this app adds it up
+      untouched.push(savedGroups(input, p, ['gq'], `${input.name} · saved, not deleted from`));
+      const doomed = k % 3 === 0 ? p.measurements[1][runs.length - 1]   // the last run
+        : k % 3 === 1 ? p.measurements[1][Math.min(1, runs.length - 1)]  // one after the first
+          : p.measurements[0][0];                                         // the main shape
+      p.dropShapes([doomed._uid]);
+      saved.push(savedGroups(input, p, ['gq'], `${input.name} · a shape deleted`));
+    }
+    checkReopen(saved, 'whole-number-led runs, a shape deleted');
+    checkReopen(untouched, 'whole-number-led runs, saved as this app added them');
+    // The limit, said every run rather than hidden: a total the DESKTOP
+    // added up from 180.0 as a float, which this app saved untouched, is
+    // re-added from 180 as an int on the next open and can move by a bit.
+    // Nothing a save may do about it; the desktop must compare past the
+    // last bit.
+    const floatLed = v => {               // Python's sum() when every number is a float
+      let hi = 0, lo = 0;
+      for (const x of v) {
+        const t = hi + x;
+        lo += Math.abs(hi) >= Math.abs(x) ? (hi - t) + x : (x - t) + hi;
+        hi = t;
+      }
+      return lo && Number.isFinite(lo) ? hi + lo : hi;
+    };
+    const desk = untouched.map(s => {
+      const job = structuredClone(s.job);
+      const m = job.measurements['0'][0];
+      m.value = m.own_value + floatLed(job.measurements['1'].map(r => r.value));
+      return { ...s, job };
+    });
+    const still = desktopReopens(desk).moved.filter(x => x.length).length;
+    console.log(`   (known limit, the desktop's to fix: ${still} of ${desk.length} totals the desktop `
+      + 'added from floats move by a bit when it re-adds them from a web save it reopens)');
+    // ...and pySum is Python's sum() of the numbers as this app writes them
+    const sums = [];
+    for (let k = 0; k < 3000; k++) {
+      const v = [];
+      for (let j = 2 + Math.floor(rnd() * 5); j > 0; j--) v.push(num());
+      sums.push(v);
+    }
+    sums.push([], [3], [180, 0.20500007584682972, 83.13100005532559, 7.25],
+      [0.1, 0.2, 0.3], [7, 8, 9], [0.5, 2, 3]);
+    const py = desktopReopens([], sums).sums;
+    const off = sums.map((v, k) => [v, pySum(v), py[k]]).filter(([, a, b]) => a !== b);
+    eq(`pySum is Python's sum() of ${sums.length} lists as this app writes them`,
+      off.slice(0, 3), []);
+    // What a main shape's heir takes over from it: the desktop's
+    // _PROMOTE_KEYS, exactly. `in_group` (its Group container) is not among
+    // them there, so the heir leaves the Group on the desktop too, and here
+    // it does the same -- if the desktop ever adds it, this says so.
+    const doomed = { type: 'area', name: 'M', label: 'M', notes: 'n', floor_level: 'L1',
+      category: 'C', layer: 'Lay', sub_category: 'S', cost_type: 'labor', sort_order: 7,
+      associated_items: [{ name: 'Studs', qty: 1 }], color: [1, 0, 0, 1], visible: true,
+      pitch: 4, purpose: 'p', catalog_code: 'X1', catalog_unit: 'EA', framing: { plan: 1 },
+      framing_suppressed: true, in_group: 'grp', unit_cost: 3, rev_id: 'r1', rev_page: 0,
+      scale: '1/4"', group_id: 'gp', own_value: 10, value: 15, points: [[1, 1], [9, 1], [9, 9]] };
+    const heir = { type: 'area', name: 'R', label: 'R', visible: false, cost_type: 'material',
+      unit_cost: 9, group_id: 'gp', group_child: true, value: 5, points: [[2, 2], [8, 2], [8, 8]] };
+    const took = h => Object.keys(doomed).filter(k => k !== 'value'
+      && JSON.stringify(h[k]) === JSON.stringify(doomed[k])).sort();
+    const pp = new Project();
+    pp.loadFrom({ metadata: {}, annotations: {}, pageCount: 2,
+      measurements: { 0: [structuredClone(doomed)], 1: [structuredClone(heir)] } });
+    pp.dropShapes([pp.measurements[0][0]._uid]);
+    const [deskHeir] = desktopReopens([], [], [[structuredClone(doomed), structuredClone(heir)]]).heirs;
+    eq('a main shape\'s heir takes over what the desktop\'s heir takes, and no more',
+      took(pp.measurements[1][0]), took(deskHeir));
   }
 }
 

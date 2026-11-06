@@ -44,9 +44,13 @@ transcription of them.
 The desktop app's own answers to **what counts** — which piece of takeoff is
 in the totals, how much it adds, which drawing each sheet counts from and is
 shown at, what every tile and question and sentence says, what the first
-takeoff on each drawing books — over synthetic jobs built the way the
-estimator builds one. **No real project is in it**: every scenario is written
-out in `tests/counting-python-truth.py`, so there is nothing to scrub.
+takeoff on each drawing books, what each Delete takes (one shape, the shapes
+on a sheet, a selection of shapes across several sheets, the whole item, and
+the Items list's question word for word) —
+over synthetic jobs built the way the estimator builds one; and what a job
+switch leaves of the count tool's state. **No real project is in it**: every
+scenario is written out in `tests/counting-python-truth.py`, so there is
+nothing to scrub.
 
 Regenerate it when the desktop's counting rule or its wording changes:
 

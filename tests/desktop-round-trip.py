@@ -9,14 +9,17 @@ that reissues sheets and ADDS one in the middle, a second that reissues and
 adds two at the end -- and takes it off through the real canvas (mouse
 presses and Enter on the Area tool, the real import, the arrows landing on
 the newest drawing, Yes to "count the drawing you just took off"), places
-callout pins and a note on a revision, adds a multi-sheet item, and saves.
+callout pins and a note on a revision, adds a multi-sheet item, lays a
+picture over A6.0 as the overlay to compare (3.06, in a look of its own),
+and saves.
 
 `check` opens a file -- the one the WEB saved -- and reports everything a
 price or a pin depends on: the sheets in order, which drawing each counts
 from, every quantity in the totals and the Report Center's own estimate rows,
 which sheets a revision ADDED (sheet_origin, after the desktop's own pixel
-proof at open), where every pin points, what every tile says, and what
-Delete Revision would remove.
+proof at open), where every pin points, what every tile says, what
+Delete Revision would remove, and every saved overlay -- its record, its
+picture's flag, and the look it comes up in on arriving at its sheet.
 
 `delete-rev` runs Delete Revision on that file and reports what it removed.
 
@@ -211,7 +214,7 @@ def summary():
     return {"labels": labs, "origin": origin, "book": book,
             "counted": counted, "sums": sums, "estimate": estimate,
             "marks": marks, "tiles": tiles, "plans": plans,
-            "newest": newest, "groups": groups,
+            "newest": newest, "groups": groups, "overlays": overlays(),
             "revisions": [win.rev_name(r.get("id")) for r in win._revisions]}
 
 
@@ -294,9 +297,56 @@ def make(out):
     gl._measurements.setdefault(a6, []).append(
         dict(wall, value=35.0, group_child=True,
              points=[[0.0, 0.0], [1750.0, 0.0]]))
+
+    # 6. a picture laid over A6.0 as the overlay to compare (3.06), by the
+    #    desktop's own "Overlay to compare", in a look of his own: Original
+    #    colours, inverted, a hand-set paper cut-off. A sheet after the one
+    #    the browser deletes, so its record has to move up a row with it.
+    win.go_to_page(a6)
+    settle()
+    import base64
+    import io
+    buf = io.BytesIO()
+    Image.new("RGB", (64, 48), (200, 40, 40)).save(buf, "PNG")
+    ent = win._place_image_overlay(
+        base64.b64encode(buf.getvalue()).decode("ascii"), 64, 48)
+    assert ent and ent.get("as_overlay"), "the picture was not laid as the overlay"
+    gl.set_overlay_look("original", True, 180)
+    win._save_overlay_state()
+
     win._resync_group_totals()
     save(out)
     return summary()
+
+
+def overlays():
+    """Each sheet's saved overlay record, by sheet LABEL: what it compares
+    (a picture of the sheet, another sheet, a revision), its tint, fade and
+    look -- and for a picture, whether the picture is on that sheet and
+    flagged, the flag that keeps it out of the drawing and every click."""
+    labs = labels()
+    out = {}
+    for k, st in (win.metadata.get("page_overlays") or {}).items():
+        p = int(k)
+        lab = labs[p] if 0 <= p < len(labs) else "page %s" % k
+        rec = {"color": [round(float(c), 4) for c in st.get("color") or []],
+               "alpha": st.get("alpha"), "mode": st.get("mode"),
+               "invert": st.get("invert"), "cutoff": st.get("cutoff")}
+        if st.get("image_id"):
+            pics = [a for a in (gl._annotations or {}).get(p) or []
+                    if a.get("subtype") == "cad" and a.get("etype") == "image"
+                    and str(a.get("id")) == str(st.get("image_id"))]
+            rec.update({"kind": "picture", "matched": bool(st.get("matched")),
+                        "flagged": [bool(a.get("as_overlay")) for a in pics]})
+        elif st.get("rev_id") is not None:
+            rec.update({"kind": "revision", "of": win.rev_name(st.get("rev_id"))})
+        else:
+            op = st.get("overlay_page")
+            rec.update({"kind": "sheet",
+                        "of": labs[op] if isinstance(op, int) and 0 <= op < len(labs)
+                        else None})
+        out[lab] = rec
+    return dict(sorted(out.items()))
 
 
 def main():
@@ -307,6 +357,17 @@ def main():
         ANSWER["default"] = V.QMessageBox.No      # opening must ask nothing
         load(path)
         out = summary()
+        # ...and arriving on each sheet with a saved overlay puts it up, in
+        # its own look (_restore_overlay_for_page): what the record says is
+        # what he sees, not only what the file holds.
+        up = {}
+        for lab in sorted(out["overlays"]):
+            win.go_to_page(at(lab))
+            settle()
+            up[lab] = [gl._overlay_page is not None, gl._overlay_is_picture(),
+                       gl._overlay_mode, bool(gl._overlay_invert),
+                       gl._overlay_cutoff]
+        out["overlayUp"] = up
     elif cmd == "delete-rev":
         load(path)
         rev = rev_by_name(sys.argv[3])
