@@ -3423,8 +3423,10 @@ async function reacquireAfterSave(handle) {
       // NEWEST — so saving while working on a sheet's own drawing swapped the
       // drawing underneath the estimator and hid every item they had just
       // taken off. Re-pointing the blob slices at the re-written file is
-      // bookkeeping; it must not move anybody.
-      await goToPage(app.currentPage, { version: versionView.revId });
+      // bookkeeping; it must not move anybody - and that includes the view:
+      // setFromProject re-points app.pages, so without view 'keep' goToPage
+      // takes the re-read for a new job and opens it at the default zoom.
+      await goToPage(app.currentPage, { version: versionView.revId, view: 'keep' });
       thumbs.refresh(app.currentPage);
     }
   } catch (err) {
