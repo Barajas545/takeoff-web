@@ -113,13 +113,11 @@
 // desktop stops at ten times the whole picture, short of the drawing's own
 // pixels in the Diff on a phone); and a job that opens at Fit Width keeps
 // the top of the sheet in view on the web, where the desktop's is centred
-// (the same zoom; from the first turn on both are centred); and + and - with
-// the sheet dragged aside zoom about the middle of the screen on the web,
-// where the desktop's (set_zoom) keep the dragged offset (the same zoom; the
-// user decided 1 only). The readout's number truncates as the desktop's does
-// (int(zoom * 100): 12.5% is '12%'), and 1 (100%) keeps a dragged pan as the
-// desktop's set_zoom does -- both the user's decisions of 2026-11-07,
-// compared exactly; ZoomFloor.setZoom keeps the pan at any zoom. Not in the
+// (the same zoom; from the first turn on both are centred). The readout's
+// number truncates as the desktop's does (int(zoom * 100): 12.5% is '12%'),
+// and 1 (100%), + and - keep a dragged pan as the desktop's set_zoom does --
+// the user's decisions of 2026-11-07, compared exactly; ZoomFloor.setZoom
+// keeps the pan at any zoom. Not in the
 // differential, on purpose: the web's row click on THIS sheet selects and
 // scrolls to the item at the zoom he has, as it always has (the desktop's
 // double-click zooms there too); a row on another sheet is the desktop's.
@@ -603,16 +601,6 @@ const KNOWN = {
   'turns: a job that opens at Fit Width keeps it as a number': [{
     fields: ['pan'], at: [0],
     why: 'the web\'s Fit Width puts the top of the sheet at the top of the screen; the desktop\'s leaves it centred',
-  }],
-  // + and - (zoom_in / zoom_out) are set_zoom on the desktop too, so a sheet
-  // dragged aside stays that far aside; the web's zoom about the middle of
-  // the screen, as they always have (ZoomFloor.zoomIn / zoomOut). The user's
-  // decision of 2026-11-07 named 1 only: + and - are his call. The zoom, the
-  // readout and the floor are the same; at Fit both are centred.
-  '+ and - with the sheet dragged aside': [{
-    fields: ['pan'], at: [3, 4, 5, 6, 7, 8],
-    why: 'the web\'s + and - zoom about the middle of the screen, so the dragged offset grows and shrinks with the '
-      + 'zoom (150 x -80 -> 180 x -96 at 120%); the desktop\'s keep it, as its 1 does and the web\'s 1 now does',
   }],
   'a sheet whose Fit is below the minimum': [{
     fields: ['label', 'said'],
@@ -1763,6 +1751,29 @@ log('\n-- 6. a change of size: Fit stays Fit, anything else keeps its centre --'
       r.vp.zoom === to && close(after[0], before[0], 1e-9, 1e-9) && close(after[1], before[1], 1e-9, 1e-9),
       `${before} -> ${after} at ${r.vp.zoom}`);
   }
+}
+{
+  // With no drawing up -- a sheet that could not be opened, its takeoff still
+  // drawn; or one decoding again after a save -- there is no page centre to
+  // keep: + and - (and 1) zoom about the middle of the screen, so a centred
+  // view stays centred. Keeping the origin instead ran it off to the top-left.
+  const canvas = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 1024, height: 704 }), width: 0, height: 0 };
+  const vp = new Viewport(canvas);
+  vp.resize();
+  const zf = new ZF.ZoomFloor(vp, { size: () => null, enabled: () => true, page: () => 0 });
+  vp.zoom = 0.3;
+  vp.centerOn(3600, 2400);
+  const mid = () => vp.toScreen(3600, 2400);
+  const was = mid();
+  zf.zoomIn();
+  const a = mid();
+  zf.zoomOut();
+  const b = mid();
+  zf.setZoom(1);
+  const c = mid();
+  ok('no drawing up: +, - and 1 zoom about the middle of the screen, a centred view stays centred',
+    close(vp.zoom, 1) && [a, b, c].every(p => close(p[0], was[0], 1e-9, 1e-9) && close(p[1], was[1], 1e-9, 1e-9)),
+    `${was} -> ${a} -> ${b} -> ${c} at ${vp.zoom}`);
 }
 
 // ═══ 7. the Settings box ════════════════════════════════════════════════

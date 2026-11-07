@@ -1048,8 +1048,7 @@ SCENARIOS = [
                ["rev", LARGE], ["pan", -55, -35], ["one"], ["rev", None]]},
     # + and - with the sheet dragged aside, above Fit: the desktop's zoom_in /
     # zoom_out are set_zoom too, and keep the page centre's offset as 1 does;
-    # the web's zoom about the middle of the screen (zoom-floor.mjs KNOWN --
-    # the user decided 1, and was not asked about + and -)
+    # so do the web's (the user's decision of 2026-11-07)
     {"name": "+ and - with the sheet dragged aside",
      "canvas": (W, H), "pages": [BIG],
      "steps": [["open"], ["one"], ["pan", 150, -80], ["plus"], ["plus"], ["minus"],
