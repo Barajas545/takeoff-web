@@ -1249,6 +1249,23 @@ table.grid td.indent { padding-left: 26px; color: var(--text-dim); }
   .menubar > * { flex: 0 0 auto; }
   .menubar-right { margin-left: 8px; }
 
+  /* ...and a scroller clips whatever hangs out of it: overflow-x makes
+     overflow-y auto too, and an open menu showed as nothing but its lit
+     title, while a tap meant for Save landed on the sheet (every phone, an
+     iPad held upright). So here an open menu does not hang from its title's
+     box but from the chrome's, which is positioned and clips nothing:
+     wireMenus (main.js placeOpenMenu) puts it under its title, on screen
+     and above the foot bar, and it scrolls when it is taller than that. */
+  .menu { position: static; }
+  .menu-pop {
+    left: var(--menu-x, 0px); top: var(--menu-y, 100%);
+    max-height: var(--menu-max-h, none);
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  /* The Sheets and Items drawers are z-index 60 too, later in the page: while
+     a menu is open the toolbars stand above them, still under the foot bar. */
+  .chrome.menu-up { z-index: 65; }
+
   /* One scrolling row per toolbar beats wrapping: wrapping the 13 tools
      cost 122px of height on a 844px screen, and height is the scarce one. */
   .toolbar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }

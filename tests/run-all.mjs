@@ -41,6 +41,7 @@ const PORTABLE = [
   'zoom-floor',         // zooming out stops at Fit == the desktop's own methods; touch, resize, Settings, pictures
   'rounding-parity',    // every number reads as the desktop writes it (Python's rounding); no display toFixed left
   'tile-form-browser',  // the tile form's sizes are the desktop's presets, picked by real keys (skips without Chrome)
+  'menu-touch',         // every menu entry can be tapped by finger at a phone's and a tablet's width; File › Save is a Save (skips without Chrome)
   'heading-menu',       // a finger's hold and the heading menu == the desktop's; forms list the job's names first
   'classification-rename', // rename a heading / set the blank ones == the desktop's plan, writes, follows and undo
   'picture-overlay-format', // a save keeps the 3.06 overlay; undo keeps one copy of its picture

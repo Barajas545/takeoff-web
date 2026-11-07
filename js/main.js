@@ -5329,6 +5329,85 @@ function forgetDeletedSelection() {
 
 // ── menus ─────────────────────────────────────────────────────────────────
 
+/**
+ * Below 1024 px the menu bar scrolls sideways (css/app.css), and a scroller
+ * clips what hangs out of it: an open menu showed as nothing but its lit
+ * title, and a tap meant for File › Save landed on the sheet. There the open
+ * menu hangs from the chrome instead, and is put here under its title -- on
+ * screen, above the phone's foot bar, scrolling when it is taller than the
+ * room. Its spot is worked out from where it lands at 0,0, so wherever the
+ * chrome is (pinned, or slid down over the sheet) the menu is where its
+ * title is. Wider, the stylesheet hangs it from its title as it always did.
+ */
+function placeOpenMenu(opening = false) {
+  const menu = $('menus').querySelector('.menu.open');
+  const pop = menu && menu.querySelector('.menu-pop');
+  if (!pop) return;
+  // Taking the height off for the measuring loses the place in a scrolled
+  // menu, so it is put back: a menu opens at its top, and following its
+  // title keeps the place in it.
+  const keep = pop.scrollTop;
+  for (const k of ['--menu-x', '--menu-y', '--menu-max-h']) pop.style.removeProperty(k);
+  if (!window.matchMedia('(max-width: 1023px)').matches) return;
+  pop.style.setProperty('--menu-x', '0px');
+  pop.style.setProperty('--menu-y', '0px');
+  const origin = pop.getBoundingClientRect();
+  const title = menu.querySelector('.menu-btn').getBoundingClientRect();
+  const top = $('menubar').getBoundingClientRect().bottom;
+  const foot = $('mobileBar');
+  const footRect = foot.hidden ? null : foot.getBoundingClientRect();
+  let bottom = footRect && footRect.height > 0 ? footRect.top : window.innerHeight;
+  // iOS's keyboard shrinks only the visual viewport: the menu stops above it.
+  const vv = window.visualViewport;
+  if (vv) bottom = Math.min(bottom, vv.offsetTop + vv.height);
+  const x = Math.max(6, Math.min(title.left, document.documentElement.clientWidth - pop.offsetWidth - 6));
+  const room = Math.max(120, bottom - top - 6);
+  pop.style.setProperty('--menu-x', `${x - origin.left}px`);
+  pop.style.setProperty('--menu-y', `${top - origin.top}px`);
+  pop.style.setProperty('--menu-max-h', `${room}px`);
+  pop.scrollTop = opening === true ? 0 : keep;
+}
+
+/** Shut whichever menu of the menu bar is open. */
+function closeOpenMenus() {
+  for (const m of $('menus').querySelectorAll('.menu.open')) m.classList.remove('open');
+}
+
+/**
+ * What moves an open menu, and what puts it away, below 1024 px.
+ *  - The bar scrolled sideways, the screen turned, the keyboard came up, the
+ *    foot bar came or went (crossing 1024 px: its media query answers after
+ *    'resize'), the toolbars finished sliding down: it follows its title.
+ *  - The toolbars slid away (a press on the sheet, unpinning): it goes with
+ *    them -- left open it hung over the drawing from nothing. And a finger
+ *    down anywhere outside the menus shuts it, because iOS sends no mouse
+ *    press for a tap on the sheet, which has no click listener.
+ *  - While a menu is open the toolbars stand above the Sheets and Items
+ *    drawers (css .chrome.menu-up: both are z-index 60 and the drawers come
+ *    later in the page), so a menu over an open drawer is all there and the
+ *    drawer stays as it was -- View › Sheets Panel still shuts it.
+ */
+function wireMenuPlacement() {
+  const follow = () => placeOpenMenu();
+  $('menubar').addEventListener('scroll', follow, { passive: true });
+  window.addEventListener('resize', follow);
+  window.visualViewport?.addEventListener('resize', follow);
+  new ResizeObserver(follow).observe($('mobileBar'));
+  $('chrome').addEventListener('transitionend', ev => {
+    if (ev.target === $('chrome') && ev.propertyName === 'transform') follow();
+  });
+  new MutationObserver(() => {
+    const a = $('app');
+    if (a.classList.contains('chrome-float') && !a.classList.contains('chrome-open')) closeOpenMenus();
+  }).observe($('app'), { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('pointerdown', ev => {
+    if (ev.pointerType !== 'mouse' && !ev.target.closest('.menu')) closeOpenMenus();
+  }, true);
+  new MutationObserver(() => {
+    $('chrome').classList.toggle('menu-up', !!$('menus').querySelector('.menu.open'));
+  }).observe($('menus'), { subtree: true, attributes: true, attributeFilter: ['class'] });
+}
+
 function wireMenus() {
   const menus = $('menus');
   menus.addEventListener('click', ev => {
@@ -5337,7 +5416,10 @@ function wireMenus() {
       const menu = btn.parentElement;
       const wasOpen = menu.classList.contains('open');
       for (const m of menus.querySelectorAll('.menu')) m.classList.remove('open');
-      if (!wasOpen) menu.classList.add('open');
+      if (!wasOpen) {
+        menu.classList.add('open');
+        placeOpenMenu(true);
+      }
       return;
     }
     const act = ev.target.closest('button[data-act]');
@@ -6449,6 +6531,7 @@ buildToolButtons();
 buildScaleSelect();
 syncScaleSelect();
 wireMenus();
+wireMenuPlacement();
 // Inside the portal its Plans Library keeps the plans: this app's own doors
 // to a folder and to a copy of its own are not offered (js/core/embedded.js).
 if (embedded) {
