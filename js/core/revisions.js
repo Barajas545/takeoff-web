@@ -36,6 +36,8 @@
 // which runs them through tests/revisions-python-truth.py rather than against
 // a transcription of them.
 
+import { pyIntStr } from './pyformat.js';
+
 /** How many pages a revision set has, without holding one of them. */
 export function revPageCount(rev) {
   if (!rev) return 0;
@@ -601,10 +603,11 @@ export function sizesMatch(sheetSize, revSize) {
 
 /** Why nothing may be traced here, in the estimator's own terms. */
 export function sizeRefusal(sheetSize, revSize) {
-  const sw = Math.round((revSize && revSize.width) || 0);
-  const sh = Math.round((revSize && revSize.height) || 0);
-  const pw = Math.round((sheetSize && sheetSize.width) || 0);
-  const ph = Math.round((sheetSize && sheetSize.height) || 0);
+  // the desktop's _size_refusal words: int() of each side, as there
+  const sw = pyIntStr((revSize && revSize.width) || 0);
+  const sh = pyIntStr((revSize && revSize.height) || 0);
+  const pw = pyIntStr((sheetSize && sheetSize.width) || 0);
+  const ph = pyIntStr((sheetSize && sheetSize.height) || 0);
   return 'This revision was reissued at a different sheet size '
     + `(${sw}×${sh} against ${pw}×${ph} pixels at this job's dpi). `
     + 'The scale is the sheet’s, measured on the sheet’s own drawing, '

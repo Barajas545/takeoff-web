@@ -69,8 +69,9 @@ also runs it live, over these scenarios and over the whole library.
 ## zoom-floor-truth.json
 
 The desktop app's own answers to **where zooming out stops**: after every step
-of 30 scripted scenarios (the wheel, Shift and Ctrl+Shift on it, a sideways
-wheel, a pinch, the minus and plus buttons, F and 1, a drag, a page turn, a
+of 55 scripted scenarios (the wheel, Shift and Ctrl+Shift on it, a sideways
+wheel, a pinch, the minus and plus buttons -- with the sheet dragged aside
+too, F and 1 -- which keeps a dragged pan, a drag, a page turn, a
 change of window size, a jump to an item, a flip to a revision on other paper,
 the Settings box ticked off and on, the wheel set to scroll, sheets whose Fit
 is past either zoom limit), the zoom, the pan, the readout ('Fit 18%'), whether
@@ -184,3 +185,48 @@ it fails anywhere if the port's ranking drifts. The live differential is what
 keeps the snapshot honest: if the **desktop's** rule changes, the snapshot
 would happily go on asserting the old one, and only a run against the real
 source catches that. Neither alone is enough.
+
+## rounding-truth.json
+
+The desktop app's own answers to **how a number reads** (the user's decision
+of 2026-11-07, "match the desktop rounding"): Python rounds an exact binary
+tie half to even, so 12.25 sq ft is '12.2 sq ft', $0.125 is '$0.12', 22.5
+inches is 1'-10" and 12.5% zoom is '12%' (the readout truncates). Under
+`cases`, what the desktop's own producers write for a corpus of exact ties,
+the doubles either side of them, negatives, -0.0, large values with commas
+and 1e21: every canvas label and live read-out, a row's quantity, a report's
+quantities, totals and money, the export's rounding and words, the labels
+and suggested names of a finished shape and of a reshape (a grid's cells, a
+Measure line's length, a dragged pitch line's rise, angle and words), the
+pitch words, feet and inches at every precision, a calibrated scale's words,
+the catalog's table cell and pick-list price, the calibration's sentences,
+the slope form, the tile form's estimate, the materials' quantities, a
+reissue's size refusal, the zoom readout, and the CSV the desktop writes of
+one made-up job (`export_csv`: its JSON text and the desktop's CSV text --
+the rows of its own `_collect_items` through its `csv.writer`, so a float
+reads '20.0'; the same job is the one `tests/rounding-parity.mjs` exports to
+a workbook and adds up in the Items footer). Also: what a reshape writes
+into a grid or a pitch line and the canvas label it then draws (the
+desktop's whole `_recalc_value`: `recalc_grid_shape`, `recalc_pitch`), the
+workbook's quantities item by item (`xlsx_qty`: the Takeoff sheet's
+'Qty / Value' from `_export_excel`'s own `value_and_unit`, and a material's
+'%g' there and on the Materials sheet), and the Report Center's rows of one
+made-up job with every kind of pin (`report_collect`: each item's quantity,
+unit, rate and cost and its materials', from `ReportCenterDialog._collect`).
+Under `helpers`, Python's own
+format() ('.Nf', ',.Nf', '.pg'), round(), int() and str() on generated ties
+for N 0..6 and p 1..7. **No project is in it**: the inputs are numbers and
+made-up items written out in `tests/rounding-python-truth.py`.
+
+Regenerate it when a desktop format changes:
+
+```
+python -B tests/rounding-python-truth.py <path to pdf_fast_viewer.py> --write
+```
+
+That script lifts the producers out of `pdf_fast_viewer.py` through `ast` --
+whole functions and methods on stand-ins that record what they paint, and
+single expressions found by their own text -- refusing to run unless the
+lifted set is a closure. `tests/rounding-parity.mjs` holds the web's helpers
+and producers to this snapshot anywhere, and to the script live when the
+desktop source is here.

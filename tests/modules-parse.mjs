@@ -85,6 +85,10 @@ const IMPORTABLE = [
   'core/save-route.js', 'core/embedded.js',
   'core/takeoff-file.js', 'core/zlib.js', 'core/page-store.js', 'core/project.js',
   'core/geom.js', 'core/units.js', 'core/measure.js', 'core/xlsx.js',
+  // Every number as the desktop writes it (Python's rounding).
+  'core/pyformat.js',
+  // The printed reports' markup (the Report Center is reports.js's).
+  'ui/report-html.js',
   'core/revisions.js',
   'core/scratch.js',
   'core/classify.js',

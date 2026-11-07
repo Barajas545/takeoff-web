@@ -61,6 +61,7 @@ const PROGRAM = [
   'js/core/plans-link.js',
   'js/core/portal-handoff.js',
   'js/core/project.js',
+  'js/core/pyformat.js',
   'js/core/remote-file.js',
   'js/core/revisions.js',
   'js/core/save-route.js',

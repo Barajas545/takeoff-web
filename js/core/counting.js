@@ -32,14 +32,16 @@ import {
   originDateOf, pyInt, pyStr, isTakeoffType, KEPT_MARK_TYPES,
   resolveLatestSheets, onThisVersion,
 } from './revisions.js';
+import { pyFixed, pyRound, pyG, pyIntStr } from './pyformat.js';
 
 export { isTakeoffType as isTakeoffItem, KEPT_MARK_TYPES };
+export { pyFixed, pyRound, pyG };
 
 /** The bucket for takeoff that belongs to the job rather than a sheet. */
 export const STANDALONE = -1000;
 
 /** desktop PIN_TYPES: one click on the plan that stands for one thing. */
-const PIN_TYPES = new Set(['window', 'door', 'partition', 'header']);
+export const PIN_TYPES = new Set(['window', 'door', 'partition', 'header']);
 
 /** desktop REPORT_UNIT_BY_TYPE. */
 const REPORT_UNIT_BY_TYPE = {
@@ -53,7 +55,8 @@ const REPORT_UNIT_BY_TYPE = {
 // The sentences are compared with the desktop's character for character, so
 // "1,318.6 sq ft" has to round the way Python does: half to EVEN on the exact
 // binary value. Number.prototype.toFixed rounds an exact tie UP (1.25 -> 1.3
-// where Python says 1.2), so the digits are taken exactly and rounded here.
+// where Python says 1.2), so the digits are taken exactly and rounded in
+// pyformat.js, which every number the app shows goes through.
 
 /** {ok, n} — Python's float() of a JSON value. */
 export function pyFloat(v) {
@@ -81,47 +84,9 @@ function orZero(v) {
   return truthy(v) ? v : 0;
 }
 
-/** The exact decimal digits of |x| as [intDigits, fracDigits]. */
-function exactDigits(x) {
-  const s = Math.abs(x).toFixed(100);       // exact for every value a bid holds
-  const [i, f = ''] = s.split('.');
-  return [i, f];
-}
-
-/** Python format(x, '.Nf') with an optional ',' — round half to even. */
-export function pyFixed(x, nd, commas = false) {
-  if (Number.isNaN(x)) return 'nan';
-  if (!Number.isFinite(x)) return x < 0 ? '-inf' : 'inf';
-  const neg = x < 0 || Object.is(x, -0);
-  let [ip, fp] = exactDigits(x);
-  const keep = fp.slice(0, nd);
-  const rest = fp.slice(nd);
-  let digits = (ip + keep).split('').map(Number);
-  const first = rest.length ? Number(rest[0]) : 0;
-  const tail = rest.slice(1).replace(/0+$/, '');
-  let up = false;
-  if (first > 5 || (first === 5 && tail.length)) up = true;
-  else if (first === 5 && !tail.length) up = digits.length ? digits[digits.length - 1] % 2 === 1 : false;
-  if (up) {
-    let k = digits.length - 1;
-    while (k >= 0) {
-      if (digits[k] === 9) { digits[k] = 0; k -= 1; } else { digits[k] += 1; break; }
-    }
-    if (k < 0) digits.unshift(1);
-  }
-  const all = digits.join('');
-  let intPart = all.slice(0, all.length - nd) || '0';
-  intPart = intPart.replace(/^0+(?=\d)/, '');
-  const frac = nd ? all.slice(all.length - nd) : '';
-  if (commas) intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return (neg ? '-' : '') + intPart + (nd ? `.${frac}` : '');
-}
-
-/** Python round(x, nd) — the nearest double to the half-even decimal. */
-export function pyRound(x, nd) {
-  if (!Number.isFinite(x)) return x;
-  return Number(pyFixed(x, nd).replace(/,/g, ''));
-}
+// pyFixed, pyRound and pyG are pyformat.js's (every number the app shows
+// goes through that one file), re-exported here for the modules that
+// have always imported them from counting.js.
 
 /**
  * Python's sum() of these numbers, read the way the desktop will read them
@@ -173,25 +138,6 @@ export function pySum(values) {
 /** A number this app writes as a JSON int, so Python reads an int. */
 function isPyInt(x) {
   return Number.isInteger(x) && Math.abs(x) < 1e21;
-}
-
-/** Python format(x, 'g'). */
-export function pyG(x) {
-  if (Number.isNaN(x)) return 'nan';
-  if (!Number.isFinite(x)) return x < 0 ? '-inf' : 'inf';
-  if (x === 0) return Object.is(x, -0) ? '-0' : '0';
-  const p = 6;
-  // the exponent AFTER rounding to p significant digits
-  const e = Number(x.toExponential(p - 1).split('e')[1]);
-  if (e < -4 || e >= p) {
-    let [m, ex] = x.toExponential(p - 1).split('e');
-    if (m.includes('.')) m = m.replace(/0+$/, '').replace(/\.$/, '');
-    const n = Number(ex);
-    return `${m}e${n < 0 ? '-' : '+'}${String(Math.abs(n)).padStart(2, '0')}`;
-  }
-  let s = pyFixed(x, Math.max(0, p - 1 - e));
-  if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, '');
-  return s;
 }
 
 // ── a piece of takeoff, by quantity ──────────────────────────────────────
@@ -1781,14 +1727,12 @@ export function sheetNotes(sheet, label) {
 
 /** Python's "%d" % int(round(q)): round half to even, then the digits. */
 function intRound(q) {
-  const r = pyRound(Number(q) || 0, 0);
-  return `${Object.is(r, -0) ? 0 : r}`;
+  return pyIntStr(pyRound(Number(q) || 0, 0));
 }
 
 /** Python's "%d" % int(q). */
 function intTrunc(q) {
-  const r = Math.trunc(Number(q) || 0);
-  return `${Object.is(r, -0) ? 0 : r}`;
+  return pyIntStr(Number(q) || 0);
 }
 
 /** A quantity in the words a row of this kind already uses (desktop
@@ -1846,7 +1790,7 @@ export function valueStr(m) {
   if (t === 'tile') {
     const needed = Math.trunc(Number(getOr(m, 'tiles_needed', 0)) || 0);
     const pat = tileLabel(getOr(m, 'pattern', 'grid'));
-    let out = `${pyFixed(Number(v), 1)} sq ft · ${String(needed).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} tiles (${pat})`;
+    let out = `${pyFixed(Number(v), 1)} sq ft · ${pyIntStr(needed, true)} tiles (${pat})`;
     if (truthy(m.boxes)) out += ` · ${pyStr(m.boxes)} boxes`;
     return truthy(v) ? out + suffix : '';
   }

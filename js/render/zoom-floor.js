@@ -50,6 +50,8 @@
 // how big it is, whether the Settings box is ticked, which sheet this is,
 // and how to say the once-a-session sentence.
 
+import { pyZoomPercent } from '../core/pyformat.js';
+
 /** Float noise, not a zoom anyone could pick: two answers this close are the same view. */
 export const FIT_EPS = 1e-6;
 
@@ -648,6 +650,21 @@ export class ZoomFloor {
   }
 
   /**
+   * The desktop's set_zoom: the zoom alone (1, 100%: _set_zoom_100). Its
+   * pan -- the page centre's offset from the canvas centre, in screen
+   * pixels -- is not touched, so a sheet dragged aside stays that far aside
+   * at the new zoom, and a centred one stays centred. The caller says
+   * whether it is a zoom he chose (chosen()).
+   */
+  setZoom(zoom) {
+    const s = this._size();
+    if (!s) { this.vp.zoom = zoom; return; }
+    const [px, py] = this._pan(s);
+    this.vp.zoom = zoom;
+    this.vp.centerOn(s.w / 2 - px / zoom, s.h / 2 - py / zoom);
+  }
+
+  /**
    * The drawing on screen was swapped for one of another size -- a
    * revision on other paper flipped up, or back -- from `old` ({w, h}).
    * The desktop's flip keeps zoom and pan (set_page_preview), and its pan
@@ -793,9 +810,11 @@ export class ZoomFloor {
   /**
    * The readout: "Fit 21%" on the floor, the number alone anywhere else --
    * and on a floor the minimum zoom raised, where the sheet does not fit.
+   * The number is the desktop's (update_zoom_label: int(zoom * 100)): it
+   * TRUNCATES, so 12.5% reads '12%' on both.
    */
   label() {
-    const pct = `${Math.round(this.vp.zoom * 100)}%`;
+    const pct = pyZoomPercent(this.vp.zoom);
     return this.atFloor() && this._floorFits() ? `Fit ${pct}` : pct;
   }
 }

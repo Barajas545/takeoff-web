@@ -36,6 +36,8 @@ import {
 } from './markup.js';
 import { wheelInOut } from '../render/zoom-floor.js';
 import { pinFiling, applyClassTool } from '../core/classify.js';
+import { pyFixed, pyG, pyIntStr, pyStrFloat } from '../core/pyformat.js';
+import { pitchLabel, pitchFromPoints } from '../core/measure.js';
 
 /** The takeoff tools — the ones that produce a quantity. */
 export const TAKEOFF_TOOLS = [
@@ -2014,10 +2016,7 @@ export class ToolController extends EventTarget {
   }
 
   _finalizePitch(pts) {
-    const dx = Math.abs(pts[1][0] - pts[0][0]);
-    const dy = Math.abs(pts[1][1] - pts[0][1]);
-    const rise12 = dx < 1e-9 ? Infinity : (12.0 * dy) / dx;
-    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    const [rise12, angle] = pitchFromPoints(pts[0], pts[1]);
     const m = this._base('pitch', {
       points: pts.map(p => p.slice()),
       name: this.options.pendingName || '',
@@ -2035,7 +2034,7 @@ export class ToolController extends EventTarget {
     const created = this._commit(m, 'Pitch');
     if (created) delete created.sort_order;
     this.emit('status', {
-      text: `Pitch ${pitchLabel(rise12)} (${angle.toFixed(0)}°)`
+      text: `Pitch ${pitchLabel(rise12)} (${pyFixed(angle, 0)}°)`
         + (this.scratchSink ? ' — temporary; not saved with the project' : ''),
     });
   }
@@ -2052,13 +2051,13 @@ export class ToolController extends EventTarget {
       // clicks and a double-click, not a form.
       this._commit(this._base('area', {
         points: pts.map(p => p.slice()),
-        label: `${areaFt2.toFixed(1)} sq ft`,
+        label: `${pyFixed(areaFt2, 1)} sq ft`,
         value: areaFt2, perimeter: perimFt,
         name: '', color: nextPaletteColor(),
         floor_level: '', category: '', sub_category: '',
       }), 'Area');
       this.emit('status', {
-        text: `${areaFt2.toFixed(1)} sq ft, ${formatFt(perimFt)} around `
+        text: `${pyFixed(areaFt2, 1)} sq ft, ${formatFt(perimFt)} around `
           + '— a temporary dimension; it is not saved with the project',
       });
       return;
@@ -2067,7 +2066,7 @@ export class ToolController extends EventTarget {
     if (mode === 'area') {
       const spec = await this._ask(this.host.askItem?.({
         type: 'area',
-        suggestedName: this.options.pendingName || `Area ${areaFt2.toFixed(0)} sq ft`,
+        suggestedName: this.options.pendingName || `Area ${pyFixed(areaFt2, 0)} sq ft`,
         color: peekPaletteColor(),
       }));
       if (!spec) { this.emit('changed'); return; }
@@ -2075,7 +2074,7 @@ export class ToolController extends EventTarget {
       this._remember(spec);
       this._commit(this._base('area', {
         points: pts.map(p => p.slice()),
-        label: spec.name || `${areaFt2.toFixed(1)} sq ft`,
+        label: spec.name || `${pyFixed(areaFt2, 1)} sq ft`,
         value: areaFt2, perimeter: perimFt,
         ...spec,
       }), 'Area');
@@ -2096,7 +2095,7 @@ export class ToolController extends EventTarget {
       const sloped = areaFt2 * factor;
       this._commit(this._base('slope_area', {
         points: pts.map(p => p.slice()),
-        label: spec.name || `${sloped.toFixed(1)} sq ft (${trimNum(pitch)}:12)`,
+        label: spec.name || `${pyFixed(sloped, 1)} sq ft (${pyG(pitch)}:12)`,
         value: sloped, flat_area: areaFt2, perimeter: perimFt, pitch,
         ...spec,
       }), 'Slope roof');
@@ -2127,7 +2126,7 @@ export class ToolController extends EventTarget {
     const spec = await this._ask(this.host.askItem?.({
       type: 'grid',
       suggestedName: this.options.pendingName
-        || `Grid ${cols}×${rows}  (${trimNum(cwFt, 2)}×${trimNum(chFt, 2)} ft)`,
+        || `Grid ${cols}×${rows}  (${pyG(cwFt, 2)}×${pyG(chFt, 2)} ft)`,
       color: peekPaletteColor(),
       gridCells: [cwFt, chFt],
     }));
@@ -2181,7 +2180,7 @@ export class ToolController extends EventTarget {
     });
     recompute(item);
     item.label = spec.name ||
-      `Tile ${(item.tile_count || 0).toLocaleString('en-US')} (${patternLabel(item.pattern)})`;
+      `Tile ${pyIntStr(item.tile_count || 0, true)} (${patternLabel(item.pattern)})`;
     this._commit(item, 'Tile');
   }
 
@@ -2190,7 +2189,7 @@ export class ToolController extends EventTarget {
     const ft = pathLength(pts) / ppf;
     const spec = await this._ask(this.host.askItem?.({
       type: 'polyline',
-      suggestedName: this.options.pendingName || `Run ${ft.toFixed(1)} ft`,
+      suggestedName: this.options.pendingName || `Run ${pyFixed(ft, 1)} ft`,
       color: peekPaletteColor(),
     }));
     if (!spec) { this.emit('changed'); return; }
@@ -2211,7 +2210,7 @@ export class ToolController extends EventTarget {
     const count = countAlong(pts, spacingPx);
     const spec = await this._ask(this.host.askItem?.({
       type: 'linear_count',
-      suggestedName: this.options.pendingName || `${count} items @ ${trimNum(spacingIn)}"`,
+      suggestedName: this.options.pendingName || `${count} items @ ${pyG(spacingIn)}"`,
       color: peekPaletteColor(),
       spacingIn,
     }));
@@ -2549,7 +2548,7 @@ export class ToolController extends EventTarget {
     this.project.setPageScale(page, ppf);
     this.host.alert?.(
       'Scale Calibrated',
-      `Scale set: ${ppf.toFixed(2)} pixels per foot\n(${distPx.toFixed(1)} px = ${Number(text)} ft)`
+      `Scale set: ${pyFixed(ppf, 2)} pixels per foot\n(${pyFixed(distPx, 1)} px = ${pyStrFloat(Number(text))} ft)`
     );
     this.emit('changed');
   }
@@ -2809,20 +2808,13 @@ function storeHolds(store, m) {
   return false;
 }
 
-export function pitchLabel(rise12) {
-  if (!Number.isFinite(rise12)) return 'vertical';
-  const r = Math.round(rise12 * 10) / 10;
-  if (Math.abs(r - Math.round(r)) < 0.05) return `${Math.round(r)}:12`;
-  return `${r.toFixed(1)}:12`;
-}
+// pitchLabel (desktop _pitch_label) is measure.js's, with the reshape that
+// re-reads a dragged pitch line; handed on from here as it always has been.
+export { pitchLabel };
 
 function patternLabel(key) {
   const row = TILE_PATTERNS.find(p => p[0] === key);
   return row ? row[1] : String(key || 'grid');
-}
-
-function trimNum(v, dp = 6) {
-  return String(parseFloat((Number(v) || 0).toPrecision(dp)));
 }
 
 function formatDistanceLabel(ft, precision) {

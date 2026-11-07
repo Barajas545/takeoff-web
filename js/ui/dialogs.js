@@ -10,6 +10,7 @@ import { FLOOR_LEVEL_PRESETS, CATEGORY_PRESETS } from './items-panel.js';
 import { UNIT_CODES, UNITS, parseFeet, formatFtIn, DISTANCE_PRECISIONS } from '../core/units.js';
 import { TILE_PATTERNS, TILE_SIZE_PRESETS, tilePatternWaste } from '../tools/controller.js';
 import { classChoicesFrom, classClean, classNameProblem } from '../core/classify.js';
+import { pyFixed, pyIntStr } from '../core/pyformat.js';
 
 const host = () => document.getElementById('modal');
 
@@ -355,8 +356,8 @@ export function askSlopeRoof({ flatArea, suggestedName = '', color, existing = n
       const factor = Math.sqrt(1 + (p / 12) ** 2);
       const ang = (Math.atan2(p, 12) * 180) / Math.PI;
       readout.textContent =
-        `Flat ${flatArea.toFixed(1)} sq ft  ×  ${factor.toFixed(4)}  =  ` +
-        `${(flatArea * factor).toFixed(1)} sq ft sloped   (${ang.toFixed(1)}°)`;
+        `Flat ${pyFixed(flatArea, 1)} sq ft  ×  ${pyFixed(factor, 4)}  =  ` +
+        `${pyFixed(flatArea * factor, 1)} sq ft sloped   (${pyFixed(ang, 1)}°)`;
     };
     pitch.addEventListener('input', update);
     update();
@@ -402,9 +403,19 @@ export function askTile(setup) {
     const form = el('div', 'form');
     const name = field(form, 'Name', input(ex.name || setup.suggestedName || ''));
 
+    // The desktop's presets, rows of [label, w_in, h_in] (TILE_SIZE_PRESETS),
+    // each keyed by its own size. The row showing is found by NUMBER -- within
+    // 0.01, either way round -- as _sync_tile_preset_combo finds it, and is
+    // 'Custom…' when no row is the size in the boxes.
+    const presetKey = (w, h) => {
+      const row = TILE_SIZE_PRESETS.find(([, pw, ph]) =>
+        (Math.abs(pw - w) < 0.01 && Math.abs(ph - h) < 0.01)
+        || (Math.abs(ph - w) < 0.01 && Math.abs(pw - h) < 0.01));
+      return row ? `${row[1]}x${row[2]}` : 'custom';
+    };
     const sizeSel = select(
-      [...TILE_SIZE_PRESETS.map(([w, h]) => [`${w}x${h}`, `${w}″ × ${h}″`]), ['custom', 'Custom…']],
-      `${setup.tileWIn}x${setup.tileHIn}`
+      [...TILE_SIZE_PRESETS.map(([label, w, h]) => [`${w}x${h}`, label]), ['custom', 'Custom…']],
+      presetKey(Number(setup.tileWIn), Number(setup.tileHIn))
     );
     field(form, 'Tile size', sizeSel);
 
@@ -420,6 +431,11 @@ export function askTile(setup) {
       tw.value = w; th.value = h;
     };
     sizeSel.addEventListener('change', () => { syncCustom(); update(); });
+    // A size typed by hand points the list at its row, or at Custom… (the
+    // desktop's _tile_size_edited).
+    for (const n of [tw, th]) {
+      n.addEventListener('input', () => { sizeSel.value = presetKey(Number(tw.value), Number(th.value)); });
+    }
 
     const pattern = field(form, 'Pattern',
       select(TILE_PATTERNS.map(([id, label]) => [id, label]), setup.pattern));
@@ -441,10 +457,12 @@ export function askTile(setup) {
       const approx = tileArea > 0 ? Math.ceil(setup.areaFt2 / tileArea) : 0;
       const needed = Math.ceil(approx * (1 + (Number(waste.value) || 0) / 100));
       const pb = Number(perBox.value) || 0;
+      // The desktop's numbers here (ItemPropertiesDialog._tile_refresh):
+      // f"{area_ft2:,.1f}", f"{needed:,}", f"{int(math.ceil(needed / per_box)):,}".
       readout.textContent =
-        `${setup.areaFt2.toFixed(1)} sq ft  ≈  ${approx.toLocaleString('en-US')} tiles  →  ` +
-        `${needed.toLocaleString('en-US')} with waste` +
-        (pb > 0 ? `  ·  ${Math.ceil(needed / pb)} boxes` : '');
+        `${pyFixed(setup.areaFt2, 1, true)} sq ft  ≈  ${pyIntStr(approx, true)} tiles  →  ` +
+        `${pyIntStr(needed, true)} with waste` +
+        (pb > 0 ? `  ·  ${pyIntStr(Math.ceil(needed / pb), true)} boxes` : '');
     };
     pattern.addEventListener('change', () => {
       waste.value = String(tilePatternWaste(pattern.value));
@@ -651,7 +669,7 @@ export function askCalibration({ distPx }) {
     const form = el('div', 'form');
     const info = el('div', 'full');
     info.style.cssText = 'font-size:12.5px;color:#bdbdbd;margin-bottom:6px';
-    info.textContent = `Line drawn: ${distPx.toFixed(1)} pixels`;
+    info.textContent = `Line drawn: ${pyFixed(distPx, 1)} pixels`;
     form.appendChild(info);
     const len = field(form, 'True length', input('10'),
       'Feet, or feet and inches: 10, 10.5, 10\'-6"');

@@ -28,6 +28,8 @@ import {
   pyTitle, pyCapitalize, classStrip, rowsNow,
 } from '../core/classify.js';
 import { holdGesture } from './hold.js';
+import { pyFixed } from '../core/pyformat.js';
+import { itemCost } from '../core/measure.js';
 
 /** Item types the panel never lists — rulers, markup and Group containers. */
 const EXCLUDED = new Set(['distance', 'textnote', 'page_ref', 'pitch', 'ref_distance', 'group']);
@@ -1187,9 +1189,16 @@ export class ItemsPanel extends EventTarget {
     // — only `value` — so passing them straight in totalled nothing but the
     // hand-added standalone items.
     const totals = unitTotals(items.map(m => reportQty(m)).filter(Boolean));
+    // The money is what the reports add (collectItems, the desktop Report
+    // Center's _collect): each item's own line by their rule (itemCost: a
+    // count by its points, an array by its whole dots, every pin -- a
+    // partition and a header too -- as one, an item on no sheet by its typed
+    // quantity) and its materials -- none of either for a kind the reports do
+    // not list (no quantity: a pitch).
     let cost = 0;
     for (const m of items) {
-      cost += (Number(m.value) || 0) * (Number(m.unit_cost) || 0);
+      if (!reportQty(m)) continue;
+      cost += itemCost(m);
       for (const line of expandAssembly(m)) cost += line.cost;
     }
     const nc = left ? `   ·   ${left} not counted` : '';
@@ -1258,10 +1267,10 @@ function gutterEl(tree, color) {
   return el;
 }
 
+/** The footer's whole dollars (web-only: the desktop's list has no footer), rounded as Python rounds. */
 function money(v) {
-  return Number(v).toLocaleString('en-US', {
-    style: 'currency', currency: 'USD', maximumFractionDigits: 0,
-  });
+  const n = Number(v);
+  return `$${pyFixed(Number.isNaN(n) ? 0 : n, 0, true)}`;
 }
 
 export { STANDALONE_PAGE };

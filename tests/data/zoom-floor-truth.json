@@ -12541,6 +12541,2043 @@
    "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
   },
   {
+   "name": "1 (100%) after a drag at different zooms",
+   "trace": [
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.22499999999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "22%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.22499999999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.26999999999999996,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "26%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.26999999999999996,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.32399999999999995,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "32%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.32399999999999995,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.3887999999999999,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "38%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.3887999999999999,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.46655999999999986,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "46%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.46655999999999986,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.5598719999999998,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "55%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.5598719999999998,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.6718463999999997,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "67%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.6718463999999997,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.8062156799999997,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "80%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.8062156799999997,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.9674588159999995,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "96%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.9674588159999995,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.1609505791999994,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "116%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.1609505791999994,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.3931406950399994,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "139%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.3931406950399994,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.6717688340479993,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "167%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.6717688340479993,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 2.006122600857599,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "200%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 2.006122600857599,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 2.006122600857599,
+     "pan": [
+      150.0,
+      -60.0
+     ],
+     "label": "200%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 2.006122600857599,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      150.0,
+      -60.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      -200.0,
+      90.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      -200.0,
+      90.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.8695652173913044,
+     "pan": [
+      -173.913043478261,
+      78.26086956521726
+     ],
+     "label": "86%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.8695652173913044,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.7561436672967865,
+     "pan": [
+      -151.2287334593575,
+      68.05293005671092
+     ],
+     "label": "75%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.7561436672967865,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.7561436672967865,
+     "pan": [
+      -118.2287334593575,
+      112.05293005671092
+     ],
+     "label": "75%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.7561436672967865,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      -118.2287334593575,
+      112.05293005671092
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.8695652173913044,
+     "pan": [
+      -102.80759431248498,
+      97.43733048409626
+     ],
+     "label": "86%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.8695652173913044,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.8695652173913044,
+     "pan": [
+      -119.80759431248498,
+      102.43733048409626
+     ],
+     "label": "86%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.8695652173913044,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      -119.80759431248498,
+      102.43733048409626
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      61.0,
+      -9.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      61.0,
+      -9.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     3400,
+     2200
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "pan",
+     150,
+     -60
+    ],
+    [
+     "one"
+    ],
+    [
+     "F"
+    ],
+    [
+     "pan",
+     -200,
+     90
+    ],
+    [
+     "one"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120,
+     0,
+     true
+    ],
+    [
+     "pan",
+     33,
+     44
+    ],
+    [
+     "one"
+    ],
+    [
+     "wheel",
+     800,
+     450,
+     -120
+    ],
+    [
+     "pan",
+     -17,
+     5
+    ],
+    [
+     "one"
+    ],
+    [
+     "next"
+    ],
+    [
+     "pan",
+     61,
+     -9
+    ],
+    [
+     "one"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "1 (100%) twice, and again after a drag",
+   "trace": [
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      120.0,
+      -70.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      120.0,
+      -70.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      120.0,
+      -70.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      90.0,
+      -60.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      90.0,
+      -60.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      90.0,
+      -60.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     3400,
+     2200
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "pan",
+     120,
+     -70
+    ],
+    [
+     "one"
+    ],
+    [
+     "one"
+    ],
+    [
+     "pan",
+     -30,
+     10
+    ],
+    [
+     "one"
+    ],
+    [
+     "one"
+    ],
+    [
+     "F"
+    ],
+    [
+     "one"
+    ],
+    [
+     "one"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "1 (100%) on a reissued drawing of other paper",
+   "trace": [
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 0.4090909090909091,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 0.4090909090909091,
+     "pan": [
+      90.0,
+      -45.0
+     ],
+     "label": "Fit 40%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      90.0,
+      -45.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      70.0,
+      -30.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      70.0,
+      -30.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 2,
+     "shown": [
+      10800,
+      7200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 2,
+     "shown": [
+      10800,
+      7200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      -140.0,
+      60.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 2,
+     "shown": [
+      10800,
+      7200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      -140.0,
+      60.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      70.0,
+      25.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      70.0,
+      25.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      70.0,
+      25.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      70.0,
+      25.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      10800,
+      7200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      70.0,
+      25.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      10800,
+      7200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      15.0,
+      -10.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      10800,
+      7200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      15.0,
+      -10.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      15.0,
+      -10.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     7200,
+     4800
+    ],
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "next"
+    ],
+    [
+     "pan",
+     90,
+     -45
+    ],
+    [
+     "one"
+    ],
+    [
+     "pan",
+     -20,
+     15
+    ],
+    [
+     "one"
+    ],
+    [
+     "next"
+    ],
+    [
+     "pan",
+     -140,
+     60
+    ],
+    [
+     "one"
+    ],
+    [
+     "prev"
+    ],
+    [
+     "prev"
+    ],
+    [
+     "rev",
+     [
+      3400,
+      2200
+     ]
+    ],
+    [
+     "pan",
+     70,
+     25
+    ],
+    [
+     "one"
+    ],
+    [
+     "rev",
+     null
+    ],
+    [
+     "one"
+    ],
+    [
+     "rev",
+     [
+      10800,
+      7200
+     ]
+    ],
+    [
+     "pan",
+     -55,
+     -35
+    ],
+    [
+     "one"
+    ],
+    [
+     "rev",
+     null
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further.",
+   "revs": {
+    "1": [
+     [
+      "r1",
+      [
+       3400,
+       2200
+      ]
+     ]
+    ],
+    "2": [
+     [
+      "r2",
+      [
+       10800,
+       7200
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "+ and - with the sheet dragged aside",
+   "trace": [
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      150.0,
+      -80.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.2,
+     "pan": [
+      150.0,
+      -80.0
+     ],
+     "label": "120%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.2,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.44,
+     "pan": [
+      150.0,
+      -80.0
+     ],
+     "label": "144%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.44,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.2,
+     "pan": [
+      150.0,
+      -80.0
+     ],
+     "label": "120%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.2,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.2,
+     "pan": [
+      110.0,
+      -55.0
+     ],
+     "label": "120%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.2,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      110.0,
+      -55.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.8333333333333334,
+     "pan": [
+      110.0,
+      -55.0
+     ],
+     "label": "83%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 0.8333333333333334,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "one"
+    ],
+    [
+     "pan",
+     150,
+     -80
+    ],
+    [
+     "plus"
+    ],
+    [
+     "plus"
+    ],
+    [
+     "minus"
+    ],
+    [
+     "pan",
+     -40,
+     25
+    ],
+    [
+     "minus"
+    ],
+    [
+     "minus"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
+   "name": "1 (100%) after a drag, then a page turn",
+   "trace": [
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": true,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 0.1875,
+     "pan": [
+      250.0,
+      130.0
+     ],
+     "label": "Fit 18%",
+     "atFloor": true,
+     "showsFit": false,
+     "base": 0.1875,
+     "baseFit": true,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      250.0,
+      130.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      -80.0,
+      40.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      -80.0,
+      40.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      10.0,
+      -10.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      10.0,
+      -10.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 0,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      10.0,
+      -10.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 1,
+     "shown": [
+      3400,
+      2200
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    },
+    {
+     "page": 2,
+     "shown": [
+      7200,
+      4800
+     ],
+     "zoom": 1.0,
+     "pan": [
+      0.0,
+      0.0
+     ],
+     "label": "100%",
+     "atFloor": false,
+     "showsFit": false,
+     "base": 1.0,
+     "baseFit": false,
+     "pastFit": false,
+     "raised": false,
+     "said": []
+    }
+   ],
+   "canvas": [
+    1600,
+    900
+   ],
+   "pages": [
+    [
+     7200,
+     4800
+    ],
+    [
+     3400,
+     2200
+    ],
+    [
+     7200,
+     4800
+    ]
+   ],
+   "settings": {},
+   "steps": [
+    [
+     "open"
+    ],
+    [
+     "pan",
+     250,
+     130
+    ],
+    [
+     "one"
+    ],
+    [
+     "next"
+    ],
+    [
+     "pan",
+     -80,
+     40
+    ],
+    [
+     "one"
+    ],
+    [
+     "turn",
+     0
+    ],
+    [
+     "pan",
+     10,
+     -10
+    ],
+    [
+     "one"
+    ],
+    [
+     "prev"
+    ],
+    [
+     "next"
+    ],
+    [
+     "next"
+    ]
+   ],
+   "minusTip": "Zoom out \u2014 stops when the whole sheet fits the screen. Hold Shift while you scroll to go further."
+  },
+  {
    "name": "turns: a step made while the sheet turned to is still being decoded",
    "trace": [
     {

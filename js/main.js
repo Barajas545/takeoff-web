@@ -80,6 +80,7 @@ import { followTool as followToolMoves } from './core/classify.js';
 import { SavedOverlay, HIDDEN_NOTE, COMPARE_NOTE, overlayWords } from './core/saved-overlay.js';
 import { overlayRgba, pictureBytes, pngInfo, pngHeadInfo, pngPlain, pngRgba, pngAutoCutoff } from './core/overlay-look.js';
 import { decodeSheet, decodeReduces } from './core/page-store.js';
+import { pyFixed, pyRoundInt, pyIntStr } from './core/pyformat.js';
 
 const $ = id => document.getElementById(id);
 
@@ -2936,6 +2937,18 @@ function applyDefaultZoomTo(mode) {
   return true;
 }
 
+/**
+ * 1 (100%), the key, the menu and the readout's: the desktop's _set_zoom_100,
+ * which is set_zoom(1.0) -- the zoom alone. A sheet he dragged aside stays
+ * where he put it (its centre at the same place on the screen); a centred
+ * one stays centred. It is a zoom he chose: the next sheet comes up at it,
+ * centred, as before.
+ */
+function zoomTo100() {
+  zoomFloor.setZoom(1);
+  zoomFloor.chosen();
+}
+
 function pageFinalLabel(idx) {
   if (idx === STANDALONE_PAGE) return 'no sheet';
   return app.project.pageLabel(idx);
@@ -3094,19 +3107,34 @@ function syncScaleSelect() {
   const match = [...sel.options].find(o => Math.abs(Number(o.value) - ppf) < 0.01);
   sel.value = match ? match.value : String(ppf);
   $('scaleReadout').textContent = app.pages.pageCount
-    ? `Scale ${label}   ·   ${ppf.toFixed(2)} px/ft`
+    ? `Scale ${label}   ·   ${pyFixed(ppf, 2)} px/ft`
     : '';
+}
+
+/**
+ * The Custom… prompt's answer: a scale he typed, 'unchanged', or null for
+ * none. The box shows the sheet's scale to 2 places (Python's rounding), so
+ * OK on that text as it was shown is no change -- the sheet keeps its exact
+ * scale, never the rounded figure (16.125 px/ft is shown 16.12 and stays
+ * 16.125). A figure he typed is read as typed.
+ */
+function customScaleAnswer(txt, shown) {
+  if (txt === null || txt === undefined) return null;
+  if (String(txt).trim() === shown) return 'unchanged';
+  const n = Number(txt);
+  return n > 0 ? n : null;
 }
 
 $('scaleSelect').addEventListener('change', async ev => {
   const sel = ev.target;
   let ppf;
   if (sel.value === 'custom') {
-    const txt = await D.promptDialog('Custom Scale', 'Pixels per foot',
-      String(app.project.pagePpf(app.currentPage).toFixed(2)),
-      `At ${app.project.dpi} DPI, 1/4" = 1 ft is ${computePixelsPerFoot(app.project.dpi, 0.25, 1).toFixed(1)} px/ft.`);
-    ppf = Number(txt);
-    if (!(ppf > 0)) { syncScaleSelect(); return; }
+    const shown = pyFixed(app.project.pagePpf(app.currentPage), 2);
+    const txt = await D.promptDialog('Custom Scale', 'Pixels per foot', shown,
+      `At ${app.project.dpi} DPI, 1/4" = 1 ft is ${pyFixed(computePixelsPerFoot(app.project.dpi, 0.25, 1), 1)} px/ft.`);
+    const answer = customScaleAnswer(txt, shown);
+    if (typeof answer !== 'number') { syncScaleSelect(); return; }
+    ppf = answer;
   } else {
     ppf = Number(sel.value);
   }
@@ -3263,7 +3291,7 @@ function syncCompareLabel() {
   const out = $('ovBalanceOut');
   if (!out) return;
   const b = overlay.balance || 0;
-  const pct = Math.round(Math.abs(b) * 100);
+  const pct = pyRoundInt(Math.abs(b) * 100);
   out.textContent = pct < 3 ? 'both'
     : b > 0 ? `newest +${pct}%`
       : `older +${pct}%`;
@@ -4318,7 +4346,7 @@ function askChangedOnDisk(now) {
   const when = ms => new Date(ms).toLocaleString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   });
-  const mb = n => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+  const mb = n => (n >= 1048576 ? `${pyFixed(n / 1048576, 1)} MB` : `${Math.max(1, pyRoundInt(n / 1024))} KB`);
   const was = app.archive.stamp;
   const text = now
     ? `${app.fileName} was changed after you opened it — saved from another `
@@ -5524,14 +5552,10 @@ async function runAction(act) {
         requestDraw();
       }
       break;
-    case 'zoom-100': {
-      viewport.zoom = 1;
-      const s = shownDrawingSize();
-      if (s) viewport.centerOn(s.w / 2, s.h / 2);
-      zoomFloor.chosen();
+    case 'zoom-100':
+      zoomTo100();
       requestDraw();
       break;
-    }
     case 'zoom-width':
       if (pageImage) {
         pendingFit = !applyDefaultZoomTo('width');
@@ -5706,7 +5730,7 @@ function stepMarkerScale(dir) {
   if (i < 0) i = MARKER_STEPS.indexOf(1.0);
   i = Math.max(0, Math.min(MARKER_STEPS.length - 1, i + dir));
   app.settings.set('marker_scale', MARKER_STEPS[i]);
-  setStatus(`Marker size ${Math.round(MARKER_STEPS[i] * 100)}%`);
+  setStatus(`Marker size ${pyIntStr(pyRoundInt(MARKER_STEPS[i] * 100))}%`);
   requestDraw();
 }
 
@@ -5999,7 +6023,7 @@ async function showRecent() {
         sub.style.cssText = 'font-size:10.5px;color:#7d7d7d';
         nameCell.appendChild(sub);
         tr.appendChild(nameCell);
-        tr.appendChild(D.el('td', 'num', `${(r.size / 1048576).toFixed(1)} MB`));
+        tr.appendChild(D.el('td', 'num', `${pyFixed(r.size / 1048576, 1)} MB`));
         tr.appendChild(D.el('td', null, new Date(r.at).toLocaleDateString('en-US')));
         tr.style.cursor = 'pointer';
         tr.addEventListener('click', () => { close(true); safeRun('open-project'); });
@@ -7388,9 +7412,9 @@ async function keepOnDevice() {
 function librarySize(bytes) {
   const n = Number(bytes);
   if (!(n > 0)) return '';
-  if (n >= 1073741824) return `${(n / 1073741824).toFixed(1)} GB`;
-  if (n >= 1048576) return `${(n / 1048576).toFixed(1)} MB`;
-  return `${Math.max(1, Math.round(n / 1024))} KB`;
+  if (n >= 1073741824) return `${pyFixed(n / 1073741824, 1)} GB`;
+  if (n >= 1048576) return `${pyFixed(n / 1048576, 1)} MB`;
+  return `${Math.max(1, pyRoundInt(n / 1024))} KB`;
 }
 
 function libraryVersionDate(ms) {
@@ -7481,7 +7505,7 @@ requestDraw();
 // leave the app fully usable, so it is warmed in the background and never
 // awaited by anything on the critical path.
 loadCatalog().then(n => {
-  if (n) setStatus(`Materials catalog ready — ${n.toLocaleString('en-US')} items`);
+  if (n) setStatus(`Materials catalog ready — ${pyIntStr(n, true)} items`);
 }).catch(() => {});
 
 /**

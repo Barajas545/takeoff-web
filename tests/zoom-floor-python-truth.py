@@ -1016,12 +1016,50 @@ SCENARIOS = [
      "steps": [["open"], ["wheel", 800, 450, -120, 0, True], ["next"], ["next"], ["prev"],
                ["wheel", 800, 450, 120], ["wheel", 800, 450, 120], ["prev"], ["next"],
                ["F"], ["next"]]},
-    # 1 after a drag: the desktop's set_zoom keeps the pan, the web centres
-    # (zoom-floor.mjs KNOWN); from the next turn on both are centred
+    # 1 after a drag: the desktop's set_zoom keeps the pan -- the page
+    # centre's screen offset -- and so does the web's (the user's decision of
+    # 2026-11-07, "keep the pan"); from the next turn on both are centred
     {"name": "1 (100%) after a drag, then a walk",
      "canvas": (W, H), "pages": [BIG, SMALL, LARGE],
      "steps": [["open"], ["pan", 120, -70], ["one"], ["next"], ["next"], ["prev"],
                ["prev"]]},
+    # ...from other zooms: zoomed in past 100%, at Fit, below Fit by Shift
+    {"name": "1 (100%) after a drag at different zooms",
+     "canvas": (W, H), "pages": [BIG, SMALL],
+     "steps": [["open"], ["plus"], ["plus"], ["plus"], ["plus"], ["plus"], ["plus"],
+               ["plus"], ["plus"], ["plus"], ["plus"], ["plus"], ["plus"], ["plus"],
+               ["pan", 150, -60], ["one"], ["F"], ["pan", -200, 90], ["one"],
+               ["wheel", 800, 450, -120, 0, True], ["wheel", 800, 450, -120, 0, True],
+               ["pan", 33, 44], ["one"], ["wheel", 800, 450, -120], ["pan", -17, 5],
+               ["one"], ["next"], ["pan", 61, -9], ["one"]]},
+    # ...twice: the second 1 changes nothing, a drag between them is kept
+    {"name": "1 (100%) twice, and again after a drag",
+     "canvas": (W, H), "pages": [BIG, SMALL],
+     "steps": [["open"], ["pan", 120, -70], ["one"], ["one"], ["pan", -30, 10],
+               ["one"], ["one"], ["F"], ["one"], ["one"]]},
+    # ...on a reissue on other paper (the newest drawing up, and a flip): the
+    # pan is measured on the drawing ON SCREEN, its own centre
+    {"name": "1 (100%) on a reissued drawing of other paper",
+     "canvas": (W, H), "pages": [BIG, BIG, BIG],
+     "revs": {1: [["r1", SMALL]], 2: [["r2", LARGE]]},
+     "steps": [["open"], ["next"], ["pan", 90, -45], ["one"], ["pan", -20, 15], ["one"],
+               ["next"], ["pan", -140, 60], ["one"], ["prev"], ["prev"],
+               ["rev", SMALL], ["pan", 70, 25], ["one"], ["rev", None], ["one"],
+               ["rev", LARGE], ["pan", -55, -35], ["one"], ["rev", None]]},
+    # + and - with the sheet dragged aside, above Fit: the desktop's zoom_in /
+    # zoom_out are set_zoom too, and keep the page centre's offset as 1 does;
+    # the web's zoom about the middle of the screen (zoom-floor.mjs KNOWN --
+    # the user decided 1, and was not asked about + and -)
+    {"name": "+ and - with the sheet dragged aside",
+     "canvas": (W, H), "pages": [BIG],
+     "steps": [["open"], ["one"], ["pan", 150, -80], ["plus"], ["plus"], ["minus"],
+               ["pan", -40, 25], ["minus"], ["minus"]]},
+    # ...then a page turn: centred from the turn on, at 100% (his zoom)
+    {"name": "1 (100%) after a drag, then a page turn",
+     "canvas": (W, H), "pages": [BIG, SMALL, BIG],
+     "steps": [["open"], ["pan", 250, 130], ["one"], ["next"], ["pan", -80, 40],
+               ["one"], ["turn", 0], ["pan", 10, -10], ["one"], ["prev"], ["next"],
+               ["next"]]},
     # A step made while the sheet a turn asked for is still being decoded
     # (["during", ...]): Page Down then Page Up, the card, Page Down twice --
     # each a turn, centred, whatever the drawing still up is; a drag there is

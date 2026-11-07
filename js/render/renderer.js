@@ -25,7 +25,7 @@ import {
 } from './callouts.js';
 import {
   generatedPoints, gridCellsFor, tilesFor, isAreaType, tilePatternLabel,
-  notesWithPurpose,
+  notesWithPurpose, gridSpan, pitchFromPoints,
 } from '../core/measure.js';
 import { pitchLabel } from '../tools/controller.js';
 
@@ -73,6 +73,7 @@ import {
 import {
   polygonArea, areaCentroid, pathLength, boundingBox, pointsAlongPath,
 } from '../core/geom.js';
+import { pyFixed, pyG, pyIntStr } from '../core/pyformat.js';
 
 export class Renderer {
   constructor(canvas, viewport) {
@@ -797,7 +798,10 @@ export class Renderer {
     const own = shapeOwn(m);
     switch (m.type) {
       case 'distance': {
-        const txt = formatDistancePrecision(own.value, m.precision || '1/2');
+        // The desktop's canvas draws a Measure line's length with format_ft
+        // (to the whole inch), as the read-out while it is drawn and the
+        // status line after it do; the half-inch words are its stored label.
+        const txt = formatFt(own.value);
         return nameLine ? `${nameLine}${txt}${notesHint}${tag}` : `${txt}${notesHint}${tag}`;
       }
       case 'ref_distance': {
@@ -817,23 +821,35 @@ export class Renderer {
         // render as "0:12" beside a correct angle.
         const p = Number(m.value ?? m.pitch) || 0;
         const ang = Number(m.angle_deg) || (Math.atan2(p, 12) * 180) / Math.PI;
-        return `${nameLine}${pitchLabel(p)}   ${ang.toFixed(0)}°${notesHint}`;
+        // A vertical line: the desktop stores its rise as Infinity and draws
+        // _pitch_label(inf), 'vertical'. A JSON file cannot hold Infinity, so
+        // this app stores 0 -- and a 0 on a line its own two ends say is
+        // vertical is read back as the desktop's Infinity, not as '0:12'
+        // under the 'vertical' its label already says.
+        const pts = m.points || [];
+        const vertical = p === 0 && pts.length >= 2
+          && !Number.isFinite(pitchFromPoints(pts[0], pts[1])[0]);
+        return `${nameLine}${pitchLabel(vertical ? Infinity : p)}   ${pyFixed(ang, 0)}°${notesHint}`;
       }
+      // The desktop's own label words (_gl_draw_measurement_label), rounded
+      // its way: f"{area:.1f}", f"{pitch:g}", int(), f"{n:,}", f"{a:.0f}".
       case 'area':
-        return `${nameLine}${own.value.toFixed(1)} sq ft${notesHint}${tag}`;
+        return `${nameLine}${pyFixed(own.value, 1)} sq ft${notesHint}${tag}`;
       case 'slope_area':
-        return `${nameLine}${own.value.toFixed(1)} sq ft (${g(m.pitch || 0)}:12)${notesHint}${tag}` +
-               `\nFlat: ${(own.flat || 0).toFixed(1)} sq ft`;
+        return `${nameLine}${pyFixed(own.value, 1)} sq ft (${pyG(m.pitch || 0)}:12)${notesHint}${tag}` +
+               `\nFlat: ${pyFixed(own.flat || 0, 1)} sq ft`;
       case 'polyline':
         return `${nameLine}${formatFt(own.value)}${notesHint}${tag}`;
       case 'linear_count':
-        return `${nameLine}${Math.trunc(own.value)} items @ ${g(m.spacing_in ?? 12)}"${notesHint}${tag}`;
+        return `${nameLine}${pyIntStr(own.value)} items @ ${pyG(m.spacing_in ?? 12)}"${notesHint}${tag}`;
       case 'grid': {
-        const cols = Math.max(1, Number(m.cols) || 1);
-        const rows = Math.max(1, Number(m.rows) || 1);
+        // the cells it spans as the desktop's canvas counts them, from its
+        // points (gridSpan) -- not a stored count an older save may have
+        // written another way
+        const [cols, rows] = gridSpan(m);
         const l1 = m.name || m.label || `Grid ${cols}×${rows}`;
-        const l2 = `${cols}×${rows} cells  (${g2(m.cell_w_ft)}×${g2(m.cell_h_ft)} ft each)`;
-        const l3 = `Total ${(own.value || 0).toFixed(0)} sq ft${notesHint}`;
+        const l2 = `${cols}×${rows} cells  (${pyG(Number(m.cell_w_ft) || 0, 2)}×${pyG(Number(m.cell_h_ft) || 0, 2)} ft each)`;
+        const l3 = `Total ${pyFixed(own.value || 0, 0)} sq ft${notesHint}`;
         return `${l1}\n${l2}\n${l3}`;
       }
       case 'tile': {
@@ -841,9 +857,9 @@ export class Renderer {
         const l1 = m.name || m.label || `Tile — ${pat}`;
         const count = Number(m.tile_count) || 0;
         const needed = Number(m.tiles_needed) || 0;
-        const l2 = `${count.toLocaleString('en-US')} tiles  (${g(m.tile_w_in ?? 12)}″×${g(m.tile_h_in ?? 12)}″ ${pat})`;
-        const l3 = `+${g(m.waste_pct || 0)}% waste → ${needed.toLocaleString('en-US')} tiles`;
-        let l4 = `Total ${(own.value || 0).toFixed(0)} sq ft${notesHint}`;
+        const l2 = `${pyIntStr(count, true)} tiles  (${pyG(m.tile_w_in ?? 12)}″×${pyG(m.tile_h_in ?? 12)}″ ${pat})`;
+        const l3 = `+${pyG(m.waste_pct || 0)}% waste → ${pyIntStr(needed, true)} tiles`;
+        let l4 = `Total ${pyFixed(own.value || 0, 0)} sq ft${notesHint}`;
         if (m.boxes) l4 += `  ·  ${m.boxes} boxes`;
         return `${l1}\n${l2}\n${l3}\n${l4}`;
       }
@@ -1009,62 +1025,10 @@ export class Renderer {
   }
 
   _drawPreviewLabel(ctx, pv, ppf) {
-    const vp = this.viewport;
-    const mode = pv.mode;
-    const pts = pv.points || [];
-    const cursor = pv.constrained || pv.cursor;
-    const rgb = PREVIEW_LABEL_RGB[mode];
-    if (!rgb || !pts.length) return;
-
-    let text = '';
-    let anchor = pts[pts.length - 1];
-    let header = null;
-    let alpha = 160;
-
-    if (mode === 'pitch' && cursor) {
-      const dx = Math.abs(cursor[0] - pts[0][0]);
-      const dy = Math.abs(cursor[1] - pts[0][1]);
-      const r12 = dx < 1e-6 ? Infinity : (dy / dx) * 12;
-      const ang = (Math.atan2(dy, dx || 1e-9) * 180) / Math.PI;
-      text = `${Number.isFinite(r12) ? g(Math.round(r12 * 4) / 4) : '—'}:12  ${ang.toFixed(0)}°`;
-      header = 'Pitch / Angle';
-      alpha = 170;
-      anchor = mid(pts[0], cursor);
-    } else if (mode === 'distance' && cursor) {
-      text = formatFt(Math.hypot(cursor[0] - pts[0][0], cursor[1] - pts[0][1]) / ppf);
-      anchor = mid(pts[0], cursor);
-    } else if (mode === 'calibrate' && cursor) {
-      text = `${Math.hypot(cursor[0] - pts[0][0], cursor[1] - pts[0][1]).toFixed(0)}px`;
-      anchor = mid(pts[0], cursor);
-    } else if (mode === 'area' || mode === 'slope_area' || mode === 'tile') {
-      const poly = cursor ? [...pts, cursor] : pts;
-      if (poly.length >= 3 && ppf > 0) {
-        const sf = polygonArea(poly) / (ppf * ppf);
-        text = `~${sf.toFixed(1)} sq ft`;
-        if (mode === 'tile') {
-          const tw = (Number(pv.tileWIn) || 12) + (Number(pv.groutIn) || 0);
-          const th = (Number(pv.tileHIn) || 12) + (Number(pv.groutIn) || 0);
-          const tileArea = (tw * th) / 144;
-          if (tileArea > 0) {
-            text += `  ·  ~${Math.ceil(sf / tileArea).toLocaleString('en-US')} tiles`;
-          }
-        }
-      } else {
-        text = `~${formatFt(pathLength(poly) / (ppf || 1))}`;
-      }
-    } else if (mode === 'polyline') {
-      const chain = cursor ? [...pts, cursor] : pts;
-      text = `~${formatFt(pathLength(chain) / (ppf || 1))}`;
-    } else if (mode === 'linear_count') {
-      const chain = cursor ? [...pts, cursor] : pts;
-      const spacingPx = ((Number(pv.spacingIn) || 12) / 12) * ppf;
-      const n = spacingPx > 1 ? pointsAlongPath(chain, spacingPx).length : chain.length;
-      text = `~${n} items`;
-    }
-
-    if (!text) return;
-    const [x, y] = vp.toScreen(anchor[0], anchor[1]);
-    drawLabel(ctx, text, x, y, rgb, { alpha, header });
+    const lbl = previewLabel(pv, ppf);
+    if (!lbl) return;
+    const [x, y] = this.viewport.toScreen(lbl.anchor[0], lbl.anchor[1]);
+    drawLabel(ctx, lbl.text, x, y, lbl.rgb, { alpha: lbl.alpha, header: lbl.header });
   }
 
   /**
@@ -1196,11 +1160,69 @@ function traceQuad(ctx, quad) {
 
 function mid(a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
 
-function g(v, dp = 6) {
-  return String(parseFloat((Number(v) || 0).toPrecision(dp)));
-}
-function g2(v) {
-  return String(parseFloat((Number(v) || 0).toPrecision(2)));
+/**
+ * The live read-out while a tool draws: {text, anchor, rgb, alpha, header},
+ * or null for none. The desktop's words (_gl_draw_preview_label) and its
+ * rounding -- '~12.2 sq ft' for a 12.25 sq ft outline, as the finished
+ * label will say -- so the number does not change when he lets go.
+ */
+export function previewLabel(pv, ppf) {
+  const mode = pv.mode;
+  const pts = pv.points || [];
+  const cursor = pv.constrained || pv.cursor;
+  const rgb = PREVIEW_LABEL_RGB[mode];
+  if (!rgb || !pts.length) return null;
+
+  let text = '';
+  let anchor = pts[pts.length - 1];
+  let header = null;
+  let alpha = 160;
+
+  if (mode === 'pitch' && cursor) {
+    // desktop _pitch_from_points: 12 * dy / dx (in that order), vertical
+    // below 1e-9 -- the finished pitch's own arithmetic and label
+    const dx = Math.abs(cursor[0] - pts[0][0]);
+    const dy = Math.abs(cursor[1] - pts[0][1]);
+    const r12 = dx < 1e-9 ? Infinity : (12.0 * dy) / dx;
+    const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
+    text = `${pitchLabel(r12)}  ${pyFixed(ang, 0)}°`;
+    header = 'Pitch / Angle';
+    alpha = 170;
+    anchor = mid(pts[0], cursor);
+  } else if (mode === 'distance' && cursor) {
+    text = formatFt(Math.hypot(cursor[0] - pts[0][0], cursor[1] - pts[0][1]) / ppf);
+    anchor = mid(pts[0], cursor);
+  } else if (mode === 'calibrate' && cursor) {
+    text = `${pyFixed(Math.hypot(cursor[0] - pts[0][0], cursor[1] - pts[0][1]), 0)}px`;
+    anchor = mid(pts[0], cursor);
+  } else if (mode === 'area' || mode === 'slope_area' || mode === 'tile') {
+    const poly = cursor ? [...pts, cursor] : pts;
+    if (poly.length >= 3 && ppf > 0) {
+      const sf = polygonArea(poly) / (ppf * ppf);
+      text = `~${pyFixed(sf, 1)} sq ft`;
+      if (mode === 'tile') {
+        const tw = (Number(pv.tileWIn) || 12) + (Number(pv.groutIn) || 0);
+        const th = (Number(pv.tileHIn) || 12) + (Number(pv.groutIn) || 0);
+        const tileArea = (tw * th) / 144;
+        if (tileArea > 0) {
+          text += `  ·  ~${pyIntStr(Math.ceil(sf / tileArea), true)} tiles`;
+        }
+      }
+    } else {
+      text = `~${formatFt(pathLength(poly) / (ppf || 1))}`;
+    }
+  } else if (mode === 'polyline') {
+    const chain = cursor ? [...pts, cursor] : pts;
+    text = `~${formatFt(pathLength(chain) / (ppf || 1))}`;
+  } else if (mode === 'linear_count') {
+    const chain = cursor ? [...pts, cursor] : pts;
+    const spacingPx = ((Number(pv.spacingIn) || 12) / 12) * ppf;
+    const n = spacingPx > 1 ? pointsAlongPath(chain, spacingPx).length : chain.length;
+    text = `~${n} items`;
+  }
+
+  if (!text) return null;
+  return { text, anchor, rgb, alpha, header };
 }
 
 /**

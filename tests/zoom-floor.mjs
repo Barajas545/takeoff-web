@@ -99,8 +99,7 @@
 // The only differences from the desktop are the documented ones: the web's
 // Fit keeps its 16 px margin, and Zoom to item fits the desktop's box inside
 // the same margin (sections 5-8 run it; the differential runs the desktop's
-// margin-free Fit), the readout's number is rounded as the web
-// always has (the desktop truncates), a refusal by pinch is said in the touch
+// margin-free Fit), a refusal by pinch is said in the touch
 // words, and the picture windows draw at fractional pixels where the desktop
 // rounds to whole ones (the pan is compared to within that rounding). Then
 // the ones KNOWN lists, each still checked to be there: the web's F never
@@ -114,9 +113,13 @@
 // desktop stops at ten times the whole picture, short of the drawing's own
 // pixels in the Diff on a phone); and a job that opens at Fit Width keeps
 // the top of the sheet in view on the web, where the desktop's is centred
-// (the same zoom; from the first turn on both are centred); and 1 (100%)
-// centres the sheet on the web, as it always has, where the desktop keeps a
-// dragged pan (the same zoom; centred from the next turn on). Not in the
+// (the same zoom; from the first turn on both are centred); and + and - with
+// the sheet dragged aside zoom about the middle of the screen on the web,
+// where the desktop's (set_zoom) keep the dragged offset (the same zoom; the
+// user decided 1 only). The readout's number truncates as the desktop's does
+// (int(zoom * 100): 12.5% is '12%'), and 1 (100%) keeps a dragged pan as the
+// desktop's set_zoom does -- both the user's decisions of 2026-11-07,
+// compared exactly; ZoomFloor.setZoom keeps the pan at any zoom. Not in the
 // differential, on purpose: the web's row click on THIS sheet selects and
 // scrolls to the item at the zoom he has, as it always has (the desktop's
 // double-click zooms there too); a row on another sheet is the desktop's.
@@ -244,7 +247,9 @@ const LIFTED = ['shownDrawingSize', 'zoomStopsAtFit', 'applyDefaultZoom',
   // a page turn, and its doors: Page Down / Up, the own drawing, an item
   'goToPage', 'stepSheet', 'goToPageOwnVersion', 'jumpToItem',
   // ...and what it asks: whose drawing is up, which job, how it comes up
-  'sheetUp', 'onSheetUp', 'jobNow', 'inLandedJob', 'viewOf', 'leftByChoice'];
+  'sheetUp', 'onSheetUp', 'jobNow', 'inLandedJob', 'viewOf', 'leftByChoice',
+  // 1 (100%): runAction's case calls it
+  'zoomTo100'];
 const tick = () => new Promise(res => setTimeout(res, 0));
 
 /**
@@ -599,14 +604,15 @@ const KNOWN = {
     fields: ['pan'], at: [0],
     why: 'the web\'s Fit Width puts the top of the sheet at the top of the screen; the desktop\'s leaves it centred',
   }],
-  // 1 (100%) centres the sheet on the web, as it always has; the desktop's
-  // _set_zoom_100 (set_zoom) leaves the pan -- the page centre's screen
-  // offset -- where a drag put it. The same zoom, his zoom; from the next
-  // turn on both are centred.
-  '1 (100%) after a drag, then a walk': [{
-    fields: ['pan'], at: [2],
-    why: 'the web\'s 1 puts the middle of the sheet in the middle of the screen; the desktop\'s keeps the dragged '
-      + 'pan (120 x -70 screen px) at 100%',
+  // + and - (zoom_in / zoom_out) are set_zoom on the desktop too, so a sheet
+  // dragged aside stays that far aside; the web's zoom about the middle of
+  // the screen, as they always have (ZoomFloor.zoomIn / zoomOut). The user's
+  // decision of 2026-11-07 named 1 only: + and - are his call. The zoom, the
+  // readout and the floor are the same; at Fit both are centred.
+  '+ and - with the sheet dragged aside': [{
+    fields: ['pan'], at: [3, 4, 5, 6, 7, 8],
+    why: 'the web\'s + and - zoom about the middle of the screen, so the dragged offset grows and shrinks with the '
+      + 'zoom (150 x -80 -> 180 x -96 at 120%); the desktop\'s keep it, as its 1 does and the web\'s 1 now does',
   }],
   'a sheet whose Fit is below the minimum': [{
     fields: ['label', 'said'],
@@ -644,10 +650,9 @@ async function checkScenarios(truth, label) {
         if (!close(g.pan[0], t.pan[0], 1e-9, 1e-6) || !close(g.pan[1], t.pan[1], 1e-9, 1e-6)) {
           diff.push(`pan ${g.pan} vs ${t.pan}`);
         }
-        // The one difference in the readout: the web rounds its number, as it
-        // always has; the desktop truncates. 'Fit ' and when it shows are the desktop's.
-        const wantLabel = t.label.replace(/\d+%$/, `${Math.round(t.zoom * 100)}%`);
-        if (g.label !== wantLabel) diff.push(`label ${g.label} vs ${wantLabel}`);
+        // The readout, exactly: 'Fit ', when it shows, and the number, which
+        // truncates on both (update_zoom_label's int(zoom * 100)).
+        if (g.label !== t.label) diff.push(`label ${g.label} vs ${t.label}`);
         for (const k of ['page', 'atFloor', 'showsFit', 'baseFit', 'pastFit', 'raised']) {
           if (g[k] !== t[k]) diff.push(`${k} ${g[k]} vs ${t[k]}`);
         }
@@ -1739,6 +1744,26 @@ log('\n-- 6. a change of size: Fit stays Fit, anything else keeps its centre --'
   r.resize(844, 366);
   ok('the bar goes (the layout switched): the bigger Fit', r.zf.showsFit() && r.vp.zoom > fit);
 }
+{
+  // ZoomFloor.setZoom is the desktop's set_zoom at ANY zoom, not only 1's:
+  // the pan -- the page centre's offset from the canvas centre, in SCREEN
+  // pixels -- is the same after it, so a sheet dragged aside stays that far
+  // aside. (At zoom 1 a pan in page units reads the same; at 0.37 or 2.5 it
+  // does not.)
+  const r = pinchRig();
+  for (const [from, pan, to] of [[0.5, [150, -80], 0.37], [0.37, [-63.25, 41.5], 2.5], [2.5, [0, 0], 1],
+    [1, [212, 17.75], 10], [0.2, [-300, -120], 0.2]]) {
+    r.vp.zoom = from;
+    const s = { w: SHEET[0], h: SHEET[1] };
+    r.vp.centerOn(s.w / 2 - pan[0] / from, s.h / 2 - pan[1] / from);
+    const before = r.pan();
+    r.zf.setZoom(to);
+    const after = r.pan();
+    ok(`setZoom(${to}) from ${from} with the sheet ${pan} aside: the zoom, and the same pan`,
+      r.vp.zoom === to && close(after[0], before[0], 1e-9, 1e-9) && close(after[1], before[1], 1e-9, 1e-9),
+      `${before} -> ${after} at ${r.vp.zoom}`);
+  }
+}
 
 // ═══ 7. the Settings box ════════════════════════════════════════════════
 log('\n-- 7. the Settings box, on a stand-in page --');
@@ -1809,6 +1834,9 @@ log('\n-- 8. the app\'s wiring --');
     && /refused: via => sayZoomFloorOnce\(via\)/.test(BUILD) && /margin: 16,/.test(BUILD));
   const draw = fnText('drawFrame') || '';
   ok('the readout is the zoom floor\'s ("Fit 21%")', /\$\('zoomLabel'\)\.textContent = zoomFloor\.label\(\);/.test(draw));
+  ok('runAction: 1 is zoomTo100 alone, which is the zoom floor\'s set_zoom, a zoom he chose',
+    /\n {4}case 'zoom-100':\n {6}zoomTo100\(\);\n {6}requestDraw\(\);\n {6}break;\n {4}case 'zoom-width':/.test(CASES || '')
+    && /^function zoomTo100\(\) \{\n {2}zoomFloor\.setZoom\(1\);\n {2}zoomFloor\.chosen\(\);\n\}$/.test(fnText('zoomTo100') || ''));
   ok('runAction: + and - are the zoom floor\'s, F is the one Fit',
     /case 'zoom-in': zoomFloor\.zoomIn\(\);/.test(CASES || '') && /case 'zoom-out': zoomFloor\.zoomOut\(\);/.test(CASES || '')
     && /pendingFit = !applyDefaultZoomTo\('fit'\);/.test(CASES || ''));
