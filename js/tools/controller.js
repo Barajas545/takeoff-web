@@ -35,6 +35,7 @@ import {
   DEFAULT_HIGHLIGHT_WIDTH, DEFAULT_PEN_WIDTH, ERASER_RADIUS_PX,
 } from './markup.js';
 import { wheelInOut } from '../render/zoom-floor.js';
+import { pinFiling, applyClassTool } from '../core/classify.js';
 
 /** The takeoff tools — the ones that produce a quantity. */
 export const TAKEOFF_TOOLS = [
@@ -117,8 +118,6 @@ const CONSTRAINED_TOOLS = new Set([
 ]);
 /** Tools whose polygon closes when the cursor snaps back to the first vertex. */
 const CLOSING_TOOLS = new Set(['area', 'slope_area', 'grid', 'tile']);
-
-const CATEGORY_DEFAULT_OPENINGS = 'Doors & Windows';
 
 /** How far a finger may slide and still count as a tap, in screen px.
  *  (The Items list's hold, js/ui/hold.js, uses the same number.) */
@@ -337,6 +336,12 @@ export class ToolController extends EventTarget {
     // putting a trembled shape back: the count being placed, and the ones
     // held on other drawings, are found again in the store put back.
     this.project.addEventListener('restored', ev => this._rearmCount((ev.detail || {}).before));
+    // An undo or redo of a rename of a floor, trade or sub-category: what it
+    // moved here -- the next item's floor and sub-category, the armed
+    // count's answers -- goes back (or forward) with the names, while it
+    // still holds what the rename left (js/core/classify.js applyClassTool).
+    this.project.addEventListener('class-tool', ev => applyClassTool(ev.detail,
+      mv => mv[1] === this || mv[0] === 'spec', { countSpec: () => this.countSpec }));
     // Anything that moves the history while a press on a shape is held -- a
     // Ctrl+Z, a Ctrl+Y -- ends that press: its release must not then keep,
     // or put back, a picture of the job from before that edit (the
@@ -2517,7 +2522,11 @@ export class ToolController extends EventTarget {
       label, name: label,
       color,
       value: 1,
-      category: CATEGORY_DEFAULT_OPENINGS,
+      // Filed under the trade its kind is filed under: 'Doors & Windows',
+      // or wherever a rename of that trade moved it (metadata.pin_filing,
+      // desktop _pin_filing) -- a pin dropped with no form after a rename
+      // must not bring the old heading back beside the new one.
+      category: pinFiling(this.project.metadata, kind)[0],
     }), { label });
     this.emit('changed');
   }

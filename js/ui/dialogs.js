@@ -9,7 +9,7 @@ import { TAKEOFF_PALETTE, rgba, hex, fromHex } from '../render/theme.js';
 import { FLOOR_LEVEL_PRESETS, CATEGORY_PRESETS } from './items-panel.js';
 import { UNIT_CODES, UNITS, parseFeet, formatFtIn, DISTANCE_PRECISIONS } from '../core/units.js';
 import { TILE_PATTERNS, TILE_SIZE_PRESETS, tilePatternWaste } from '../tools/controller.js';
-import { classChoicesFrom } from '../core/classify.js';
+import { classChoicesFrom, classClean, classNameProblem } from '../core/classify.js';
 
 const host = () => document.getElementById('modal');
 
@@ -779,6 +779,87 @@ export function askCallout({ existing = null, sheets = [] } = {}) {
     return dlg({
       title: existing ? 'Edit Callout' : 'Detail Callout',
       body: form,
+      buttons: [button('Cancel', '', () => close(null)), button('OK', 'primary', accept)],
+    });
+  });
+}
+
+// ── rename a heading / set the blank ones ─────────────────────────────────
+
+/**
+ * The small form behind an Items-list heading's Rename and Set (desktop
+ * ClassificationDialog): a name -- this job's own names first (`own`), then
+ * the stock list (`rest`) -- a sentence that says exactly what will change,
+ * worked out by `describe(option)` before OK and again whenever the choice
+ * moves, and where there is a choice of how far it reaches (`options`,
+ * [[text, value]], the first one picked), that choice. Amber `notes` under
+ * it. It changes nothing itself: it resolves {name, option} for the list
+ * to act on, or null.
+ *
+ * OK refuses a blank name ('Type a name.'), the lists' own words ('All
+ * Floors', 'Uncategorized', ... -- 'is what the lists call themselves'),
+ * and, renaming (`old`), the name it already has -- said in red, and the
+ * form stays up.
+ */
+export function askClassification({
+  title, label, current = '', own = [], rest = [], describe = () => '',
+  options = null, notes = [], old = null,
+} = {}) {
+  return showDialog(close => {
+    const form = el('div', 'form cls-form');
+    form.appendChild(el('div', 'full cls-label', label));
+    const name = combo(current || '', [...own, ...rest], 'classNamePresets');
+    name.classList.add('full', 'cls-name');
+    form.appendChild(name);
+    const what = el('div', 'full cls-what');
+    const picks = [];
+    const chosen = () => {
+      for (const [r, v] of picks) if (r.checked) return v;
+      return null;
+    };
+    const update = () => {
+      let txt = '';
+      try { txt = describe(chosen()) || ''; } catch { txt = ''; }
+      what.textContent = txt;
+    };
+    if (options && options.length) {
+      const box = el('div', 'full cls-opts');
+      options.forEach(([text, value], i) => {
+        const l = el('label');
+        const r = input('', 'radio');
+        r.name = 'classScope';
+        r.value = String(i);
+        r.checked = i === 0;
+        r.addEventListener('change', update);
+        l.appendChild(r);
+        l.appendChild(el('span', null, text));
+        box.appendChild(l);
+        picks.push([r, value]);
+      });
+      form.appendChild(box);
+    }
+    form.appendChild(what);
+    for (const n of notes || []) form.appendChild(el('div', 'full cls-note', n));
+    const err = el('div', 'full cls-err');
+    err.hidden = true;
+    form.appendChild(err);
+    update();
+    const accept = () => {
+      const nm = classClean(name.value_());
+      let why = classNameProblem(nm);
+      if (!why && old !== null && old !== undefined && nm === old) why = 'That is already its name.';
+      if (why) {
+        err.textContent = why;
+        err.hidden = false;
+        return;
+      }
+      close({ name: nm, option: chosen() });
+    };
+    form.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); accept(); }
+    });
+    return dlg({
+      title, body: form,
       buttons: [button('Cancel', '', () => close(null)), button('OK', 'primary', accept)],
     });
   });

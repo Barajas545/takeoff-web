@@ -21,6 +21,12 @@ import {
   countsHere, notCountedHereWhy, soloCount,
 } from '../core/counting.js';
 import { headerAct, headerTip, rowsUnder, HDR_FIELD, HDR_WHAT, SOLO } from '../core/classify.js';
+import {
+  classNameProblem, classificationPlan, existingSpelling, classLists, renameWhat, renameNotes,
+  mergeQuestion, renameSaid, followRename, renameClassification, isClassRow, unfiledItems,
+  sheetsOfGroups, assignWhat, assignOptions, assignSaid, assignClassification, applyClassTool,
+  pyTitle, pyCapitalize, classStrip, rowsNow,
+} from '../core/classify.js';
 import { holdGesture } from './hold.js';
 
 /** Item types the panel never lists — rulers, markup and Group containers. */
@@ -90,6 +96,12 @@ export class ItemsPanel extends EventTarget {
      *  hint has been said -- for this page's life, never saved. */
     this._listed = 0;
     this._hinted = false;
+    /** Every item the last build listed (desktop _listed_ids): what the
+     *  rename form counts as hidden by the filters is the rest. */
+    this._listedIds = new Set();
+    /** Which job this is: one more every time another comes in. A form
+     *  asked about one job and answered in the next is no answer. */
+    this._job = 0;
     /** The menu this list opened (the host's handle) and where the list
      *  stood then: a menu points at a row, so the list scrolling under it
      *  closes it. */
@@ -278,7 +290,13 @@ export class ItemsPanel extends EventTarget {
       this._sheetView = null;
       this._sheetKey = null;
       this._soloCount = null;
+      this._job += 1;
     });
+    // An undo or redo of a rename (or a Set): the filters and the folded
+    // headings it moved go back -- or forward -- with the names, before the
+    // list is rebuilt (js/core/classify.js applyClassTool).
+    this.project.addEventListener?.('class-tool', ev => applyClassTool(ev.detail,
+      mv => mv[1] === this || mv[1] === this.collapsed));
   }
 
   /** A menu the list has just opened: the host's handle, or nothing. */
@@ -359,9 +377,9 @@ export class ItemsPanel extends EventTarget {
     const list = [...ids];
     const m = list.length ? this.project.findItem(list[list.length - 1])?.item : null;
     if (m) {
-      const fl = String(m.floor_level || '').trim();
-      const cat = String(m.category || '').trim();
-      const sub = String(m.sub_category || '').trim();
+      const fl = classStrip(m.floor_level);
+      const cat = classStrip(m.category);
+      const sub = classStrip(m.sub_category);
       const keys = [`fl\x00${fl}`, `cat\x00${fl}\x00${cat}`];
       if (sub) keys.push(`sub\x00${fl}\x00${cat}\x00${sub}`);
       let opened = false;
@@ -397,8 +415,8 @@ export class ItemsPanel extends EventTarget {
       for (const m of p.measurements[key]) {
         if (EXCLUDED.has(m.type)) continue;
         if (m.group_child) continue;          // child shapes roll up into the master
-        const fl = String(m.floor_level || '').trim();
-        const cat = String(m.category || '').trim();
+        const fl = classStrip(m.floor_level);
+        const cat = classStrip(m.category);
         // Collect every existing value BEFORE filtering, so the filter combos
         // always list what is in the project even when it is filtered out.
         if (!floorsAll.includes(fl)) floorsAll.push(fl);
@@ -410,6 +428,22 @@ export class ItemsPanel extends EventTarget {
         this._counts.set(m, this._model.itemCountsTowards(Number(key), m));
       }
     }
+    // What this build lists, by item (desktop _listed_ids) -- the rename
+    // form's 'hidden by the list's filters' is every other item it renames.
+    // The desktop lists a Group container whenever the filters let it
+    // through, so one counts as listed here too, though the web shows no
+    // Group section: the sentence is the desktop's for the same job.
+    const boxes = [];
+    for (const key of Object.keys(p.measurements)) {
+      for (const m of p.measurements[key]) {
+        if (m.type !== 'group' || m.group_child) continue;
+        if (this.costFilter !== 'all' && (m.cost_type || 'material') !== this.costFilter) continue;
+        if (this.floorFilter !== null && classStrip(m.floor_level) !== this.floorFilter) continue;
+        if (this.groupFilter !== null && classStrip(m.category) !== this.groupFilter) continue;
+        boxes.push(m);
+      }
+    }
+    this._listedIds = new Set([...all.map(([, m]) => m), ...boxes]);
 
     const emptyLast = (a, b) => (a === '') - (b === '') || a.localeCompare(b);
     floorsAll.sort(emptyLast);
@@ -475,6 +509,11 @@ export class ItemsPanel extends EventTarget {
       this._sheetShapes = sheet.shapes;
       solo = new Set(sheet.solo.map(([, m]) => m));
       all = [...sheet.rows, ...sheet.solo];
+      // One sheet lists its rows, each Group one of them is in, and the
+      // items on no sheet (desktop _sheet_rows).
+      const inBoxes = new Set(sheet.rows.map(([, m]) => String(m.in_group || '')));
+      this._listedIds = new Set([...all.map(([, m]) => m),
+        ...boxes.filter(b => b.group_item_id && inBoxes.has(String(b.group_item_id)))]);
       this._openSoloOnAdd();
       notes = sheetNotes(sheet, label);
     }
@@ -482,9 +521,9 @@ export class ItemsPanel extends EventTarget {
 
     const tree = new Map();
     for (const [pg, m] of all) {
-      const fl = solo && solo.has(m) ? SOLO : String(m.floor_level || '').trim();
-      const cat = String(m.category || '').trim();
-      const sub = String(m.sub_category || '').trim();
+      const fl = solo && solo.has(m) ? SOLO : classStrip(m.floor_level);
+      const cat = classStrip(m.category);
+      const sub = classStrip(m.sub_category);
       if (!tree.has(fl)) tree.set(fl, new Map());
       const cats = tree.get(fl);
       if (!cats.has(cat)) cats.set(cat, new Map());
@@ -645,10 +684,17 @@ export class ItemsPanel extends EventTarget {
    * them: the act's entry and a rule when there is one, then Collapse all
    * (every section listed now folds) and Expand all (everything unfolds).
    * The tree and the rows are the ones listed when the menu opened, as the
-   * desktop's meta carries them.
+   * desktop's meta carries them. A Set files THOSE rows, found again when
+   * it is chosen by who they are, not by where the heading sits then
+   * (classify.js rowsNow): the desktop's menu is modal, the web's is not --
+   * an Undo while it is up puts a copy of every item in the job, and a page
+   * turn with the SHEET chip on rebuilds the list for the next sheet under
+   * it (a row is a snapshot: carry its identity, re-derive it on the
+   * click). A menu opened in one job writes nothing in the next.
    */
   _headerEntries(meta) {
     const act = this._headerAct(meta);
+    const job = this._job;
     const tree = this._tree;
     const rows = rowsUnder(tree, meta);
     const what = HDR_WHAT[HDR_FIELD[meta.type]] || '';
@@ -664,9 +710,11 @@ export class ItemsPanel extends EventTarget {
         run: () => {
           // Asked again HERE, not only when the menu was built: a menu opened
           // while editing stays on screen when the gate closes under it -- a
-          // version flip -- and its write must not go through then.
-          if (this._headerAct(meta) !== act) return;
-          this.host.classifyFromHeading?.(act, meta, rows);
+          // version flip -- and its write must not go through then. Nor in
+          // another job: an open does not close it either.
+          if (this._job !== job || this._headerAct(meta) !== act) return;
+          this.host.classifyFromHeading?.(act, meta,
+            act === 'assign' ? rowsNow(this.project.measurements, rows, HDR_FIELD[meta.type]) : rows);
         },
       });
       out.push('-');
@@ -687,6 +735,153 @@ export class ItemsPanel extends EventTarget {
 
   _headerMenu(meta, at) {
     this._openedMenu(this.host.showMenu?.(this._headerEntries(meta), at));
+  }
+
+  // ── renaming a heading, and filing the items under a blank one ──────
+  //
+  // A heading is not a thing of its own: it is the floor level, category or
+  // sub-category its rows share, so renaming it rewrites that string on
+  // every item that carries it, job-wide (js/core/classify.js
+  // renameClassification). A blank heading -- NO FLOOR LEVEL, Uncategorized
+  // -- has no name to change; its menu files the items listed under it
+  // instead. Both ask in the desktop's form (host.askClassification) and
+  // write one undo level. The form is not modal to the rest of the page the
+  // way the desktop's is, so what it was asked about is checked again when
+  // it is answered: the same job, the list still allowed to write.
+
+  /** What the step did, said until the history moves past it (the host's
+   *  sayStep; its plain say where it has none). */
+  _sayStep(text) {
+    if (this.host.sayStep) this.host.sayStep(text);
+    else this.host.say?.(text);
+  }
+
+  /** Is the answer to a form still the answer for this heading? */
+  _stillAsked(job, meta, act) {
+    return job === this._job && this._headerAct(meta) === act;
+  }
+
+  /**
+   * Rename a floor level, category or sub-category from its heading (desktop
+   * _rename_from_header). The whole job: renaming a heading is fixing a
+   * name, and a name is the same name everywhere in the job. A Group
+   * section's 'Only the items in the group' waits until the web lists Group
+   * sections (the user's decision 4).
+   */
+  async renameFromHeader(meta) {
+    const field = HDR_FIELD[meta.type];
+    if (!field) return;
+    const what = HDR_WHAT[field];
+    const fl = String(meta.fl || '');
+    const old = classStrip({ floor_level: fl, category: meta.cat, sub_category: meta.sub }[field]);
+    if (!old) return;
+    const job = this._job;
+    // A sub-category belongs to its category: the same 'Exterior' can sit
+    // under Walls and under Doors, and renaming one is not renaming the other.
+    const base = {};
+    if (field === 'sub_category') base.category = classStrip(meta.cat);
+    const listed = this._listedIds;
+    const describe = opt => renameWhat(this.project.measurements, field, old, base, opt, listed);
+    const presets = { floor_level: FLOOR_LEVEL_PRESETS, category: CATEGORY_PRESETS }[field] || [];
+    const { own, rest } = classLists(this.project.measurements, field, base.category ?? null, presets);
+    const got = await this.host.askClassification?.({
+      title: `Rename ${pyTitle(what)}`,
+      label: `New name for the ${what} '${old}':`,
+      current: old, own, rest, describe, options: null,
+      notes: renameNotes(field, old), old,
+    });
+    if (!got || !this._stillAsked(job, meta, 'rename')) return;
+    let nu = got.name;
+    if (classNameProblem(nu) || nu === old) return;
+    const scope = { ...base };
+    if (got.option) scope.group = got.option;
+    const plan = classificationPlan(this.project.measurements, field, old, scope);
+    if (!plan.length) {
+      this.host.say?.(`Nothing is filed under '${old}' any more`);
+      return;
+    }
+    // A name the job already has, in any capitals or spacing: a merge into
+    // the spelling that is there -- asked first, No the default.
+    const into = existingSpelling(this.project.measurements, field, nu, old, base.category ?? null);
+    if (into !== null) {
+      const yes = await this.host.askYesNo?.(`Merge ${pyTitle(what)}`,
+        mergeQuestion(this.project.measurements, field, plan, into, base));
+      if (!yes || !this._stillAsked(job, meta, 'rename')) return;
+      nu = into;
+    }
+    // The list's own state first: the rename rebuilds the list, and a
+    // filter whose value has gone falls back to All without a word. One
+    // Undo puts these back with the names (`also`).
+    const was = [this.floorFilter, this.groupFilter];
+    const folds = followRename(this, field, old, nu, scope);
+    const also = [['attr', this, 'floorFilter', was[0], this.floorFilter],
+      ['attr', this, 'groupFilter', was[1], this.groupFilter], ...folds];
+    const counts = renameClassification(this.project, field, old, nu, scope,
+      { followTool: this.host.followTool || null, also });
+    if (!counts || !Object.keys(counts).length) return;
+    this._sayStep(renameSaid(field, old, nu, into !== null, counts));
+  }
+
+  /**
+   * NO FLOOR LEVEL ▸ Set floor level for these items (and the same for
+   * Uncategorized): file the rows listed under a blank heading (desktop
+   * _assign_from_header). `rows` are the ones its menu named, as the job
+   * holds them when the entry is chosen (classify.js rowsNow).
+   */
+  async assignFromHeader(meta, rows) {
+    const field = HDR_FIELD[meta.type];
+    if (field !== 'floor_level' && field !== 'category') return;
+    const what = HDR_WHAT[field];
+    const hdr = field === 'floor_level' ? 'NO FLOOR LEVEL' : 'Uncategorized';
+    // Said, never silent: nothing filed must not read as filed.
+    const gone = () => this.host.say?.(`Nothing is listed under ${hdr} any more`);
+    const job = this._job;
+    const store = this.project.measurements;
+    const listed = (rows || []).filter(isClassRow);
+    if (!listed.length) { gone(); return; }
+    const unfiled = unfiledItems(store, field);
+    const sheets = sheetsOfGroups(store);
+    const filtered = this._filtering() || this.sheetOnly();
+    const describe = opt => assignWhat(field, opt === 'job' ? unfiled : listed,
+      opt !== 'job' && filtered, sheets);
+    const presets = field === 'floor_level' ? FLOOR_LEVEL_PRESETS : CATEGORY_PRESETS;
+    const { own, rest } = classLists(store, field, null, presets);
+    const got = await this.host.askClassification?.({
+      title: `Set ${pyTitle(what)}`,
+      label: `${pyCapitalize(what)} for these items:`,
+      current: '', own, rest, describe, options: assignOptions(field, listed, unfiled),
+      notes: [], old: null,
+    });
+    if (!got || !this._stillAsked(job, meta, 'assign')) return;
+    let nu = got.name;
+    if (classNameProblem(nu)) return;
+    // Filing under a floor that exists, spelled however he typed it, is
+    // filing under THAT floor -- never a look-alike second heading.
+    nu = existingSpelling(this.project.measurements, field, nu, null) ?? nu;
+    const targets = got.option === 'job' ? unfiled : listed;
+    const tids = new Set(targets);
+    // Nothing is left unfiled, so a list filtered to the blank would be
+    // empty -- and fall back to All. It follows the items instead (and an
+    // Undo puts it back on the blank with them).
+    const also = [];
+    if (!unfiled.some(m => !tids.has(m))) {
+      if (field === 'floor_level' && this.floorFilter === '') {
+        also.push(['attr', this, 'floorFilter', '', nu]);
+        this.floorFilter = nu;
+      } else if (field === 'category' && this.groupFilter === '') {
+        also.push(['attr', this, 'groupFilter', '', nu]);
+        this.groupFilter = nu;
+      }
+    }
+    const counts = assignClassification(this.project, field, nu, targets, { also });
+    if (!counts || !Object.keys(counts).length) {
+      // Nothing was filed (every row it was asked about has gone since):
+      // nor is the filter moved -- and he is told.
+      for (const [, holder, name, was] of also) holder[name] = was;
+      if (counts) gone();
+      return;
+    }
+    this._sayStep(assignSaid(field, counts, nu));
   }
 
   /** The item as the totals see it (a multi-sheet item: the runs that count). */

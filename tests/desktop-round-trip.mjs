@@ -23,6 +23,11 @@
 //      this app left them (the overlay put up again in its look) — and its
 //      Delete Revision removes the untouched sheet that
 //      revision added, and no original sheet.
+//   6. THIS APP renames a floor, the framing engine's trade, the pins' trade
+//      and a pin kind's sub-category (Round 7) on the desktop test's own
+//      fixture; the DESKTOP reads the same names, files its new pins where
+//      the web recorded (metadata pin_filing), and its framing engine's
+//      merge rule leaves the renamed lines where the web filed them.
 //
 // Needs the desktop source and its Python (PyQt5, PIL); SKIPS otherwise.
 // Nothing it writes is kept: a temp folder, removed at the end.
@@ -41,6 +46,7 @@ import { ToolController } from '../js/tools/controller.js';
 import { CountingModel } from '../js/core/counting.js';
 import { newestVersionOf } from '../js/core/revisions.js';
 import { collectItems } from '../js/ui/reports.js';
+import { renameClassification, projectValues, pinFiling, PIN_KINDS, CLASS_FIELDS } from '../js/core/classify.js';
 import { DESKTOP_SRC, haveDesktopSource, skip } from './config.mjs';
 
 const run = promisify(execFile);
@@ -298,6 +304,69 @@ try {
   ok('and the question named the quantities that leave',
     !!dq && /11\.6 sq ft of Wall A3 new/.test(dq[1]) && /Wall A5/.test(dq[1]),
     `${JSON.stringify(d3.asked)} / ${d3.status}`);
+
+  // ── 6. a rename on the web, read by the desktop (Round 7) ──
+  // The desktop test's own fixture (tests/data/rename-truth.json: synthetic,
+  // its framed wall made by framing.py's own functions) on the desktop's job;
+  // this app renames a floor, the framing engine's trade, the pins' trade
+  // and a pin kind's sub-category, and saves. The desktop must read the same
+  // names, file new pins where the web recorded, and a framing recompute
+  // must leave the renamed lines where the web filed them.
+  console.log('\n-- 6. this app renames floors and trades; the desktop reads them back --');
+  const RT = JSON.parse(await readFile(new URL('./data/rename-truth.json', import.meta.url), 'utf-8')).rename;
+  const f6 = await openProject(new Blob([await readFile(made)]));
+  const pj = new Project();
+  pj.loadFrom({ metadata: f6.metadata, annotations: f6.annotations, measurements: f6.measurements,
+    pageCount: f6.pageCount, revisionCounts: f6.revisions.map(s => s.length) });
+  const st6 = new PageStore();
+  st6.setFromProject(f6);
+  for (const [pg, lst] of RT.fixtures.pins) {
+    const key = String(pg);
+    pj.measurements[key] = [...(pj.measurements[key] || []), ...JSON.parse(JSON.stringify(lst))];
+  }
+  const renames = [
+    ['floor_level', 'Level 1', '1st Floor', null],
+    ['category', 'Framing', 'Wood Framing', null],
+    ['category', 'Doors & Windows', 'Openings', null],
+    ['sub_category', 'Partitions', 'Interior Walls', { category: 'Wood Framing' }],
+  ];
+  const got6 = renames.map(([fld, o, nu, sc]) => renameClassification(pj, fld, o, nu, sc));
+  ok('the four renames each wrote something', got6.every(c => c && c.items > 0), JSON.stringify(got6));
+  eq('...and recorded where windows, doors and partitions go', pj.metadata.pin_filing, {
+    window: { category: 'Openings' }, door: { category: 'Openings' },
+    partition: { category: 'Wood Framing', sub_category: 'Interior Walls' } });
+  const renamedPath = path.join(dir, 'web-renamed.takeoff');
+  const blob6 = await writeProject({
+    metadata: pj.buildSaveMetadata(),
+    pageSources: st6.saveSources(),
+    revisionSources: st6.saveRevisionSources(),
+  });
+  await writeFile(renamedPath, new Uint8Array(await blob6.arrayBuffer()));
+  const d6 = await desktop('classes', renamedPath);
+  const dc = d6.classes;
+  for (const fld of CLASS_FIELDS) {
+    eq(`the desktop reads this job's ${fld} names as the web does (project_values)`, dc.values[fld],
+      projectValues(pj.measurements, fld));
+  }
+  ok('...and no old name is left', !dc.values.floor_level.includes('Level 1') && !dc.values.category.includes('Framing')
+    && !dc.values.category.includes('Doors & Windows'), JSON.stringify(dc.values));
+  eq('the desktop files new pins where the web recorded (_pin_filing)', dc.pinFiling,
+    Object.fromEntries(PIN_KINDS.map(k => [k, pinFiling(pj.metadata, k)])));
+  eq('...its metadata holds the web\'s record as written', dc.metaPinFiling, pj.metadata.pin_filing);
+  eq('...a door and a window placed with the desktop\'s own pin tools go under Openings', dc.placed,
+    [['door', 'Openings', 'Level 9'], ['window', 'Openings', 'Level 9']]);
+  const wall = dc.framed['Wall B'];
+  ok('the framed wall came through with its answers', !!wall, JSON.stringify(Object.keys(dc.framed)));
+  if (wall) {
+    eq('a framing recompute (the engine\'s own merge rule) leaves every renamed line where the web filed it',
+      wall.recomputed, wall.saved);
+    eq('...the lines, as the web wrote them', wall.saved, {
+      Strap: ['Wood Framing', '1st Floor'], Shims: ['Wood Framing', ''], Crane: ['Hardware', '1st Floor'],
+      '2x6 stud': ['Wood Framing', ''] });
+    eq('...and the answers it re-attaches them from', wall.extras,
+      [['e1', 'Wood Framing', '1st Floor'], ['e2', 'Wood Framing', ''], ['e3', 'Wood Framing', '1st Floor']]);
+  }
+  eq('opening the renamed job asked nothing', d6.asked, []);
 } finally {
   await rm(dir, { recursive: true, force: true });
 }

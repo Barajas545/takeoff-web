@@ -49,9 +49,11 @@
 //
 // The differences from the desktop are the web's on purpose, each checked:
 // no 'Drag to reorder' (the web cannot reorder yet: canDrag false); no
-// Rename… / Set … for these N items… until Round 7 flips the host's
-// canClassifyFromHeadings (the menu and the tooltip both follow the one
-// switch); nothing to rename or set while the list is read-only; the touch
+// Rename… / Set … for these N items… while the host's
+// canClassifyFromHeadings is off (on since Round 7 while editing; the menu
+// and the tooltip both follow the one switch; tests/classification-rename.mjs
+// holds what the entries then do); nothing to rename or set while the list
+// is read-only; the touch
 // layout says 'Tap' and 'Hold'; a datalist shows neither the desktop's
 // leading blank nor its separator.
 //
@@ -403,15 +405,33 @@ function checkMenus(truth, where) {
   } finally { r.restore(); }
 }
 
+/** The snapshot's rows as a job holds them: a Project with each row on its
+ *  sheet, and the rows again as [page, the job's own dict] in the
+ *  snapshot's order -- a Set hands on the rows its menu named as the job
+ *  holds them (classify.js rowsNow), so a tree of dicts the job does not
+ *  hold would hand on none. */
+function jobOfRows(rows) {
+  const measurements = {};
+  for (const [pg, m] of rows) (measurements[pg] = measurements[pg] || []).push(JSON.parse(JSON.stringify(m)));
+  const p = new Project();
+  p.loadFrom({ metadata: { page_labels: ['X1.0', 'X2.0', 'X3.0'] }, annotations: {}, measurements, pageCount: 3 });
+  const at = {};
+  const live = rows.map(([pg]) => { at[pg] = (at[pg] || 0) + 1; return [pg, p.measurements[pg][at[pg] - 1]]; });
+  return { p, live };
+}
+
 function checkChoices(truth, where) {
   log(`\n-- 1. what the entries do == the desktop's (${where}) --`);
-  const r = panelRig();
+  const { p, live } = jobOfRows(truth.rows.list);
+  ok(`${where}: the snapshot's rows load as the job's own, in order`,
+    live.every(([pg, m], i) => m && m.name === truth.rows.list[i][1].name && Number(pg) === Number(truth.rows.list[i][0])));
+  const r = panelRig({ project: p });
   try {
     let refreshes = 0;
     r.panel.refresh = () => { refreshes += 1; };
     for (const c of truth.choices) {
       const tag = `${where}: ${c.label}: ${c.entry}`;
-      r.panel._tree = webTree(truth.rows.list);
+      r.panel._tree = webTree(live);
       r.panel.collapsed = new Set(c.before.map(toKey));
       r.state.classify = true; r.state.readOnly = false;
       r.calls.length = 0;
@@ -1723,7 +1743,8 @@ log('\n-- 8. the wiring --');
   const main = (await readFile(new URL('../js/main.js', import.meta.url), 'utf-8')).replace(/\r\n/g, '\n');
   const panelHost = main.slice(main.indexOf('const itemsPanel = new ItemsPanel({'), main.indexOf('const thumbs = new Thumbnails({'));
   ok('the list\'s host: showMenu', panelHost.includes('showMenu: (entries, at) => showMenu(entries, at),'));
-  ok('the list\'s host: the one switch, off this round', panelHost.includes('canClassifyFromHeadings: () => false,'));
+  ok('the list\'s host: the one switch, on while editing and the list may write (Round 7)',
+    panelHost.includes('canClassifyFromHeadings: () => app.editing && !controller.readOnly,'));
   ok('the list\'s host: the layout, the list on screen, the hint',
     panelHost.includes("touchLayout: () => document.documentElement.dataset.ui === 'touch',")
     && panelHost.includes('listShown: () => itemsListShown(),') && panelHost.includes('hint: (text, when) => sayWhenQuiet(text, when),'));

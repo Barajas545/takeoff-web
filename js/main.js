@@ -76,6 +76,7 @@ import {
 import { ZoomFloor, PinchHold, fitPlace, pinchPlace, wheelInOut, pictureZoom, pictureRect, zoomFloorLine, zoomOutTip, wheelHelp, pinchHelp, PICTURE_STEP } from './render/zoom-floor.js';
 import { menuPlace } from './ui/hold.js';
 import { activateOnThisSheet, activateAcrossSheets, propertiesOnThisSheet, deleteHereChoice, deletedHereWords, deleteName, shapesOnScreen } from './core/counting.js';
+import { followTool as followToolMoves } from './core/classify.js';
 
 const $ = id => document.getElementById(id);
 
@@ -253,10 +254,19 @@ const itemsPanel = new ItemsPanel({
     // A heading's menu (Collapse all / Expand all), held or right-clicked.
     showMenu: (entries, at) => showMenu(entries, at),
     // The one switch for Rename… / Set … for these N items… on a heading
-    // (desktop 3.07, ported in a later round): until it is on, the menu
-    // offers Collapse all and Expand all only, and the heading's tooltip
-    // promises nothing more.
-    canClassifyFromHeadings: () => false,
+    // (desktop 3.07): on while he is editing and the list may write -- not
+    // in View Only, not on an older drawing of a sheet. The heading's
+    // tooltip follows the same switch, so it promises what the menu has.
+    canClassifyFromHeadings: () => app.editing && !controller.readOnly,
+    // ...the entry chosen: the list's own Rename / Set form, and its write.
+    classifyFromHeading: (act, meta, rows) => classifyFromHeading(act, meta, rows),
+    askClassification: opts => D.askClassification(opts),
+    askYesNo: (title, text) => D.yesNoDialog(title, text, { defaultButton: 'No' }),
+    // ...and what it did, said until the history moves past it.
+    sayStep: text => sayStep(text),
+    // What a rename moves in the TOOL: the next item's floor and
+    // sub-category, an armed count's answers (they ride the undo level).
+    followTool: (field, old, nu, scope) => followToolMoves(controller, field, old, nu, scope),
     // The tooltips' words, and the one-time hold hint.
     touchLayout: () => document.documentElement.dataset.ui === 'touch',
     listShown: () => itemsListShown(),
@@ -1783,6 +1793,28 @@ function sayToFinger(text) {
   fingerToastTimer = setTimeout(() => { t.hidden = true; }, FINGER_TOAST_MS);
 }
 const FINGER_TOAST_MS = 4000;
+
+/**
+ * A sentence about the step just taken -- 'Renamed floor level … — Undo
+ * puts it back', 'Filed 2 items under …' -- said as sayToFinger says it,
+ * and taken down the moment the history moves past that step (its Undo, a
+ * Redo, the next edit): left up, it went on naming a rename the Undo had
+ * just taken back. Nothing new is said in its place; the line goes back to
+ * the tool's own hint.
+ */
+let stepSaid = '';
+function sayStep(text) {
+  sayToFinger(text);
+  stepSaid = text || '';
+}
+app.project.addEventListener('history-changed', () => {
+  const was = stepSaid;
+  stepSaid = '';
+  if (!was) return;
+  if ($('statusText').textContent === was) setStatus(HINTS[controller.mode] || 'Ready');
+  const t = $('fingerToast');
+  if (t && !t.hidden && t.textContent === was) t.hidden = true;
+});
 
 /**
  * The shape a row's tap is for, as [page, shape], when it is not stepping
@@ -4797,6 +4829,18 @@ function showMenu(entries, at) {
   }, 0);
   document.addEventListener('keydown', onKey, true);
   return { close: () => { if (menu.dismiss === dismiss) closeMenu(); } };
+}
+
+/**
+ * A heading's Rename floor level… / Rename category… / Rename
+ * sub-category… or Set … for these N items… chosen from its menu (desktop
+ * 3.07): the Items list asks its form and writes one undo level, with what
+ * the rename moves in the tool and the list on it. (The list has already
+ * asked whether it may write, when the entry was chosen.)
+ */
+function classifyFromHeading(act, meta, rows) {
+  if (act === 'rename') void itemsPanel.renameFromHeader(meta);
+  else if (act === 'assign') void itemsPanel.assignFromHeader(meta, rows);
 }
 
 /** Close the menu on screen and stop listening for its dismiss and its

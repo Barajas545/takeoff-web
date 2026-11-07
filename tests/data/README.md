@@ -95,6 +95,37 @@ closure. `tests/zoom-floor.mjs` diffs the web against this snapshot anywhere,
 and against the script live when the desktop source is here -- which also
 fails a snapshot gone stale.
 
+## rename-truth.json
+
+The desktop app's own answers about the Items list's **headings and the
+names they carry**: what each heading's menu and tooltip offer, what a
+selection on the drawing opens, the order the forms list a job's names in
+(Round 5) -- and, under `rename` (Round 7), what renaming a floor level,
+category or sub-category writes (every place, in order, over the desktop's
+own test fixture), what Set for a blank heading files, where new pins are
+filed, what the tool and the list follow, what one Ctrl+Z / Ctrl+Y puts back,
+and every word of the forms, the merge question and the status line, for 41
+flows driven the way he drives them -- the SHEET chip on in three -- and 4
+chains of steps across Ctrl+Z and Ctrl+Y; the one look-alike merge that
+goes the other way on a file the desktop wrote with its sheets out of page
+order (the declared divergence); and the desktop's `_class_norm` and
+`_class_sort_key` over every character its Python's Unicode table assigns,
+compactly. **No project is in it**: the fixture is
+the desktop test's own (generic names), written out in
+`tests/rename-python-truth.py`, so there is nothing to scrub.
+
+Regenerate it when the desktop's rule or its wording changes:
+
+```
+python -B tests/rename-python-truth.py <path to pdf_fast_viewer.py> --write
+```
+
+That script lifts the members out of `pdf_fast_viewer.py` (and the framing
+helpers out of `framing.py` beside it) through `ast`, refusing to run unless
+the lifted set is a closure. `tests/heading-menu.mjs` and
+`tests/classification-rename.mjs` diff the web against this snapshot anywhere,
+and against the script live when the desktop source is here.
+
 ## Why a snapshot AND a live differential
 
 `tests/revisions-logic.mjs` runs both. The snapshot is the regression check —

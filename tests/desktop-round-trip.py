@@ -23,6 +23,12 @@ picture's flag, and the look it comes up in on arriving at its sheet.
 
 `delete-rev` runs Delete Revision on that file and reports what it removed.
 
+`classes` opens a file the web RENAMED floors and trades in (Round 7) and
+reports what the desktop reads off it: the job's own names, where each kind
+of new pin is filed, a door and a window placed with its own pin tools, and
+every framed item's lines after the framing engine's own merge rule runs on
+a copy (a recompute must leave the renamed lines where the web filed them).
+
 Every command prints one line `JSON: {...}` at the end, by labels and
 revision NAMES (the ids are random): the browser side compares them with its
 own reading of the same file. PTT_DESKTOP_SRC points at pdf_fast_viewer.py.
@@ -349,6 +355,48 @@ def overlays():
     return dict(sorted(out.items()))
 
 
+def classes():
+    """What a rename the WEB made reads as on the desktop (Round 7): this
+    job's own names (project_values -- what every form offers first and the
+    Report Center lists), where each kind of new pin is filed (_pin_filing,
+    off the metadata the web wrote), a door and a window placed now through
+    the desktop's own pin tools, and the framing engine's own merge rule
+    (framing.refresh_materials) run on a copy of every framed item, its
+    hand-added lines re-attached from its answers as a recompute does: the
+    lines must come back where the web filed them."""
+    F = V._framing
+    vals = {f: gl.project_values(f) for f in ("floor_level", "category", "sub_category")}
+    files = {k: list(gl._pin_filing(k)) for k in ("window", "door", "partition", "header")}
+    framed = {}
+    for _pg, lst in (gl._measurements or {}).items():
+        for m in lst or []:
+            fr = m.get("framing")
+            params = fr.get("params") if isinstance(fr, dict) else None
+            if not isinstance(params, dict) or not F.extras_of(params):
+                continue
+            cp = json.loads(json.dumps(m))
+            F.refresh_materials(cp, F.extra_lines(F.extras_of(cp["framing"]["params"]))
+                                + [F.material("2x6 stud", 10, "each")])
+            framed[m.get("name") or ""] = {
+                "saved": {a.get("name"): [a.get("category"), a.get("floor_level")]
+                          for a in m.get("associated_items") or []},
+                "recomputed": {a.get("name"): [a.get("category"), a.get("floor_level")]
+                               for a in cp["associated_items"]},
+                "extras": [[s.get("id"), s.get("category"), s.get("floor_level")]
+                           for s in F.extras_of(m["framing"]["params"])],
+            }
+    win.go_to_page(0)
+    settle()
+    gl._last_floor, gl._last_sub = "Level 9", ""
+    gl._add_door_pin((40.0, 40.0))
+    gl._add_window_pin((60.0, 40.0))
+    settle()
+    placed = [[m.get("type"), m.get("category"), m.get("floor_level")]
+              for m in (gl._measurements.get(0) or [])[-2:]]
+    return {"values": vals, "pinFiling": files, "framed": framed, "placed": placed,
+            "metaPinFiling": win.metadata.get("pin_filing")}
+
+
 def main():
     cmd, path = sys.argv[1], sys.argv[2]
     if cmd == "make":
@@ -368,6 +416,11 @@ def main():
                        gl._overlay_mode, bool(gl._overlay_invert),
                        gl._overlay_cutoff]
         out["overlayUp"] = up
+    elif cmd == "classes":
+        ANSWER["default"] = V.QMessageBox.No      # opening must ask nothing
+        load(path)
+        out = summary()
+        out["classes"] = classes()
     elif cmd == "delete-rev":
         load(path)
         rev = rev_by_name(sys.argv[3])

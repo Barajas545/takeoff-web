@@ -1065,6 +1065,9 @@ button.es-lib-manage { background: none; border: 0; cursor: pointer; font-family
   padding: 12px 18px; border-top: 1px solid #333;
 }
 .dlg-foot .spacer { margin-right: auto; }
+/* OK / Cancel / Yes / No: a finger's height in the touch layout, as tall as
+   the controls above them (0 in the standard layout: padding decides). */
+.dlg-foot .btn { min-height: var(--ctl-h); }
 /* Answers named in full (choiceDialog): one per line, each the width of the
    box, so a long one is never cut and every one is a finger's size. */
 .dlg-foot.stack { flex-direction: column; align-items: stretch; }
@@ -1074,16 +1077,30 @@ button.es-lib-manage { background: none; border: 0; cursor: pointer; font-family
 .form { display: grid; grid-template-columns: var(--form-cols); gap: 9px 12px; align-items: center; }
 .form > label { font-size: 12px; color: var(--text-dim); text-align: right; }
 .form .full { grid-column: 1 / -1; }
+/* The field's size: 12.5px, or the touch layout's 16px -- this rule outranks
+   the plain `input, select, textarea` one, and under 16px iOS zooms the whole
+   page in when the field takes focus (and never zooms back out). */
 .form input[type=text], .form input[type=number], .form select, .form textarea {
   width: 100%; background: var(--field-bg); color: var(--text);
   border: 1px solid #303030; border-radius: 5px;
-  padding: 6px 8px; font-size: 12.5px; font-family: inherit;
+  padding: 6px 8px; font-size: max(var(--field-fs), 12.5px); font-family: inherit;
 }
 .form textarea { min-height: 62px; resize: vertical; }
 .form .hint { font-size: 11px; color: var(--text-faint); grid-column: 2; margin-top: -4px; }
 .form .err { font-size: 11.5px; color: var(--err); grid-column: 1 / -1; min-height: 15px; }
 .radio-row { display: flex; gap: 14px; align-items: center; font-size: 12.5px; }
 .radio-row label { display: flex; gap: 5px; align-items: center; cursor: pointer; }
+/* A heading's Rename / Set form (askClassification): the name, the choice
+   of how far it reaches, the sentence of what will change, the notes and
+   the refusal -- one column, as the desktop's form. Each choice is a whole
+   row, a finger's height in the touch layout. */
+.cls-form { grid-template-columns: 1fr; }
+.cls-form .cls-label { font-size: 12.5px; color: var(--text); }
+.cls-opts { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.cls-opts label { display: flex; gap: 8px; align-items: center; cursor: pointer; min-height: var(--ctl-h, 0px); }
+.cls-what { font-size: 12px; color: #9fc6ee; line-height: 1.5; }
+.cls-note { font-size: 11.5px; color: #d4b06a; line-height: 1.45; }
+.cls-err { font-size: 12px; color: #ff8a8a; line-height: 1.45; }
 
 .swatches { display: flex; gap: 6px; flex-wrap: wrap; }
 .swatch {
