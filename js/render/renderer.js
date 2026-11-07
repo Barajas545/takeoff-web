@@ -90,6 +90,10 @@ export class Renderer {
     this.calloutMode = 'paper';
     this.calloutInches = CALLOUT_DEFAULT_IN;
     this.calloutFill = null;
+    // The canvas a saved overlay's lines are tinted on as they are drawn
+    // (_drawSavedOverlay): the size of the canvas on screen, kept for the
+    // next frame -- a sheet-sized copy per tint would be a second sheet.
+    this._tintScratch = null;
   }
 
   /**
@@ -123,6 +127,14 @@ export class Renderer {
     // Another version of this sheet, laid over it. Before the takeoff, because
     // the takeoff is what the comparison is for.
     if (f.overlay) this._drawOverlay(f.overlay, f.pageImage);
+    // The overlay the desktop saved for the sheet: over the real sheet, no
+    // paper of its own -- above the drawing, below the takeoff, as the
+    // desktop paints it. Never while another version is up (main.js hands
+    // none then: the desktop's paint gate). With none to draw, the
+    // canvas-sized tint scratch goes -- an iPad counts every canvas's
+    // backing store -- unless it is only the off half of a Flash.
+    if (f.savedOverlay) this._drawSavedOverlay(f.savedOverlay);
+    else if (!f.savedOverlayFlashing) this._dropTintScratch();
 
     const items = f.items || [];
     const visible = items.filter(m => (f.isVisible ? f.isVisible(m) : m.visible !== false));
@@ -257,6 +269,82 @@ export class Renderer {
     }
     ctx.restore();
     vp.applyScreenTransform(ctx);
+  }
+
+  /**
+   * The overlay the desktop SAVED for this sheet (js/core/saved-overlay.js
+   * frame()), laid over the real sheet with no paper of its own.
+   *
+   * `image` is its mask at the decode's size, drawn at `box` [x0, y0, x1, y1]
+   * in page px: a picture at its own box, a sheet or a revision page at its
+   * own pixel size from its offset. `alpha` is the fade. Lines (`tint` set)
+   * are white with the line's alpha, and the tint is applied HERE, as the
+   * desktop's GL_MODULATE applies glColor when it draws -- so a tint or a
+   * fade is never a rebuild of the mask: the mask is laid on a scratch the
+   * size of the canvas, coloured 'source-in', and that goes over the sheet
+   * at the fade. Original (`tint` null) keeps its own colours and is drawn
+   * at the fade as it is, as the desktop's white glColor draws it.
+   */
+  _drawSavedOverlay(o) {
+    const ctx = this.ctx;
+    const vp = this.viewport;
+    const [x0, y0, x1, y1] = o.box;
+    const alpha = Math.max(0, Math.min(1, o.alpha == null ? 0.5 : o.alpha));
+    if (!(alpha > 0) || !(x1 > x0) || !(y1 > y0)) return;
+    const smooth = vp.zoom < 1.5;
+    if (!o.tint) {
+      // Original colours need no tint canvas.
+      this._dropTintScratch();
+      vp.applyTransform(ctx);
+      ctx.save();
+      ctx.imageSmoothingEnabled = smooth;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(o.image, x0, y0, x1 - x0, y1 - y0);
+      ctx.restore();
+      vp.applyScreenTransform(ctx);
+      return;
+    }
+    const cw = ctx.canvas.width;
+    const ch = ctx.canvas.height;
+    let s = this._tintScratch;
+    if (!s || s.width !== cw || s.height !== ch) {
+      if (s) { s.width = 0; s.height = 0; }
+      s = typeof document !== 'undefined'
+        ? Object.assign(document.createElement('canvas'), { width: cw, height: ch })
+        : new OffscreenCanvas(cw, ch);
+      this._tintScratch = s;
+    }
+    const sx = s.getContext('2d');
+    sx.setTransform(1, 0, 0, 1, 0, 0);
+    sx.globalCompositeOperation = 'source-over';
+    sx.globalAlpha = 1;
+    sx.clearRect(0, 0, cw, ch);
+    vp.applyTransform(sx);
+    sx.imageSmoothingEnabled = smooth;
+    sx.imageSmoothingQuality = 'high';
+    sx.drawImage(o.image, x0, y0, x1 - x0, y1 - y0);
+    sx.setTransform(1, 0, 0, 1, 0, 0);
+    sx.globalCompositeOperation = 'source-in';
+    sx.fillStyle = o.tint;
+    sx.fillRect(0, 0, cw, ch);
+    sx.globalCompositeOperation = 'source-over';
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(s, 0, 0);
+    ctx.restore();
+    vp.applyScreenTransform(ctx);
+  }
+
+  /** Let the tint canvas go: zero its backing store, as the LRU closes a
+   *  sheet, rather than leave it to a collection that may come late. */
+  _dropTintScratch() {
+    const s = this._tintScratch;
+    if (!s) return;
+    s.width = 0;
+    s.height = 0;
+    this._tintScratch = null;
   }
 
   // ── item geometry ───────────────────────────────────────────────────

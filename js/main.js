@@ -77,6 +77,9 @@ import { ZoomFloor, PinchHold, fitPlace, pinchPlace, wheelInOut, pictureZoom, pi
 import { menuPlace } from './ui/hold.js';
 import { activateOnThisSheet, activateAcrossSheets, propertiesOnThisSheet, deleteHereChoice, deletedHereWords, deleteName, shapesOnScreen } from './core/counting.js';
 import { followTool as followToolMoves } from './core/classify.js';
+import { SavedOverlay, HIDDEN_NOTE, COMPARE_NOTE, overlayWords } from './core/saved-overlay.js';
+import { overlayRgba, pictureBytes, pngInfo, pngHeadInfo, pngPlain, pngRgba, pngAutoCutoff } from './core/overlay-look.js';
+import { decodeSheet, decodeReduces } from './core/page-store.js';
 
 const $ = id => document.getElementById(id);
 
@@ -132,6 +135,30 @@ const app = {
 const canvas = $('canvas');
 const viewport = new Viewport(canvas);
 const renderer = new Renderer(canvas, viewport);
+
+// The overlay the desktop saved for the sheet he is on (desktop 3.06
+// _restore_overlay_for_page): put up on arrival, taken down on every turn,
+// LOOKING ONLY -- nothing here writes a record or marks the project. The
+// rules are js/core/saved-overlay.js; the wiring is near the comparing code.
+const savedOv = new SavedOverlay({
+  record: page => (app.project.metadata.page_overlays || {})[String(page)],
+  context: page => ({
+    pageCount: app.pages.pageCount,
+    revisions: allRevisions(),
+    pictures: app.project.annotations[page] || [],
+  }),
+  metadata: () => app.project.metadata,
+  sheetUp: page => onSheetUp(page) && inLandedJob(),
+  onVersion: () => browsingOtherVersion(),
+  comparing: () => overlayActive(),
+  pixels: src => overlayPixels(src),
+  surface: (px, look, free) => overlaySurface(px, look, free),
+  revisionName: src => savedRevisionName(src),
+  strip: state => syncSavedOverlayStrip(state),
+  draw: () => requestDraw(),
+  say: (text, how, still) => sayOnArrival(text, how, still),
+  retire: () => retireOverlayWords(),
+});
 
 const controller = new ToolController({
   canvas, viewport,
@@ -388,6 +415,10 @@ function syncVersionUi({ rebuild = false } = {}) {
   // A version on screen is a look, not a place to draw — say so on the canvas
   // rather than only in the status line, which scrolls away.
   canvas.classList.toggle('on-version', on);
+  // The sheet's saved overlay follows the drawing on screen: up on its own
+  // drawing, off the screen while another version is (the desktop's paint
+  // gate).
+  settleSavedOverlay();
   // A list on one sheet follows the drawing on screen (once it has landed).
   itemsPanel.onSheetShown();
 }
@@ -529,6 +560,11 @@ function drawFrame() {
     items: temp.length ? [...real, ...temp] : real,
     annotations: onRev ? [] : (app.project.annotations[app.currentPage] || []),
     overlay: overlayFrame(),
+    // The sheet's saved overlay: null while another version is up or Compare
+    // is, and off its own sheet (js/core/saved-overlay.js frame()). While it
+    // blinks, its off frames keep the renderer's tint canvas for the next on.
+    savedOverlay: savedOv.frame(),
+    savedOverlayFlashing: savedOv.flashing(),
     // Isolation is a way of looking at the TAKEOFF — "show only these items".
     // A temporary dimension is not one of them, and letting isolation swallow
     // it meant measuring in View Only reported a length, bumped the counter,
@@ -815,6 +851,12 @@ async function goToPage(index, { version, view, chose: leftChose, from, settle: 
   // rows it had on this one (sheetView's `coming`).
   landingTicket = ticket;
   const how = viewOf(index, view);
+  // The last sheet's saved overlay comes down HERE, before anything below can
+  // wait or return: a record on the next sheet that names nothing must leave
+  // nothing up (the desktop's revision branch returns first and leaves the
+  // last sheet's comparison over this one -- reported for 3.08). A 'keep' of
+  // the sheet he is on (a save's re-read) is the same visit and keeps it.
+  savedOv.turn(index, how);
   // A re-read keeps its job: a turn made while it decodes is a turn.
   if (how === 'keep') landedJob = jobNow();
   // Kept with its drawing taken down first: the view is carried from the
@@ -921,8 +963,12 @@ async function goToPage(index, { version, view, chose: leftChose, from, settle: 
       requestDraw();
     }
   }
-  // The drawing it landed on is up (or never will be): the Items list on
-  // one sheet follows it now -- once, for both changes of the landing.
+  // The drawing it landed on is up (or never will be): the sheet's saved
+  // overlay comes up on its own drawing -- on the newest of a reissued sheet
+  // it is not drawn, and he is told where it is (js/core/saved-overlay.js).
+  if (ticket === pageTicket) savedOv.settle({ arrival: true, how });
+  // ...and the Items list on one sheet follows it now -- once, for both
+  // changes of the landing.
   if (landingTicket === ticket) {
     landingTicket = 0;
     itemsPanel.onSheetShown();
@@ -2225,6 +2271,10 @@ async function startOverlay() {
     revId = v.revId; revPage = v.revPage; set = v.rev._setIndex;
   }
   showProgress('Preparing the comparison…', 0, 1, '');
+  // Asked of the sheet he is on: a turn while it is built leaves it unbuilt,
+  // or it went up over the next sheet -- and took that sheet's saved overlay
+  // down with it. (A save's re-read of this sheet is the same visit.)
+  const askedOn = savedOv.visit;
   let inkNew = null;
   let inkOld = null;
   try {
@@ -2244,7 +2294,16 @@ async function startOverlay() {
   } finally {
     hideProgress();
   }
+  if (askedOn !== savedOv.visit || app.currentPage !== page) {
+    inkNew?.close?.();
+    inkOld?.close?.();
+    return;
+  }
   clearOverlay({ draw: false });
+  // One overlay on screen at a time: the sheet's saved one gives way, and
+  // stays down for the rest of this visit -- it does not come back when
+  // Compare ends (the next arrival on the sheet brings it back).
+  const gaveWay = savedOv.stepAside();
   overlay.revId = revId;
   overlay.revPage = revPage;
   overlay.bitmap = inkNew;
@@ -2267,7 +2326,18 @@ async function startOverlay() {
   syncVersionUi();
   requestDraw();
   setStatus('Comparing: older in blue, newest in red. Slide towards the one '
-    + 'you want to see more of — the centre shows both.');
+    + 'you want to see more of — the centre shows both.'
+    + (gaveWay ? ` ${COMPARE_NOTE}` : ''));
+  // Where there is no status line (a phone), the saved overlay's going is
+  // said in the finger's toast: decision 3's choice is said, not only made.
+  // (sayToFinger's line is the hidden one there, so nothing is lost by it.)
+  if (gaveWay && !statusLineShown()) sayToFinger(COMPARE_NOTE);
+}
+
+/** Whether the status line is drawn (a phone's layout hides it). */
+function statusLineShown() {
+  const bar = document.querySelector('.statusbar');
+  return !!bar && getComputedStyle(bar).display !== 'none';
 }
 
 /**
@@ -2350,6 +2420,354 @@ function toggleOverlayFlash() {
   }
   requestDraw();
 }
+
+/* ── the overlay the desktop SAVED for a sheet ─────────────────────────────
+ *
+ * Not the comparison above. The desktop (3.06) keeps one overlay per sheet in
+ * metadata.page_overlays -- another sheet, a revision of this one, or a
+ * picture of it, in its own tint, fade and look -- and puts it up whenever he
+ * arrives on that sheet. So does this build now, READ-ONLY: it shows what the
+ * desktop saved and writes none of it, so a save still gives the file back as
+ * it came (tests/picture-overlay-format.mjs). The rules -- which record can be
+ * shown, the visit, Hide, the paint gate, Compare -- are
+ * js/core/saved-overlay.js; the pixels are js/core/overlay-look.js, the
+ * desktop's own arithmetic. Here: decoding the source, building the mask,
+ * the strip, and the words.
+ */
+
+/** A canvas for one pass over a decode, as tintLinework makes one. */
+function passCanvas(w, h) {
+  return typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(w, h)
+    : Object.assign(document.createElement('canvas'), { width: w, height: h });
+}
+
+/**
+ * A source, ready to be read: {img, owned, bytes, head, facts, colourKey}.
+ * `img` is a decode the page store already holds or is already making (used
+ * as it is, the store's to close), or null; `bytes()` hands its PNG bytes
+ * (none for a blank sheet drawn here), `head()` the first few KB of them,
+ * and `facts` is what has been learnt of them this job (sourceFacts).
+ * Nothing is decoded here: overlaySurface decides how it is read, and closes
+ * whatever it decodes itself. A picture is read from its base64 the way the
+ * desktop reads it, and its tRNS colour key counts (_picture_pil converts it
+ * to RGBA); a sheet's does not.
+ */
+async function overlayPixels(src) {
+  if (src.kind === 'sheet') {
+    const s = (app.pages.sources || [])[src.page];
+    if (s && s.kind === 'bitmap') return { img: s.data, owned: false, bytes: null };
+    const bytes = () => app.pages.pngBytes(src.page);
+    const head = () => app.pages.pngHead(src.page);
+    const facts = sourceFacts(s && s.data);
+    const live = app.pages.peekPage(src.page);
+    if (live) return { img: live, owned: false, bytes, head, facts };
+    // A neighbour the turn's prefetch is already decoding: wait for that one.
+    const coming = app.pages.decoding?.(src.page);
+    const shared = coming ? await coming.catch(() => null) : null;
+    return { img: shared || null, owned: false, bytes, head, facts };
+  }
+  if (src.kind === 'revision') {
+    if (!app.pages.hasRevisionPage(src.set, src.revPage)) {
+      throw new Error('this file carries no image for that revision sheet');
+    }
+    const live = app.pages.peekRevisionPage(src.set, src.revPage);
+    return {
+      img: live || null, owned: false,
+      bytes: () => app.pages.revisionPngBytes(src.set, src.revPage),
+      head: () => app.pages.revisionPngHead(src.set, src.revPage),
+      facts: sourceFacts(((app.pages.revisionSlices || [])[src.set] || [])[src.revPage]),
+    };
+  }
+  const raw = pictureBytes(src.entity.img_b64);
+  if (!raw || !raw.length) throw new Error('the picture has no pixels that can be read');
+  return { img: null, owned: false, bytes: () => raw, colourKey: true };
+}
+
+/**
+ * What the overlay has learnt of a source sheet's PNG -- whether a browser
+ * reads it exactly (`plain`), and Auto's cut-off off its full-size rows --
+ * kept with the page store's own object for that sheet's bytes, so it is
+ * asked once a job, not on every arrival: on a job read over the network
+ * each asking is a read of the sheet. Every way the sheet is read (held by
+ * the store or not) then gives the same answer. A fresh object, kept
+ * nowhere, for anything that is not such an object.
+ */
+function sourceFacts(key) {
+  if (!key || typeof key !== 'object') return {};
+  const memo = sourceFacts.memo || (sourceFacts.memo = new WeakMap());
+  let facts = memo.get(key);
+  if (!facts) {
+    facts = {};
+    memo.set(key, facts);
+  }
+  return facts;
+}
+
+/** A read the overlay can do without: what it gives, or undefined when it
+ *  fails (offline) -- never thrown. */
+function readIfYouCan(read) {
+  return read ? Promise.resolve().then(read).catch(() => undefined) : Promise.resolve(null);
+}
+
+/** A decode the page store holds, read at once: its pixels, or null when
+ *  the store has closed it already (a closed bitmap is 0 x 0, and drawing
+ *  one throws 'The image source is detached'). */
+function readHeld(img) {
+  const bmp = img && (img.bitmap || img);
+  if (!bmp || !(bmp.width > 0) || !(bmp.height > 0)) return null;
+  try {
+    return readDecode(img);
+  } catch {
+    return null;
+  }
+}
+
+/** A decode's pixels through a 2D canvas: exact for a plain PNG's (pngPlain). */
+function readDecode(img) {
+  const bmp = img.bitmap || img;
+  const w = bmp.width;
+  const h = bmp.height;
+  const cv = passCanvas(w, h);
+  try {
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0);
+    return ctx.getImageData(0, 0, w, h);
+  } finally {
+    // The drawn copy is done with: let it go before the mask is made.
+    cv.width = 0;
+    cv.height = 0;
+  }
+}
+
+/**
+ * The mask, built once per arrival: the desktop's _overlay_rgba over the
+ * source's pixels (in place, so a 28-megapixel sheet costs no second
+ * buffer), held as one bitmap outside the page store. Lines are white with
+ * the line's alpha, so the renderer tints them when it draws; Original keeps
+ * its own colours. Reports the source's NATIVE size: a ReducedPage's, on an
+ * iPad.
+ *
+ * The pixels are what PIL reads (js/core/overlay-look.js pngRgba) whenever a
+ * browser's decode could differ -- a semi-transparent picture, a colour
+ * profile, 16 bits, a colour key -- and the browser's own decode otherwise,
+ * where it is exact. A decode the browser must make smaller (an iPad over
+ * its canvas cap) is read as it is, but Auto's cut-off is read off the
+ * full-size rows (pngAutoCutoff), as the desktop reads it. Every decode made
+ * here is closed the moment its pixels are read, and `free` lets the
+ * caller's go then too, so an iPad holds the pixels and the mask -- never
+ * the decode as well.
+ *
+ * A decode the page store HOLDS is read first, before anything here waits:
+ * the store closes what it evicts, and a neighbour's prefetch landing while
+ * this waited on the network closed it ('The image source is detached').
+ * Read, it is in hand, and the PNG's own bytes only refine it -- whether it
+ * is plain, asked of its head (a few KB), not of the whole sheet; and on a
+ * reduced one, Auto off the full-size rows -- each learnt once a job
+ * (px.facts). A refining read that fails (offline) leaves the held read as
+ * it is: never an overlay lost for want of bytes it did not need.
+ */
+async function overlaySurface(px, look, free = () => {}) {
+  const auto = look.cutoff === null || look.cutoff === undefined;
+  const key = !!px.colourKey;
+  const facts = px.facts || {};
+  const autoKey = `auto${key ? ' keyed' : ''}${look.invert ? ' inverted' : ''}`;
+  let freed = false;
+  const letGo = () => {
+    if (freed) return;
+    freed = true;
+    free();
+  };
+  let img = px.img || null;
+  // Now, with no wait before it. Closed already: read as if it were not held.
+  let pixels = img ? readHeld(img) : null;
+  if (!pixels) img = null;
+  let reduced = !!(img && img.reduced);
+  let width = img ? img.width || pixels.width : 0;
+  let height = img ? img.height || pixels.height : 0;
+  let raw = null;
+  let info = null;
+  let mine = null;
+  try {
+    if (pixels) {
+      letGo();
+      if (!reduced && facts.plain === undefined) {
+        const head = await readIfYouCan(px.head);
+        const h = head ? pngHeadInfo(head) : null;
+        if (h) facts.plain = pngPlain(h);
+        // A head that cannot tell (or none): its bytes do. One that could
+        // not be READ: neither can they, and the held read stands.
+        else if (head !== undefined) raw = await readIfYouCan(px.bytes);
+      }
+      if (!reduced && facts.plain === false && !raw) raw = await readIfYouCan(px.bytes);
+    } else {
+      // Nothing in hand: the bytes are the source, and a failed read is said.
+      raw = px.bytes ? await px.bytes() : null;
+      if (!raw) throw new Error('there are no pixels to read');
+    }
+    if (raw) {
+      info = pngInfo(raw);
+      if (info) facts.plain = pngPlain(info);
+    }
+    if (!pixels && info) reduced = await decodeReduces(info.width, info.height);
+    if (info && !reduced && !pngPlain(info)) {
+      const exact = await pngRgba(raw, { colourKey: key, info });
+      if (exact) {
+        pixels = exact;
+        width = exact.width;
+        height = exact.height;
+      }
+    }
+    if (!pixels) {
+      mine = await decodeSheet(raw, { colorSpaceConversion: 'none' });
+      pixels = readDecode(mine);
+      reduced = reduced || !!mine.reduced;
+      width = mine.width || pixels.width;
+      height = mine.height || pixels.height;
+      mine.close?.();
+      mine = null;
+    }
+  } finally {
+    mine?.close?.();
+    letGo();
+  }
+  let cutoff = look.cutoff;
+  if (auto && reduced) {
+    if (typeof facts[autoKey] === 'number') {
+      cutoff = facts[autoKey];
+    } else {
+      // The full-size rows, when they can be had; when not, Auto is read
+      // off the reduced pixels in hand.
+      if (!raw) {
+        raw = await readIfYouCan(px.bytes);
+        info = raw ? pngInfo(raw) : null;
+      }
+      const full = info ? await pngAutoCutoff(raw, { colourKey: key, invert: look.invert, info }) : null;
+      if (full !== null) cutoff = facts[autoKey] = full;
+    }
+  }
+  const used = overlayRgba(pixels, look.mode, look.invert, cutoff, pixels.data).cutoff;
+  const image = await createImageBitmap(pixels instanceof ImageData
+    ? pixels : new ImageData(pixels.data, pixels.width, pixels.height));
+  return {
+    image, cutoff: used, width, height,
+    close() { image?.close?.(); },
+  };
+}
+
+/** What the strip calls a revision source: the version bar's name for it,
+ *  the sheet number printed on that page, and its date (the desktop's
+ *  Overlay list, 'Reissue 2  X1.2  (11/05/2026)'). */
+function savedRevisionName(src) {
+  const rl = revPageLabel(src.rev, src.revPage);
+  const date = String((src.rev && src.rev.date) || '').trim() || 'no date';
+  const head = revisionLabel(src.revId, allRevisions());
+  return `${rl ? `${head}  ${rl}` : head}  (${date})`;
+}
+
+/** The strip: what is up, its tint, the fade, Flash and Hide -- or nothing. */
+function syncSavedOverlayStrip(s) {
+  const bar = $('savedOvBar');
+  if (!bar) return;
+  bar.hidden = !s;
+  if (!s) {
+    delete bar.dataset.kind;
+    delete bar.dataset.cutoff;
+    return;
+  }
+  // Written only when it changes: the strip is a live region, and every
+  // version step settles it again.
+  const what = $('sovWhat');
+  if (what.textContent !== s.label) { what.textContent = s.label; what.title = s.label; }
+  const fade = `${s.percent}%`;
+  if ($('sovFade').textContent !== fade) $('sovFade').textContent = fade;
+  const sw = $('sovSwatch');
+  sw.hidden = !s.color;
+  if (s.color) sw.style.background = s.color;
+  const fl = $('sovFlash');
+  fl.classList.toggle('on', !!s.flashing);
+  fl.setAttribute('aria-pressed', s.flashing ? 'true' : 'false');
+  bar.dataset.kind = s.kind;
+  bar.dataset.cutoff = String(s.cutoff);
+}
+
+/**
+ * A sentence the arrival owes him: where the line is drawn, immediately on a
+ * turn and, on a job's first sheet, once the opening's own lines are said
+ * (sayWhenQuiet); where it is not (a phone), in the finger's toast.
+ *
+ * A job's first sheet lands INSIDE the opening (loadProjectFile's goToPage),
+ * before it says 'Opened ...': so the sentence waits while the opening is
+ * still under way (its progress card is up), then for that line to go quiet
+ * -- said at once, the opening's own line wiped it a millisecond later.
+ * `still()` (js/core/saved-overlay.js stillTrue) is asked at every look: a
+ * sentence queued on one visit is never said on another -- a turn, or
+ * another job opening on the same sheet number -- nor the arrival's note
+ * once he is on the sheet's own drawing, where the overlay is to be seen.
+ */
+function sayOnArrival(text, how, still = () => true) {
+  const bar = document.querySelector('.statusbar');
+  const lineShown = !!bar && getComputedStyle(bar).display !== 'none';
+  if (how === 'open' && lineShown) {
+    sayWhenQuiet(text, { still: () => still() && inLandedJob(), wait: openingUnderWay });
+    return;
+  }
+  sayToFinger(text);
+}
+
+/** A job is being opened: its progress card is up until it has said so. */
+function openingUnderWay() {
+  const p = $('progress');
+  return !!p && !p.hidden;
+}
+
+/** A turn to another sheet: a sentence about the last sheet's saved overlay
+ *  ('this sheet') comes off the status line and the finger's toast, as the
+ *  desktop's arrival note does (_retire_kept_note). Nothing else is touched. */
+function retireOverlayWords() {
+  if (overlayWords($('statusText').textContent)) setStatus(HINTS[controller.mode] || 'Ready');
+  const t = $('fingerToast');
+  if (t && !t.hidden && overlayWords(t.textContent)) t.hidden = true;
+}
+
+/** The drawing on screen changed (syncVersionUi): the saved overlay follows,
+ *  but not while a landing is still deciding its drawing -- goToPage settles
+ *  it once at the end. */
+function settleSavedOverlay() {
+  if (landingTicket !== 0 && landingTicket === pageTicket) return;
+  savedOv.settle();
+}
+
+/** Hide (and Escape): down for this visit. Writes nothing. */
+function hideSavedOverlay() {
+  if (!savedOv.hide()) return false;
+  sayToFinger(HIDDEN_NOTE);
+  return true;
+}
+
+function flashSavedOverlay() {
+  savedOv.flash();
+}
+
+// The strip's two buttons are not menu actions (no data-act): they act on
+// the overlay and hand the keyboard back to the sheet, as a mode button does.
+$('sovHide')?.addEventListener('click', () => {
+  hideSavedOverlay();
+  canvas.focus({ preventScroll: true });
+});
+$('sovFlash')?.addEventListener('click', () => {
+  flashSavedOverlay();
+  canvas.focus({ preventScroll: true });
+});
+// Another job, or none: whatever was up was the last job's.
+app.project.addEventListener('reset', () => savedOv.takeDown());
+// ...but a draft restored over this job (offerDraftRestore) is the same sheets
+// and the same visit: once the load is through, the sheet he is on puts its
+// overlay back. A job opened from a file has a new page store by then, and
+// its own first sheet's landing does that.
+app.project.addEventListener('loaded', () => queueMicrotask(() => {
+  if (inLandedJob()) settleSavedOverlay();
+}));
 
 /**
  * The two-colour slip-sheet diff.
@@ -5668,6 +6086,9 @@ document.addEventListener('keydown', ev => {
     // Escape walks back out of comparing, one layer at a time: the overlay
     // first, then the version, then the panel.
     if (overlayActive()) { ev.preventDefault(); clearOverlay(); return; }
+    // The sheet's saved overlay next: hidden for this visit. A trace in
+    // progress owns Escape first, as below.
+    if (savedOv.shown() && !controller.chainLive) { ev.preventDefault(); hideSavedOverlay(); return; }
     // A trace in progress owns Escape. This branch used to be reachable only
     // when a revision had been deliberately raised; it is now true on the
     // original of every reissued sheet, so Escape on a half-placed area threw
@@ -5849,11 +6270,15 @@ function setStatus(text) {
  * `still()` is asked at every look: once the sentence is no longer true
  * where it would be said (the layout went standard, the drawer shut) it is
  * dropped unsaid, and `dropped()` tells the asker, so it can ask again.
+ * While `wait()` is true (a job's opening, which has its own line still to
+ * say) nothing is said and no look is counted -- for five minutes at most.
  */
-function sayWhenQuiet(text, { still = () => true, dropped = () => {} } = {}) {
+function sayWhenQuiet(text, { still = () => true, dropped = () => {}, wait = () => false } = {}) {
   let tries = 0;
+  let waits = 0;
   const attempt = () => {
     if (!still()) { dropped(); return; }
+    if (wait() && ++waits <= 300) { setTimeout(attempt, 1000); return; }
     const now = $('statusText').textContent || '';
     const quiet = !now || now === 'Ready' || now === (HINTS[controller.mode] || 'Ready');
     if (quiet || ++tries > 12) setStatus(text);

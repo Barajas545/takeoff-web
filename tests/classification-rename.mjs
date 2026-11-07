@@ -1412,7 +1412,8 @@ log('\n-- 11. the wiring --');
     eq('...and once taken down, it is forgotten', set.length, 1);
   }
   ok('main.js: the new import is a line of its own after the import list',
-    /\nimport \{ activateOnThisSheet[^\n]*\} from '\.\/core\/counting\.js';\nimport \{ followTool as followToolMoves \} from '\.\/core\/classify\.js';\n\nconst \$ = /.test(mainText));
+    // (later rounds' imports follow it, each a line of its own)
+    /\nimport \{ activateOnThisSheet[^\n]*\} from '\.\/core\/counting\.js';\nimport \{ followTool as followToolMoves \} from '\.\/core\/classify\.js';\n(import [^\n]*;\n)*\nconst \$ = /.test(mainText));
   const ctlText = await readFile(new URL('../js/tools/controller.js', import.meta.url), 'utf-8');
   ok('controller.js: a window or door pin is filed where the job says (pinFiling), never a fixed trade',
     /category: pinFiling\(this\.project\.metadata, kind\)\[0\],/.test(ctlText) && !/CATEGORY_DEFAULT_OPENINGS/.test(ctlText));

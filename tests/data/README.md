@@ -126,6 +126,57 @@ the lifted set is a closure. `tests/heading-menu.mjs` and
 `tests/classification-rename.mjs` diff the web against this snapshot anywhere,
 and against the script live when the desktop source is here.
 
+## overlay-truth.json
+
+The desktop app's own answers about **the overlay it saved for a sheet**
+(Round 8): `_overlay_rgba`'s pixels and the cut-off it chose (Auto among
+them) for small seeded images -- grey ramps, a transparent cut-out, a
+grey-paper photo, saturated colours, L / LA / palette pictures -- across mode
+x invert x cutoff; what `_apply_overlay_look` and `set_overlay_look` make of
+a record's look (3.05 records, pictures, bad cut-offs); and what
+`_restore_overlay_for_page` puts up on arrival, run whole on stand-ins over a
+job of sheets of different sizes, a revision set and pictures -- the source,
+`overlay_rect`, the tint, the fade, the look, the texture, the fader's label,
+and for every record a file can hold that names nothing, whether the last
+sheet's overlay was taken down (its revision branch leaves it up: the 3.08
+residual). Plus page-pixel rects for a 5400x3600 sheet over a 2592x1728 one,
+and `_cad_image_rect`, `_pts_pair`, `overlay_picture`, the sheet and picture
+names and base64 reads. And `decode`: small PNGs of every shape a PIL read
+and a browser read can disagree on -- semi-transparent RGBA, grey with alpha,
+palettes with an alpha table or a clear index, colour keys, a picture tagged
+Display P3 or Adobe RGB (profiles built in the script), a gamma chunk, 1-, 2-,
+4- and 16-bit -- each as a sheet (`Image.open`) and as a picture (the lifted
+`_picture_pil`), with the sha1 of every mask `_overlay_rgba` makes of it and
+the cut-off it chose. **No project is in it**: every image is seeded and
+written out in `tests/overlay-python-truth.py`, so there is nothing to scrub.
+
+Declared, and pinned by `tests/overlay-look.mjs`: an `overlay_page` or
+`rev_page` written as a JSON float (`3.0`, which no desktop build writes)
+names nothing on the desktop, but JavaScript reads it as `3`, so the web shows
+that sheet; a picture's colour key on a 16-bit grey PNG, an interlaced PNG and
+a decode an iPad must reduce are read through the browser's decode, not as PIL
+reads them (for the reduced one, Auto's cut-off is still read off the
+full-size rows). A sheet the page store already holds is read at once, before
+any wait, and its PNG's bytes only refine that read (whether it is plain, from
+its head; Auto off a reduced one's full-size rows), each learnt once a job: so
+when those bytes cannot be read (a job over the network, offline) the held read
+stands -- for a sheet that is not plain, the browser's colour-managed read, and
+on a reduced one, Auto off the reduced pixels (`tests/overlay-browser.mjs`
+sections 3 and 4).
+
+Regenerate it when the desktop's overlay look or restore rule changes:
+
+```
+python -B tests/overlay-python-truth.py <path to pdf_fast_viewer.py> --write
+```
+
+That script lifts the module functions, GLPageWidget's and PDFCacheViewer's
+overlay methods out of `pdf_fast_viewer.py` through `ast` (and the fade
+label's own expression out of `_restore_overlay_for_page`), refusing to run
+unless the lifted set is a closure. `tests/overlay-look.mjs` diffs the web
+against this snapshot anywhere, and against the script live when the desktop
+source is here.
+
 ## Why a snapshot AND a live differential
 
 `tests/revisions-logic.mjs` runs both. The snapshot is the regression check —

@@ -325,6 +325,10 @@ function rig({ canvas: [w, h], pages, settings: s0 = {}, revs = null, newest = t
       { revId: '~flip', revPage: page, rev: { _setIndex: -1 }, label: 'Flip', date: '' }],
     newestOf: i => (newest === false ? '' : (versOf.get(i) || []).at(-1)?.revId || ''),
     syncVersionUi() {}, clearOverlay() {}, thumbs: { setCurrent() {} }, syncPageOf() {},
+    // (Round 8: a turn takes the last sheet's saved overlay down and the
+    // landing settles this one's -- tests/overlay-look.mjs holds that; a
+    // saved overlay moves no view)
+    savedOv: { turn() {}, settle() {} },
     // (Round 6: the Items list on one sheet waits for a landing and follows
     // it -- tests/revision-counting.mjs holds that; here the list is off, and
     // a row's tap is the jump: no stepping on one sheet, the item itself)

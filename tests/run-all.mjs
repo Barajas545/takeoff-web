@@ -42,6 +42,8 @@ const PORTABLE = [
   'heading-menu',       // a finger's hold and the heading menu == the desktop's; forms list the job's names first
   'classification-rename', // rename a heading / set the blank ones == the desktop's plan, writes, follows and undo
   'picture-overlay-format', // a save keeps the 3.06 overlay; undo keeps one copy of its picture
+  'overlay-look',       // the saved overlay on arrival == the desktop's look and restore rule; never the wrong sheet; writes nothing
+  'overlay-browser',    // ...its mask as headless Chrome builds it == the desktop's, however the source is read (skips without Chrome)
   'plans-folder',       // the Plans Archive: projects, plan files, save guard, made-up folders
   'device-plans',       // plans kept on this device: keep, list, remove, the portal's copies after the move
   'plans-link',         // a #plans link where no folder opens: that job's plans here, the link to copy

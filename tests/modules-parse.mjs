@@ -88,6 +88,8 @@ const IMPORTABLE = [
   'core/revisions.js',
   'core/scratch.js',
   'core/classify.js',
+  // The saved overlay's look and its rules (the strip and the mask are main.js's).
+  'core/overlay-look.js', 'core/saved-overlay.js',
   'render/viewport.js', 'render/theme.js', 'render/markers.js', 'render/callouts.js',
   'render/zoom-floor.js',
   // The renderer and its two label modules touch no DOM at module scope —
