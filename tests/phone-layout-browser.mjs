@@ -29,7 +29,7 @@
 //      lay over the View menu's Bigger Markers, on smaller phones over other
 //      entries -- and a menu shut within the toast's time shows it again,
 //      where it was. Every way a menu opens and shuts: its title, a second
-//      title, Escape (which leaves it open), a tap on the sheet outside it,
+//      title, Escape (which shuts it), a tap on the sheet outside it,
 //      an entry (where a finger can reach one: the menu fix).
 //   B3. ...and the item menu (#ctxMenu), opened while the toast is up by a
 //      finger's hold on the shape in Edit Mode or on its row in the Items
@@ -356,8 +356,8 @@ async function layout(L) {
    * having stood up over the strip; on the smaller ones others wherever it
    * stood. While a menu is open the toast is not drawn; a menu shut within
    * its time shows it again, where it was. Every way a menu opens and shuts,
-   * by real taps and keys: its title, a second title, Escape (which leaves
-   * it open), a tap outside it, an entry.
+   * by real taps and keys: its title, a second title, Escape (which shuts
+   * it), a tap outside it, an entry.
    */
   const menuOverToast = async () => {
     const ways = [];
@@ -434,8 +434,8 @@ async function layout(L) {
       await tapTitle('view');
       await check('View shut by its title', t0);
     }
-    // Escape: it leaves the menu open (it walks back out of the saved
-    // overlay first: the strip goes), then the title shuts it
+    // Escape shuts the menu and goes no further: the strip stays up. A menu
+    // still open after it (a main.js from before that) is shut by its title
     t0 = await sayStep();
     await tapTitle('view');
     await check('View opened once more', t0);

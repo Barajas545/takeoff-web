@@ -5474,6 +5474,10 @@ function closeOpenMenus() {
  *    drawers (css .chrome.menu-up: both are z-index 60 and the drawers come
  *    later in the page), so a menu over an open drawer is all there and the
  *    drawer stays as it was -- View › Sheets Panel still shuts it.
+ * And at every width, Escape shuts an open menu, as it does a desktop menu,
+ * and goes no further: it is the menu's, not the sheet's. It used to pass
+ * the menu by -- the saved overlay's strip went, or a trace in progress lost
+ * its points, behind a menu still open.
  */
 function wireMenuPlacement() {
   const follow = () => placeOpenMenu();
@@ -5494,6 +5498,14 @@ function wireMenuPlacement() {
   new MutationObserver(() => {
     $('chrome').classList.toggle('menu-up', !!$('menus').querySelector('.menu.open'));
   }).observe($('menus'), { subtree: true, attributes: true, attributeFilter: ['class'] });
+  // Capture phase, ahead of the app's own keys (as the right-click menu's).
+  // A dialog on screen keeps its own Escape, as it does in the app's keys.
+  document.addEventListener('keydown', ev => {
+    if (ev.key !== 'Escape' || D.dialogsOpen() || !$('menus').querySelector('.menu.open')) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    closeOpenMenus();
+  }, true);
 }
 
 function wireMenus() {

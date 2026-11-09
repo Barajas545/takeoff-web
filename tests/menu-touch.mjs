@@ -22,7 +22,11 @@
 //     title (or as near as the screen allows); at 1024 px and wider it is
 //     placed as it always was (no placing by hand, .menu position: relative);
 //  3. File › Save tapped for real says what a Save with nothing open says
-//     ('Nothing to save yet.'), and shuts the menu;
+//     ('Nothing to save yet.'), and shuts the menu; Escape (an iPad's
+//     keyboard, a desktop's) shuts an open menu and goes no further -- the
+//     app's own keys (the saved overlay, a trace, the versions) never see it
+//     -- and with no menu open Escape is the app's as before; a dialog over
+//     an open menu keeps its own Escape (one layer at a time);
 //  4. below 1024 px:
 //     - a scrolled menu keeps its place when the bar scrolls sideways;
 //     - with the foot bar's Items drawer open, a menu whose title is clear of
@@ -222,6 +226,12 @@ try {
     await metrics(S.w, S.h);
     await call('Emulation.setTouchEmulationEnabled', S.touch ? { enabled: true, maxTouchPoints: 5 } : { enabled: false });
     if (S.ua) await call('Emulation.setUserAgentOverride', { userAgent: S.ua, platform: S.w < 700 || S.h < 500 ? 'iPhone' : 'iPad' });
+    // The Escapes the app's own keys are given (3b): a listener put on the
+    // document before any script of the page runs, so it is the first of its
+    // bubble phase -- ahead of main.js's keys, whatever a later one stops.
+    await call('Page.addScriptToEvaluateOnNewDocument', {
+      source: `window.__escSeen = 0;
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') window.__escSeen += 1; });` });
     if (S.pinned) {
       await call('Page.addScriptToEvaluateOnNewDocument', {
         source: `try { localStorage.setItem('ptt.settings.v1', JSON.stringify({ chrome_pinned: true })); } catch {}` });
@@ -328,6 +338,51 @@ try {
     const said = await evaluate(`document.getElementById('statusText').textContent`);
     ok(`${tag}: a tap on File › Save is a Save`, said === 'Nothing to save yet.', said);
     ok(`${tag}: and closes the menu`, !(await anyOpen()));
+
+    // 3b. Escape: the menu's while one is open. The page's first listener
+    // (above) counts the Escapes that reached the app's keys.
+    ok(`${tag}: the Escape counter is in place, ahead of the app's keys`, (await evaluate('typeof window.__escSeen')) === 'number');
+    await evaluate('window.__escSeen = 0');
+    const escape = async () => {
+      const k = { key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 };
+      await call('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...k });
+      await call('Input.dispatchKeyEvent', { type: 'keyUp', ...k });
+      await sleep(150);
+    };
+    // With a mouse the Save left the pointer over the sheet, and the toolbars
+    // go 420 ms after it leaves them: let them go, then reach the top again.
+    if (!S.touch) await sleep(900);
+    await pullChrome();
+    await tapTitle('view');
+    ok(`${tag}: View is open before Escape`, await isOpen('view'));
+    await escape();
+    ok(`${tag}: Escape shuts the open menu`, !(await anyOpen()));
+    ok(`${tag}: and goes no further -- the app's own keys never see it`, (await evaluate('window.__escSeen')) === 0,
+      await evaluate('window.__escSeen'));
+    await escape();
+    ok(`${tag}: with no menu open, Escape is the app's as before`, (await evaluate('window.__escSeen')) === 1,
+      await evaluate('window.__escSeen'));
+    // A dialog over a menu still open (a shortcut pressed with a menu open):
+    // the first Escape is the dialog's, the next the menu's.
+    const layers = () => evaluate(`({ dialog: document.querySelectorAll('.modal-layer').length,
+      menu: !!document.querySelector('#menus .menu.open') })`);
+    await evaluate(`(() => { document.querySelector('#menus button[data-act=shortcuts]').click(); return true; })()`);
+    // With a mouse the dialog's layer comes up under the pointer: the toolbars
+    // hear it leave them and go 420 ms later, shutting an open menu with them.
+    // That is over before the menu is put up under the dialog.
+    await sleep(S.touch ? 200 : 900);
+    await evaluate(`(() => { document.querySelector('.menu[data-menu=view]').classList.add('open'); return true; })()`);
+    await sleep(100);
+    const l0 = await layers();
+    ok(`${tag}: a dialog is up over an open menu`, l0.dialog === 1 && l0.menu, l0);
+    await escape();
+    const l1 = await layers();
+    ok(`${tag}: the first Escape is the dialog's -- the menu stays`, l1.dialog === 0 && l1.menu, l1);
+    await escape();
+    const l2 = await layers();
+    ok(`${tag}: the next Escape is the menu's`, l2.dialog === 0 && !l2.menu, l2);
+    ok(`${tag}: and neither reached the app's own keys`, (await evaluate('window.__escSeen')) === 1,
+      await evaluate('window.__escSeen'));
 
     if (S.touch && narrow) {
       // 4a. a scrolled menu keeps its place when the bar scrolls sideways
@@ -467,13 +522,15 @@ try {
   const css = await readFile(path.join(ROOT, 'css/app.css'), 'utf8');
   ok('main.js: wireMenus places the menu it opens, and the boot wires the placing',
     /menu\.classList\.add\('open'\);\s*placeOpenMenu\(true\);/.test(src) && /\nwireMenus\(\);\nwireMenuPlacement\(\);\n/.test(src));
+  ok('main.js: Escape is taken in the capture phase while a menu of the bar is open, and shuts it',
+    /document\.addEventListener\('keydown', ev => \{\s*if \(ev\.key !== 'Escape' \|\| D\.dialogsOpen\(\) \|\| !\$\('menus'\)\.querySelector\('\.menu\.open'\)\) return;\s*ev\.preventDefault\(\);\s*ev\.stopPropagation\(\);\s*closeOpenMenus\(\);\s*\}, true\);/.test(src));
   const narrowBlock = css.slice(css.indexOf('@media (max-width: 1023px)')).slice(0, 3000);
   ok('app.css: below 1024 px the open menu does not hang from its title\'s box, and the toolbars stand above the drawers while it is open',
     /\.menu \{ position: static; \}/.test(narrowBlock)
     && /\.menu-pop \{[^}]*left: var\(--menu-x, 0px\); top: var\(--menu-y, 100%\);[^}]*overflow-y: auto;/.test(narrowBlock)
     && /\.chrome\.menu-up \{ z-index: 65; \}/.test(narrowBlock));
 
-  log(`\n${fails ? `${fails} of ${checks} checks FAILED` : `All ${checks} checks pass`} — every menu entry can be tapped at a phone's, a tablet's and a desktop's width, and File › Save by finger is a Save`);
+  log(`\n${fails ? `${fails} of ${checks} checks FAILED` : `All ${checks} checks pass`} — every menu entry can be tapped at a phone's, a tablet's and a desktop's width, File › Save by finger is a Save, and Escape is an open menu's`);
   await finish(fails ? 1 : 0);
 } catch (err) {
   console.log('FAIL', err && err.stack ? err.stack : err);
