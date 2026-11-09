@@ -230,3 +230,45 @@ single expressions found by their own text -- refusing to run unless the
 lifted set is a closure. `tests/rounding-parity.mjs` holds the web's helpers
 and producers to this snapshot anywhere, and to the script live when the
 desktop source is here.
+
+## py-json-truth.json
+
+Python's own **json.dumps and json.loads** on the words JSON has no room
+for -- `Infinity`, `-Infinity`, `NaN`. The desktop saves its metadata with
+`json.dumps(self._build_save_metadata())` and reads it with `json.loads`, no
+keyword on either (checked BY TEXT, through `ast`, and recorded under
+`calls`), so allow_nan is on: a vertical pitch line's rise, float("inf")
+from its own `_pitch_from_points` (lifted out of `pdf_fast_viewer.py` with
+`_pitch_label` and closure-checked, so the pitch item in the cases is the
+desktop's own), is saved as the bare word Infinity. Each case holds the
+desktop's text of a value (`desktop`), the text this app must write of it
+byte for byte (`web`: the compact form, as JavaScript holds the value), and
+what json.loads makes of each (`loads`, `web_loads`, as tagged trees in
+which a non-finite number is "inf", "-inf" or "nan"); `texts` are Python's
+verdicts on the words where it refuses them (`{NaN: 1}`, `1Infinity`,
+`-NaN`, and a word as a key even in an object a later key throws away) and
+where it still takes them (`[ NaN ]`, `1e999`, and a NaN under a key written
+again later in the same object: `{"a": NaN, "a": 1}` is `{'a': 1}`). One
+case is a dict json.dumps writes with one key twice -- the int 0 and the
+str "0" -- a NaN under the first. `canvas` holds the words the desktop's
+canvas draws for six of its own pitch lines (a vertical one; two clicks on
+one point, rise Infinity and angle 0, which it draws 'vertical   0°'; the
+same with a note; a run under its 1e-9; a sloped and a level one), each
+beside the item as json.dumps writes it, from the pitch branch of
+`GLPageWidget._gl_draw_measurement_label` lifted by text (`canvas_lifted`
+names the method and the six assignments run; closure-checked: they read
+only `m` and `_pitch_label`). **No project is in
+it**: every value is written out in `tests/py-json-python-truth.py`, sheet
+labels X1.0 and X2.0.
+
+Regenerate it when the desktop's save or load call, or its pitch label,
+changes:
+
+```
+python -B tests/py-json-python-truth.py <path to pdf_fast_viewer.py> --write
+```
+
+`tests/py-json.mjs` holds `js/core/py-json.js` to it anywhere, and live when
+the desktop source is here: Python then reads back every text this app
+writes, and the web's save of a desktop job; and the desktop's lifted canvas
+words draw this app's save of an edited zero-length line as this app does.

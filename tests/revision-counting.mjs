@@ -71,6 +71,7 @@ import { Project, resyncGroups } from '../js/core/project.js';
 import { ToolController } from '../js/tools/controller.js';
 import { choiceDialog } from '../js/ui/dialogs.js';
 import { collectItems, collectRows } from '../js/ui/reports.js';
+import { parsePyJson, stringifyPyJson } from '../js/core/py-json.js';
 import {
   LIBRARY, DESKTOP_SRC, DATA, haveLibrary, haveDesktopSource, walkProjects,
 } from './config.mjs';
@@ -379,10 +380,10 @@ function savedGroups(input, p, gids, tag) {
 function desktopReopens(saved, sums = [], promote = []) {
   const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'counting-python-truth.py');
   const out = execFileSync('python', [script, '--reopen'], {
-    input: JSON.stringify({ jobs: saved.map(s => s.job), sums, promote }),
+    input: stringifyPyJson({ jobs: saved.map(s => s.job), sums, promote }),
     env: { ...process.env, PTT_DESKTOP_SRC: DESKTOP_SRC },
     maxBuffer: 1 << 28, windowsHide: true, encoding: 'utf-8' });
-  return JSON.parse(out);
+  return parsePyJson(out);
 }
 
 function checkReopen(saved, label) {
@@ -2352,7 +2353,9 @@ if (!(await haveDesktopSource())) {
     try {
       const { stdout } = await run('python', [script, ...files],
         { maxBuffer: 1 << 30, windowsHide: true, env });
-      lib = JSON.parse(stdout);
+      // json.dumps of real jobs' items: a desktop vertical pitch line's rise
+      // is the bare word Infinity in it (js/core/py-json.js reads it).
+      lib = parsePyJson(stdout);
     } catch (err) {
       fails += 1;
       console.log(`FAIL the library run failed:\n${(err.stderr || err.message).slice(0, 2000)}`);

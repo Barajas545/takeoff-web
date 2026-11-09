@@ -217,10 +217,24 @@ def summary():
     groups = sorted([lab(p), m.get("name"), round(float(m.get("value") or 0), 4)]
                     for p, lst in meas.items() for m in lst or []
                     if m.get("group_id") and not m.get("group_child"))
+    # every pitch line: its value as json.dumps writes it, its label, angle
+    pitch = sorted([json.dumps(m.get("value")), m.get("label"),
+                    round(float(m.get("angle_deg") or 0), 4)]
+                   for lst in meas.values() for m in lst or []
+                   if m.get("type") == "pitch")
+    # ...and what the desktop itself says of each: its canvas words come
+    # from _pitch_label(m.get("value", 0.0)) (_gl_draw_measurement_label),
+    # its hover from _scale_hover_qty -- 'vertical' and nothing for a
+    # vertical line holding inf, '0:12' for one holding 0
+    pitch_says = sorted([V._pitch_label(m.get("value", 0.0)),
+                         gl._scale_hover_qty(m)]
+                        for lst in meas.values() for m in lst or []
+                        if m.get("type") == "pitch")
     return {"labels": labs, "origin": origin, "book": book,
             "counted": counted, "sums": sums, "estimate": estimate,
             "marks": marks, "tiles": tiles, "plans": plans,
             "newest": newest, "groups": groups, "overlays": overlays(),
+            "pitch": pitch, "pitchSays": pitch_says,
             "revisions": [win.rev_name(r.get("id")) for r in win._revisions]}
 
 
@@ -303,6 +317,19 @@ def make(out):
     gl._measurements.setdefault(a6, []).append(
         dict(wall, value=35.0, group_child=True,
              points=[[0.0, 0.0], [1750.0, 0.0]]))
+
+    # 5b. a VERTICAL pitch line, through the real Pitch tool: two clicks one
+    #     above the other. Its rise is float("inf") (_pitch_from_points), and
+    #     the save writes it as the bare word Infinity -- a file the browser's
+    #     JSON.parse refused whole.
+    win.go_to_page(a3)
+    settle()
+    gl._zoom, gl._pan_x, gl._pan_y = 1.0, 0.0, 0.0
+    gl.set_mode("pitch")
+    click((300.0, 100.0))
+    click((300.0, 260.0))
+    gl.set_mode("pan")
+    settle()
 
     # 6. a picture laid over A6.0 as the overlay to compare (3.06), by the
     #    desktop's own "Overlay to compare", in a look of his own: Original

@@ -9,6 +9,10 @@
 // largest job that is a few KB against 2.3 GB.
 import { open, stat } from 'node:fs/promises';
 import { walkProjects } from './config.mjs';
+// The metadata block is the desktop's json.dumps: a vertical pitch line's
+// rise is the bare word Infinity there, which JSON.parse refuses -- and a
+// refused block here quietly dropped the job from every harness's pick.
+import { parsePyJson } from '../js/core/py-json.js';
 
 const MAGIC = 'PDFCACHE1';
 const REVS = 'TKREVS01';
@@ -27,7 +31,7 @@ export async function probe(file) {
     if (head.toString('latin1', 0, 9) !== MAGIC) return null;
     const pageCount = head.readUInt32LE(9);
     const metaLen = head.readUInt32LE(13);
-    const meta = JSON.parse((await read(17, metaLen)).toString('utf8'));
+    const meta = parsePyJson((await read(17, metaLen)).toString('utf8'));
     const idxStart = 17 + metaLen;
     const idx = await read(idxStart, pageCount * 12);
     let mainEnd = idxStart + pageCount * 12;

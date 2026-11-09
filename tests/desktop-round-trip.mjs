@@ -5,7 +5,12 @@
 //      the middle; a second revision reissues two more and adds A7.0 and
 //      A8.0; takeoff on revisions through the real canvas (the first takeoff
 //      books its drawing, Yes to counting a reissue); callout pins and a
-//      note stamped with a revision; a wall that spans three sheets. Saved.
+//      note stamped with a revision; a wall that spans three sheets; a
+//      vertical line drawn with the Pitch tool, whose rise the save writes
+//      as the bare word Infinity (Python's json.dumps). Saved. (This app
+//      later renames that line, as the Properties dialog's OK does, and
+//      nudges it with the arrow keys: both recompute it, and it must still
+//      reach the desktop as its own Infinity, 'vertical' -- not '0:12'.)
 //   2. THIS APP opens that file and must price it exactly as the desktop
 //      does — every counted item and quantity, the Report's rows, which
 //      drawing each sheet counts from, the sheets a revision added, where
@@ -40,6 +45,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openProject, writeProject } from '../js/core/takeoff-file.js';
+import { recompute } from '../js/core/measure.js';
+import { stringifyPyJson } from '../js/core/py-json.js';
 import { Project } from '../js/core/project.js';
 import { PageStore } from '../js/core/page-store.js';
 import { ToolController } from '../js/tools/controller.js';
@@ -138,6 +145,14 @@ function webSummary(project) {
     }
   }
   groups.sort();
+  // Every pitch line: its value as Python's json.dumps writes it, its label, angle.
+  const pitch = [];
+  for (const lst of Object.values(project.measurements)) {
+    for (const m of lst || []) {
+      if (m.type === 'pitch') pitch.push([stringifyPyJson(m.value), m.label, r4(Number(m.angle_deg) || 0)]);
+    }
+  }
+  pitch.sort((a, b) => (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1));
   // Each sheet's saved overlay record, by label, as the desktop driver
   // reports it (overlays()): what it compares, its tint, fade and look, and
   // for a picture whether the picture on that sheet still carries its flag.
@@ -162,11 +177,11 @@ function webSummary(project) {
   const byLabel = Object.fromEntries(Object.entries(overlays)
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
   return { labels: labs, origin, book, counted, sums, estimate, marks, tiles, newest, groups,
-    overlays: byLabel, revisions: model.revs.map(r => model.revName(r.id)) };
+    overlays: byLabel, revisions: model.revs.map(r => model.revName(r.id)), pitch };
 }
 
 const SAME = ['labels', 'origin', 'book', 'counted', 'sums', 'estimate', 'marks', 'tiles',
-  'newest', 'groups', 'overlays', 'revisions'];
+  'newest', 'groups', 'overlays', 'revisions', 'pitch'];
 // The overlay the desktop lays over A6.0 in `make`, as it must come back.
 const A6_OVERLAY = { color: [1, 0.3, 0.3], alpha: 0.5, mode: 'original', invert: true, cutoff: 180,
   kind: 'picture', matched: false, flagged: [true] };
@@ -183,6 +198,9 @@ try {
     JSON.stringify(d1.book));
   eq('and it laid a picture over A6.0 as the overlay, flagged, in a look of its own',
     d1.overlays, { 'A6.0': A6_OVERLAY });
+  eq('and its Pitch tool drew a vertical line, saved as the bare word Infinity',
+    d1.pitch, [['Infinity', 'vertical', 90]]);
+  eq('...which the desktop says is \'vertical\', with no number on its hover', d1.pitchSays, [['vertical', '']]);
 
   // ── 2. this app opens it and prices it the same ──
   console.log('\n-- 2. this app opens it: the same job, the same price --');
@@ -241,6 +259,28 @@ try {
   const del = idx('A1.0');
   store.removePage(del);
   project.notePageRemoved(del);
+  // The desktop's vertical pitch line, renamed as the Properties dialog's
+  // OK does it (main.js: Object.assign, then recompute) and nudged by the
+  // arrow keys through the real controller: both recompute it.
+  const pitchRow = [...project.allItems()].find(([, m]) => m.type === 'pitch');
+  ok('the desktop\'s vertical pitch line is here, holding its Infinity', !!pitchRow && pitchRow[1].value === Infinity);
+  if (pitchRow) {
+    const [pk, line] = pitchRow;
+    project.transact('Edit item', () => { Object.assign(line, { name: 'Gable end' }); recompute(line); });
+    // on the drawing it was drawn on (a revision's): the arrows move what is on screen
+    page = pk;
+    c.setVersionView(String(line.rev_id || ''), line.rev_page ?? null);
+    c.select([line._uid]);
+    const x0 = line.points[0][0];
+    const took = c.handleKey({ key: 'ArrowRight', shiftKey: true, ctrlKey: false, metaKey: false, altKey: false,
+      preventDefault() {}, stopPropagation() {} });
+    ok('...renamed, and nudged 10 px by Shift+Right Arrow', took && line.points[0][0] === x0 + 10 && line.name === 'Gable end',
+      JSON.stringify([took, x0, line.points]));
+    ok('...and still the desktop\'s Infinity, vertical', line.value === Infinity && line.label === 'Gable end',
+      JSON.stringify([String(line.value), line.label]));
+    c.select([]);
+    c.setVersionView('', null);
+  }
   const w2 = webSummary(project);
   eq('every ADDED sheet kept its origin, one row up, date and all', w2.origin,
     { 'A2.5': ['ASI 1', 1, '02/10/2026'], 'A7.0': ['REV 2', 2, '03/01/2026'],
@@ -283,6 +323,10 @@ try {
   console.log('\n-- 4. the desktop reopens it --');
   const d2 = await desktop('check', savedPath);
   for (const k of SAME) eq(`reopened on the desktop: ${k}`, d2[k], w2[k]);
+  eq('the renamed, nudged pitch line reaches the desktop as its own Infinity, under its new name',
+    d2.pitch, [['Infinity', 'Gable end', 90]]);
+  eq('...and the desktop still says \'vertical\' of it, with no number on its hover (a 0 read \'0:12\')',
+    d2.pitchSays, [['vertical', '']]);
   eq('opening asked nothing (nothing to repair, nothing left out)', d2.asked, []);
   eq('the picture overlay came back on A6.0 -- record, flag and look -- moved up a row with its sheet',
     d2.overlays, { 'A6.0': A6_OVERLAY });

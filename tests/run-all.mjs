@@ -40,6 +40,7 @@ const PORTABLE = [
   'count-undo',         // Ctrl+Z keeps the count: the desktop's sections; diff + tag check need its source
   'zoom-floor',         // zooming out stops at Fit == the desktop's own methods; touch, resize, Settings, pictures
   'rounding-parity',    // every number reads as the desktop writes it (Python's rounding); no display toFixed left
+  'py-json',            // the desktop's Infinity / -Infinity / NaN read and written as Python's json does; nothing else changes
   'tile-form-browser',  // the tile form's sizes are the desktop's presets, picked by real keys (skips without Chrome)
   'menu-touch',         // every menu entry can be tapped by finger at a phone's and a tablet's width; File › Save is a Save (skips without Chrome)
   'heading-menu',       // a finger's hold and the heading menu == the desktop's; forms list the job's names first
@@ -47,6 +48,8 @@ const PORTABLE = [
   'picture-overlay-format', // a save keeps the 3.06 overlay; undo keeps one copy of its picture
   'overlay-look',       // the saved overlay on arrival == the desktop's look and restore rule; never the wrong sheet; writes nothing
   'overlay-browser',    // ...its mask as headless Chrome builds it == the desktop's, however the source is read (skips without Chrome)
+  'phone-layout-browser', // real taps, phone to desktop: Infinity opens, the toast clears the strip and an open menu, every tool bar on screen, the toolbars grown too (skips without Chrome)
+  'update-line-browser',  // two versions served in turn: "a new version is ready" only when the page is behind, behind a v28/v29 worker too (skips without Chrome)
   'plans-folder',       // the Plans Archive: projects, plan files, save guard, made-up folders
   'device-plans',       // plans kept on this device: keep, list, remove, the portal's copies after the move
   'plans-link',         // a #plans link where no folder opens: that job's plans here, the link to copy

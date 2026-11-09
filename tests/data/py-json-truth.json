@@ -1,0 +1,2434 @@
+{
+ "calls": {
+  "save": {
+   "in": "PDFCacheViewer._do_save_to_path",
+   "call": "json.dumps(self._build_save_metadata())",
+   "keywords": []
+  },
+  "load_cache_to_ram": {
+   "call": "json.loads(data[pos:pos + meta_len].decode('utf-8'))",
+   "keywords": []
+  },
+  "read_cache_header": {
+   "call": "json.loads(f.read(meta_len).decode('utf-8'))",
+   "keywords": []
+  }
+ },
+ "lifted": [
+  "_pitch_from_points",
+  "_pitch_label"
+ ],
+ "vertical": {
+  "value": "Infinity",
+  "angle": 90.0,
+  "label": "vertical"
+ },
+ "sloped": {
+  "value": "6.0",
+  "label": "6:12"
+ },
+ "canvas_lifted": {
+  "in": "GLPageWidget._gl_draw_measurement_label",
+  "assigns": [
+   "name",
+   "notes_hint",
+   "pstr",
+   "ang",
+   "body",
+   "disp"
+  ]
+ },
+ "canvas": [
+  {
+   "name": "a vertical line",
+   "item": "{\"type\": \"pitch\", \"points\": [[100.5, 40.25], [100.5, 300.75]], \"name\": \"\", \"notes\": \"\", \"color\": [0.2, 0.6, 0.9, 1.0], \"value\": Infinity, \"angle_deg\": 90.0, \"label\": \"vertical\", \"floor_level\": \"\", \"category\": \"\", \"sub_category\": \"\", \"cost_type\": \"material\", \"unit_cost\": 0.0}",
+   "disp": "vertical   90\u00b0"
+  },
+  {
+   "name": "two clicks on one point (zero length)",
+   "item": "{\"type\": \"pitch\", \"points\": [[120.0, 80.0], [120.0, 80.0]], \"name\": \"Zero\", \"notes\": \"\", \"color\": [0.2, 0.6, 0.9, 1.0], \"value\": Infinity, \"angle_deg\": 0.0, \"label\": \"vertical\", \"floor_level\": \"\", \"category\": \"\", \"sub_category\": \"\", \"cost_type\": \"material\", \"unit_cost\": 0.0}",
+   "disp": "Zero\nvertical   0\u00b0"
+  },
+  {
+   "name": "...with a note",
+   "item": "{\"type\": \"pitch\", \"points\": [[60.5, 30.5], [60.5, 30.5]], \"name\": \"\", \"notes\": \"see X2.0\", \"color\": [0.2, 0.6, 0.9, 1.0], \"value\": Infinity, \"angle_deg\": 0.0, \"label\": \"vertical\", \"floor_level\": \"\", \"category\": \"\", \"sub_category\": \"\", \"cost_type\": \"material\", \"unit_cost\": 0.0}",
+   "disp": "vertical   0\u00b0 [N]"
+  },
+  {
+   "name": "a run below the desktop's 1e-9 (still vertical)",
+   "item": "{\"type\": \"pitch\", \"points\": [[50.0, 10.0], [50.0000000001, 90.0]], \"name\": \"\", \"notes\": \"\", \"color\": [0.2, 0.6, 0.9, 1.0], \"value\": Infinity, \"angle_deg\": 89.99999999992839, \"label\": \"vertical\", \"floor_level\": \"\", \"category\": \"\", \"sub_category\": \"\", \"cost_type\": \"material\", \"unit_cost\": 0.0}",
+   "disp": "vertical   90\u00b0"
+  },
+  {
+   "name": "a sloped line",
+   "item": "{\"type\": \"pitch\", \"points\": [[10.5, 200.25], [130.5, 140.25]], \"name\": \"Roof\", \"notes\": \"\", \"color\": [0.2, 0.6, 0.9, 1.0], \"value\": 6.0, \"angle_deg\": 26.56505117707799, \"label\": \"6:12\", \"floor_level\": \"\", \"category\": \"\", \"sub_category\": \"\", \"cost_type\": \"material\", \"unit_cost\": 0.0}",
+   "disp": "Roof\n6:12   27\u00b0"
+  },
+  {
+   "name": "a level line",
+   "item": "{\"type\": \"pitch\", \"points\": [[10.5, 50.5], [90.5, 50.5]], \"name\": \"\", \"notes\": \"\", \"color\": [0.2, 0.6, 0.9, 1.0], \"value\": 0.0, \"angle_deg\": 0.0, \"label\": \"0:12\", \"floor_level\": \"\", \"category\": \"\", \"sub_category\": \"\", \"cost_type\": \"material\", \"unit_cost\": 0.0}",
+   "disp": "0:12   0\u00b0"
+  }
+ ],
+ "cases": [
+  {
+   "name": "top level: Infinity",
+   "desktop": "Infinity",
+   "web": "Infinity",
+   "loads": {
+    "n": "inf"
+   },
+   "web_loads": {
+    "n": "inf"
+   }
+  },
+  {
+   "name": "top level: -Infinity",
+   "desktop": "-Infinity",
+   "web": "-Infinity",
+   "loads": {
+    "n": "-inf"
+   },
+   "web_loads": {
+    "n": "-inf"
+   }
+  },
+  {
+   "name": "top level: NaN",
+   "desktop": "NaN",
+   "web": "NaN",
+   "loads": {
+    "n": "nan"
+   },
+   "web_loads": {
+    "n": "nan"
+   }
+  },
+  {
+   "name": "a job with a vertical pitch line (the desktop's own item)",
+   "desktop": "{\"project_name\": \"Synthetic job\", \"page_labels\": [\"X1.0\", \"X2.0\"], \"page_labels_custom\": {}, \"page_names\": {}, \"dpi\": 150, \"pixels_per_foot\": 50.5, \"annotations\": {}, \"measurements\": {\"0\": [{\"type\": \"pitch\", \"points\": [[100.5, 40.25], [100.5, 300.75]], \"name\": \"\", \"notes\": \"\", \"color\": [0.2, 0.6, 0.9, 1.0], \"value\": Infinity, \"angle_deg\": 90.0, \"label\": \"vertical\", \"floor_level\": \"\", \"category\": \"\", \"sub_category\": \"\", \"cost_type\": \"material\", \"unit_cost\": 0.0}, {\"type\": \"pitch\", \"points\": [[10.5, 200.25], [130.5, 140.25]], \"name\": \"Roof\", \"notes\": \"\", \"color\": [0.2, 0.6, 0.9, 1.0], \"value\": 6.0, \"angle_deg\": 26.56505117707799, \"label\": \"6:12\", \"floor_level\": \"\", \"category\": \"\", \"sub_category\": \"\", \"cost_type\": \"material\", \"unit_cost\": 0.0}, {\"type\": \"pitch\", \"points\": [[300.5, 20.5], [300.5, 90.5]], \"name\": \"\", \"notes\": \"\", \"color\": [0.2, 0.6, 0.9, 1.0], \"value\": Infinity, \"angle_deg\": 90.0, \"label\": \"vertical\", \"floor_level\": \"\", \"category\": \"\", \"sub_category\": \"\", \"cost_type\": \"material\", \"unit_cost\": 12.5, \"associated_items\": [{\"name\": \"Flashing\", \"qty\": 2, \"qty_mode\": \"per_unit\", \"unit_cost\": 3.25}]}]}, \"revisions\": []}",
+   "web": "{\"project_name\":\"Synthetic job\",\"page_labels\":[\"X1.0\",\"X2.0\"],\"page_labels_custom\":{},\"page_names\":{},\"dpi\":150,\"pixels_per_foot\":50.5,\"annotations\":{},\"measurements\":{\"0\":[{\"type\":\"pitch\",\"points\":[[100.5,40.25],[100.5,300.75]],\"name\":\"\",\"notes\":\"\",\"color\":[0.2,0.6,0.9,1],\"value\":Infinity,\"angle_deg\":90,\"label\":\"vertical\",\"floor_level\":\"\",\"category\":\"\",\"sub_category\":\"\",\"cost_type\":\"material\",\"unit_cost\":0},{\"type\":\"pitch\",\"points\":[[10.5,200.25],[130.5,140.25]],\"name\":\"Roof\",\"notes\":\"\",\"color\":[0.2,0.6,0.9,1],\"value\":6,\"angle_deg\":26.56505117707799,\"label\":\"6:12\",\"floor_level\":\"\",\"category\":\"\",\"sub_category\":\"\",\"cost_type\":\"material\",\"unit_cost\":0},{\"type\":\"pitch\",\"points\":[[300.5,20.5],[300.5,90.5]],\"name\":\"\",\"notes\":\"\",\"color\":[0.2,0.6,0.9,1],\"value\":Infinity,\"angle_deg\":90,\"label\":\"vertical\",\"floor_level\":\"\",\"category\":\"\",\"sub_category\":\"\",\"cost_type\":\"material\",\"unit_cost\":12.5,\"associated_items\":[{\"name\":\"Flashing\",\"qty\":2,\"qty_mode\":\"per_unit\",\"unit_cost\":3.25}]}]},\"revisions\":[]}",
+   "loads": {
+    "o": [
+     [
+      "project_name",
+      {
+       "s": "Synthetic job"
+      }
+     ],
+     [
+      "page_labels",
+      {
+       "a": [
+        {
+         "s": "X1.0"
+        },
+        {
+         "s": "X2.0"
+        }
+       ]
+      }
+     ],
+     [
+      "page_labels_custom",
+      {
+       "o": []
+      }
+     ],
+     [
+      "page_names",
+      {
+       "o": []
+      }
+     ],
+     [
+      "dpi",
+      {
+       "n": 150
+      }
+     ],
+     [
+      "pixels_per_foot",
+      {
+       "n": 50.5
+      }
+     ],
+     [
+      "annotations",
+      {
+       "o": []
+      }
+     ],
+     [
+      "measurements",
+      {
+       "o": [
+        [
+         "0",
+         {
+          "a": [
+           {
+            "o": [
+             [
+              "type",
+              {
+               "s": "pitch"
+              }
+             ],
+             [
+              "points",
+              {
+               "a": [
+                {
+                 "a": [
+                  {
+                   "n": 100.5
+                  },
+                  {
+                   "n": 40.25
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 100.5
+                  },
+                  {
+                   "n": 300.75
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             [
+              "name",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "notes",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "color",
+              {
+               "a": [
+                {
+                 "n": 0.2
+                },
+                {
+                 "n": 0.6
+                },
+                {
+                 "n": 0.9
+                },
+                {
+                 "n": 1.0
+                }
+               ]
+              }
+             ],
+             [
+              "value",
+              {
+               "n": "inf"
+              }
+             ],
+             [
+              "angle_deg",
+              {
+               "n": 90.0
+              }
+             ],
+             [
+              "label",
+              {
+               "s": "vertical"
+              }
+             ],
+             [
+              "floor_level",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "sub_category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "cost_type",
+              {
+               "s": "material"
+              }
+             ],
+             [
+              "unit_cost",
+              {
+               "n": 0.0
+              }
+             ]
+            ]
+           },
+           {
+            "o": [
+             [
+              "type",
+              {
+               "s": "pitch"
+              }
+             ],
+             [
+              "points",
+              {
+               "a": [
+                {
+                 "a": [
+                  {
+                   "n": 10.5
+                  },
+                  {
+                   "n": 200.25
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 130.5
+                  },
+                  {
+                   "n": 140.25
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             [
+              "name",
+              {
+               "s": "Roof"
+              }
+             ],
+             [
+              "notes",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "color",
+              {
+               "a": [
+                {
+                 "n": 0.2
+                },
+                {
+                 "n": 0.6
+                },
+                {
+                 "n": 0.9
+                },
+                {
+                 "n": 1.0
+                }
+               ]
+              }
+             ],
+             [
+              "value",
+              {
+               "n": 6.0
+              }
+             ],
+             [
+              "angle_deg",
+              {
+               "n": 26.56505117707799
+              }
+             ],
+             [
+              "label",
+              {
+               "s": "6:12"
+              }
+             ],
+             [
+              "floor_level",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "sub_category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "cost_type",
+              {
+               "s": "material"
+              }
+             ],
+             [
+              "unit_cost",
+              {
+               "n": 0.0
+              }
+             ]
+            ]
+           },
+           {
+            "o": [
+             [
+              "type",
+              {
+               "s": "pitch"
+              }
+             ],
+             [
+              "points",
+              {
+               "a": [
+                {
+                 "a": [
+                  {
+                   "n": 300.5
+                  },
+                  {
+                   "n": 20.5
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 300.5
+                  },
+                  {
+                   "n": 90.5
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             [
+              "name",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "notes",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "color",
+              {
+               "a": [
+                {
+                 "n": 0.2
+                },
+                {
+                 "n": 0.6
+                },
+                {
+                 "n": 0.9
+                },
+                {
+                 "n": 1.0
+                }
+               ]
+              }
+             ],
+             [
+              "value",
+              {
+               "n": "inf"
+              }
+             ],
+             [
+              "angle_deg",
+              {
+               "n": 90.0
+              }
+             ],
+             [
+              "label",
+              {
+               "s": "vertical"
+              }
+             ],
+             [
+              "floor_level",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "sub_category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "cost_type",
+              {
+               "s": "material"
+              }
+             ],
+             [
+              "unit_cost",
+              {
+               "n": 12.5
+              }
+             ],
+             [
+              "associated_items",
+              {
+               "a": [
+                {
+                 "o": [
+                  [
+                   "name",
+                   {
+                    "s": "Flashing"
+                   }
+                  ],
+                  [
+                   "qty",
+                   {
+                    "n": 2
+                   }
+                  ],
+                  [
+                   "qty_mode",
+                   {
+                    "s": "per_unit"
+                   }
+                  ],
+                  [
+                   "unit_cost",
+                   {
+                    "n": 3.25
+                   }
+                  ]
+                 ]
+                }
+               ]
+              }
+             ]
+            ]
+           }
+          ]
+         }
+        ]
+       ]
+      }
+     ],
+     [
+      "revisions",
+      {
+       "a": []
+      }
+     ]
+    ]
+   },
+   "web_loads": {
+    "o": [
+     [
+      "project_name",
+      {
+       "s": "Synthetic job"
+      }
+     ],
+     [
+      "page_labels",
+      {
+       "a": [
+        {
+         "s": "X1.0"
+        },
+        {
+         "s": "X2.0"
+        }
+       ]
+      }
+     ],
+     [
+      "page_labels_custom",
+      {
+       "o": []
+      }
+     ],
+     [
+      "page_names",
+      {
+       "o": []
+      }
+     ],
+     [
+      "dpi",
+      {
+       "n": 150
+      }
+     ],
+     [
+      "pixels_per_foot",
+      {
+       "n": 50.5
+      }
+     ],
+     [
+      "annotations",
+      {
+       "o": []
+      }
+     ],
+     [
+      "measurements",
+      {
+       "o": [
+        [
+         "0",
+         {
+          "a": [
+           {
+            "o": [
+             [
+              "type",
+              {
+               "s": "pitch"
+              }
+             ],
+             [
+              "points",
+              {
+               "a": [
+                {
+                 "a": [
+                  {
+                   "n": 100.5
+                  },
+                  {
+                   "n": 40.25
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 100.5
+                  },
+                  {
+                   "n": 300.75
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             [
+              "name",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "notes",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "color",
+              {
+               "a": [
+                {
+                 "n": 0.2
+                },
+                {
+                 "n": 0.6
+                },
+                {
+                 "n": 0.9
+                },
+                {
+                 "n": 1
+                }
+               ]
+              }
+             ],
+             [
+              "value",
+              {
+               "n": "inf"
+              }
+             ],
+             [
+              "angle_deg",
+              {
+               "n": 90
+              }
+             ],
+             [
+              "label",
+              {
+               "s": "vertical"
+              }
+             ],
+             [
+              "floor_level",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "sub_category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "cost_type",
+              {
+               "s": "material"
+              }
+             ],
+             [
+              "unit_cost",
+              {
+               "n": 0
+              }
+             ]
+            ]
+           },
+           {
+            "o": [
+             [
+              "type",
+              {
+               "s": "pitch"
+              }
+             ],
+             [
+              "points",
+              {
+               "a": [
+                {
+                 "a": [
+                  {
+                   "n": 10.5
+                  },
+                  {
+                   "n": 200.25
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 130.5
+                  },
+                  {
+                   "n": 140.25
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             [
+              "name",
+              {
+               "s": "Roof"
+              }
+             ],
+             [
+              "notes",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "color",
+              {
+               "a": [
+                {
+                 "n": 0.2
+                },
+                {
+                 "n": 0.6
+                },
+                {
+                 "n": 0.9
+                },
+                {
+                 "n": 1
+                }
+               ]
+              }
+             ],
+             [
+              "value",
+              {
+               "n": 6
+              }
+             ],
+             [
+              "angle_deg",
+              {
+               "n": 26.56505117707799
+              }
+             ],
+             [
+              "label",
+              {
+               "s": "6:12"
+              }
+             ],
+             [
+              "floor_level",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "sub_category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "cost_type",
+              {
+               "s": "material"
+              }
+             ],
+             [
+              "unit_cost",
+              {
+               "n": 0
+              }
+             ]
+            ]
+           },
+           {
+            "o": [
+             [
+              "type",
+              {
+               "s": "pitch"
+              }
+             ],
+             [
+              "points",
+              {
+               "a": [
+                {
+                 "a": [
+                  {
+                   "n": 300.5
+                  },
+                  {
+                   "n": 20.5
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 300.5
+                  },
+                  {
+                   "n": 90.5
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             [
+              "name",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "notes",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "color",
+              {
+               "a": [
+                {
+                 "n": 0.2
+                },
+                {
+                 "n": 0.6
+                },
+                {
+                 "n": 0.9
+                },
+                {
+                 "n": 1
+                }
+               ]
+              }
+             ],
+             [
+              "value",
+              {
+               "n": "inf"
+              }
+             ],
+             [
+              "angle_deg",
+              {
+               "n": 90
+              }
+             ],
+             [
+              "label",
+              {
+               "s": "vertical"
+              }
+             ],
+             [
+              "floor_level",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "sub_category",
+              {
+               "s": ""
+              }
+             ],
+             [
+              "cost_type",
+              {
+               "s": "material"
+              }
+             ],
+             [
+              "unit_cost",
+              {
+               "n": 12.5
+              }
+             ],
+             [
+              "associated_items",
+              {
+               "a": [
+                {
+                 "o": [
+                  [
+                   "name",
+                   {
+                    "s": "Flashing"
+                   }
+                  ],
+                  [
+                   "qty",
+                   {
+                    "n": 2
+                   }
+                  ],
+                  [
+                   "qty_mode",
+                   {
+                    "s": "per_unit"
+                   }
+                  ],
+                  [
+                   "unit_cost",
+                   {
+                    "n": 3.25
+                   }
+                  ]
+                 ]
+                }
+               ]
+              }
+             ]
+            ]
+           }
+          ]
+         }
+        ]
+       ]
+      }
+     ],
+     [
+      "revisions",
+      {
+       "a": []
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "name": "nested at any depth",
+   "desktop": "{\"a\": [1, [2, [-Infinity, {\"b\": NaN, \"c\": [[[Infinity]]]}]]], \"d\": {\"e\": {\"f\": {\"g\": Infinity, \"h\": -2.5}}}, \"i\": null, \"j\": true}",
+   "web": "{\"a\":[1,[2,[-Infinity,{\"b\":NaN,\"c\":[[[Infinity]]]}]]],\"d\":{\"e\":{\"f\":{\"g\":Infinity,\"h\":-2.5}}},\"i\":null,\"j\":true}",
+   "loads": {
+    "o": [
+     [
+      "a",
+      {
+       "a": [
+        {
+         "n": 1
+        },
+        {
+         "a": [
+          {
+           "n": 2
+          },
+          {
+           "a": [
+            {
+             "n": "-inf"
+            },
+            {
+             "o": [
+              [
+               "b",
+               {
+                "n": "nan"
+               }
+              ],
+              [
+               "c",
+               {
+                "a": [
+                 {
+                  "a": [
+                   {
+                    "a": [
+                     {
+                      "n": "inf"
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     [
+      "d",
+      {
+       "o": [
+        [
+         "e",
+         {
+          "o": [
+           [
+            "f",
+            {
+             "o": [
+              [
+               "g",
+               {
+                "n": "inf"
+               }
+              ],
+              [
+               "h",
+               {
+                "n": -2.5
+               }
+              ]
+             ]
+            }
+           ]
+          ]
+         }
+        ]
+       ]
+      }
+     ],
+     [
+      "i",
+      {
+       "z": 1
+      }
+     ],
+     [
+      "j",
+      {
+       "b": true
+      }
+     ]
+    ]
+   },
+   "web_loads": {
+    "o": [
+     [
+      "a",
+      {
+       "a": [
+        {
+         "n": 1
+        },
+        {
+         "a": [
+          {
+           "n": 2
+          },
+          {
+           "a": [
+            {
+             "n": "-inf"
+            },
+            {
+             "o": [
+              [
+               "b",
+               {
+                "n": "nan"
+               }
+              ],
+              [
+               "c",
+               {
+                "a": [
+                 {
+                  "a": [
+                   {
+                    "a": [
+                     {
+                      "n": "inf"
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     [
+      "d",
+      {
+       "o": [
+        [
+         "e",
+         {
+          "o": [
+           [
+            "f",
+            {
+             "o": [
+              [
+               "g",
+               {
+                "n": "inf"
+               }
+              ],
+              [
+               "h",
+               {
+                "n": -2.5
+               }
+              ]
+             ]
+            }
+           ]
+          ]
+         }
+        ]
+       ]
+      }
+     ],
+     [
+      "i",
+      {
+       "z": 1
+      }
+     ],
+     [
+      "j",
+      {
+       "b": true
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "name": "arrays",
+   "desktop": "[Infinity, -Infinity, NaN, 1.5, -2, \"Infinity\", \"NaN\", \"-Infinity\", [], {}, [NaN, [-Infinity]]]",
+   "web": "[Infinity,-Infinity,NaN,1.5,-2,\"Infinity\",\"NaN\",\"-Infinity\",[],{},[NaN,[-Infinity]]]",
+   "loads": {
+    "a": [
+     {
+      "n": "inf"
+     },
+     {
+      "n": "-inf"
+     },
+     {
+      "n": "nan"
+     },
+     {
+      "n": 1.5
+     },
+     {
+      "n": -2
+     },
+     {
+      "s": "Infinity"
+     },
+     {
+      "s": "NaN"
+     },
+     {
+      "s": "-Infinity"
+     },
+     {
+      "a": []
+     },
+     {
+      "o": []
+     },
+     {
+      "a": [
+       {
+        "n": "nan"
+       },
+       {
+        "a": [
+         {
+          "n": "-inf"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "web_loads": {
+    "a": [
+     {
+      "n": "inf"
+     },
+     {
+      "n": "-inf"
+     },
+     {
+      "n": "nan"
+     },
+     {
+      "n": 1.5
+     },
+     {
+      "n": -2
+     },
+     {
+      "s": "Infinity"
+     },
+     {
+      "s": "NaN"
+     },
+     {
+      "s": "-Infinity"
+     },
+     {
+      "a": []
+     },
+     {
+      "o": []
+     },
+     {
+      "a": [
+       {
+        "n": "nan"
+       },
+       {
+        "a": [
+         {
+          "n": "-inf"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "the words inside strings",
+   "desktop": "{\"note\": \"Infinity\", \"two\": \"-Infinity NaN\", \"esc\": \"a\\\"Infinity\\\\\", \"quoted\": \"\\\\\\\"NaN\", \"slash\": \"\\\\\", \"after\": NaN, \"uni\": \"\\u00e9 Infinity \\u2603\", \"tab\": \"x\\tNaN\\ny\", \"ctl\": \"\\u0001NaN\"}",
+   "web": "{\"note\":\"Infinity\",\"two\":\"-Infinity NaN\",\"esc\":\"a\\\"Infinity\\\\\",\"quoted\":\"\\\\\\\"NaN\",\"slash\":\"\\\\\",\"after\":NaN,\"uni\":\"\u00e9 Infinity \u2603\",\"tab\":\"x\\tNaN\\ny\",\"ctl\":\"\\u0001NaN\"}",
+   "loads": {
+    "o": [
+     [
+      "note",
+      {
+       "s": "Infinity"
+      }
+     ],
+     [
+      "two",
+      {
+       "s": "-Infinity NaN"
+      }
+     ],
+     [
+      "esc",
+      {
+       "s": "a\"Infinity\\"
+      }
+     ],
+     [
+      "quoted",
+      {
+       "s": "\\\"NaN"
+      }
+     ],
+     [
+      "slash",
+      {
+       "s": "\\"
+      }
+     ],
+     [
+      "after",
+      {
+       "n": "nan"
+      }
+     ],
+     [
+      "uni",
+      {
+       "s": "\u00e9 Infinity \u2603"
+      }
+     ],
+     [
+      "tab",
+      {
+       "s": "x\tNaN\ny"
+      }
+     ],
+     [
+      "ctl",
+      {
+       "s": "\u0001NaN"
+      }
+     ]
+    ]
+   },
+   "web_loads": {
+    "o": [
+     [
+      "note",
+      {
+       "s": "Infinity"
+      }
+     ],
+     [
+      "two",
+      {
+       "s": "-Infinity NaN"
+      }
+     ],
+     [
+      "esc",
+      {
+       "s": "a\"Infinity\\"
+      }
+     ],
+     [
+      "quoted",
+      {
+       "s": "\\\"NaN"
+      }
+     ],
+     [
+      "slash",
+      {
+       "s": "\\"
+      }
+     ],
+     [
+      "after",
+      {
+       "n": "nan"
+      }
+     ],
+     [
+      "uni",
+      {
+       "s": "\u00e9 Infinity \u2603"
+      }
+     ],
+     [
+      "tab",
+      {
+       "s": "x\tNaN\ny"
+      }
+     ],
+     [
+      "ctl",
+      {
+       "s": "\u0001NaN"
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "name": "the words as keys",
+   "desktop": "{\"Infinity\": 1, \"NaN\": \"NaN\", \"-Infinity\": [Infinity], \"x Infinity\": NaN, \"\": -Infinity}",
+   "web": "{\"Infinity\":1,\"NaN\":\"NaN\",\"-Infinity\":[Infinity],\"x Infinity\":NaN,\"\":-Infinity}",
+   "loads": {
+    "o": [
+     [
+      "Infinity",
+      {
+       "n": 1
+      }
+     ],
+     [
+      "NaN",
+      {
+       "s": "NaN"
+      }
+     ],
+     [
+      "-Infinity",
+      {
+       "a": [
+        {
+         "n": "inf"
+        }
+       ]
+      }
+     ],
+     [
+      "x Infinity",
+      {
+       "n": "nan"
+      }
+     ],
+     [
+      "",
+      {
+       "n": "-inf"
+      }
+     ]
+    ]
+   },
+   "web_loads": {
+    "o": [
+     [
+      "Infinity",
+      {
+       "n": 1
+      }
+     ],
+     [
+      "NaN",
+      {
+       "s": "NaN"
+      }
+     ],
+     [
+      "-Infinity",
+      {
+       "a": [
+        {
+         "n": "inf"
+        }
+       ]
+      }
+     ],
+     [
+      "x Infinity",
+      {
+       "n": "nan"
+      }
+     ],
+     [
+      "",
+      {
+       "n": "-inf"
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "name": "non-finite float keys (json.dumps writes their words)",
+   "desktop": "{\"Infinity\": 1, \"NaN\": 2, \"-Infinity\": 3, \"k\": Infinity}",
+   "web": "{\"Infinity\":1,\"NaN\":2,\"-Infinity\":3,\"k\":Infinity}",
+   "loads": {
+    "o": [
+     [
+      "Infinity",
+      {
+       "n": 1
+      }
+     ],
+     [
+      "NaN",
+      {
+       "n": 2
+      }
+     ],
+     [
+      "-Infinity",
+      {
+       "n": 3
+      }
+     ],
+     [
+      "k",
+      {
+       "n": "inf"
+      }
+     ]
+    ]
+   },
+   "web_loads": {
+    "o": [
+     [
+      "Infinity",
+      {
+       "n": 1
+      }
+     ],
+     [
+      "NaN",
+      {
+       "n": 2
+      }
+     ],
+     [
+      "-Infinity",
+      {
+       "n": 3
+      }
+     ],
+     [
+      "k",
+      {
+       "n": "inf"
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "name": "a key __proto__",
+   "desktop": "{\"__proto__\": NaN, \"x\": {\"__proto__\": Infinity}}",
+   "web": "{\"__proto__\":NaN,\"x\":{\"__proto__\":Infinity}}",
+   "loads": {
+    "o": [
+     [
+      "__proto__",
+      {
+       "n": "nan"
+      }
+     ],
+     [
+      "x",
+      {
+       "o": [
+        [
+         "__proto__",
+         {
+          "n": "inf"
+         }
+        ]
+       ]
+      }
+     ]
+    ]
+   },
+   "web_loads": {
+    "o": [
+     [
+      "__proto__",
+      {
+       "n": "nan"
+      }
+     ],
+     [
+      "x",
+      {
+       "o": [
+        [
+         "__proto__",
+         {
+          "n": "inf"
+         }
+        ]
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "name": "a key written twice, a NaN under the first (the int 0 and the str \"0\")",
+   "desktop": "{\"0\": {\"note\": NaN}, \"0\": \"X1.0 plan\", \"k\": [Infinity, {\"1\": NaN, \"1\": -Infinity}]}",
+   "web": "{\"0\":\"X1.0 plan\",\"k\":[Infinity,{\"1\":-Infinity}]}",
+   "loads": {
+    "o": [
+     [
+      "0",
+      {
+       "s": "X1.0 plan"
+      }
+     ],
+     [
+      "k",
+      {
+       "a": [
+        {
+         "n": "inf"
+        },
+        {
+         "o": [
+          [
+           "1",
+           {
+            "n": "-inf"
+           }
+          ]
+         ]
+        }
+       ]
+      }
+     ]
+    ]
+   },
+   "web_loads": {
+    "o": [
+     [
+      "0",
+      {
+       "s": "X1.0 plan"
+      }
+     ],
+     [
+      "k",
+      {
+       "a": [
+        {
+         "n": "inf"
+        },
+        {
+         "o": [
+          [
+           "1",
+           {
+            "n": "-inf"
+           }
+          ]
+         ]
+        }
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "name": "no word at all (the ordinary file)",
+   "desktop": "{\"project_name\": \"Plain job\", \"dpi\": 150, \"pixels_per_foot\": 33.25, \"page_labels\": [\"X1.0\"], \"notes\": \"Infinity and NaN, in words only\", \"measurements\": {\"0\": [{\"type\": \"area\", \"value\": 12.25, \"points\": [[0, 0], [10.5, 0], [10.5, 10.5]], \"rev_id\": null, \"visible\": true}]}}",
+   "web": "{\"project_name\":\"Plain job\",\"dpi\":150,\"pixels_per_foot\":33.25,\"page_labels\":[\"X1.0\"],\"notes\":\"Infinity and NaN, in words only\",\"measurements\":{\"0\":[{\"type\":\"area\",\"value\":12.25,\"points\":[[0,0],[10.5,0],[10.5,10.5]],\"rev_id\":null,\"visible\":true}]}}",
+   "loads": {
+    "o": [
+     [
+      "project_name",
+      {
+       "s": "Plain job"
+      }
+     ],
+     [
+      "dpi",
+      {
+       "n": 150
+      }
+     ],
+     [
+      "pixels_per_foot",
+      {
+       "n": 33.25
+      }
+     ],
+     [
+      "page_labels",
+      {
+       "a": [
+        {
+         "s": "X1.0"
+        }
+       ]
+      }
+     ],
+     [
+      "notes",
+      {
+       "s": "Infinity and NaN, in words only"
+      }
+     ],
+     [
+      "measurements",
+      {
+       "o": [
+        [
+         "0",
+         {
+          "a": [
+           {
+            "o": [
+             [
+              "type",
+              {
+               "s": "area"
+              }
+             ],
+             [
+              "value",
+              {
+               "n": 12.25
+              }
+             ],
+             [
+              "points",
+              {
+               "a": [
+                {
+                 "a": [
+                  {
+                   "n": 0
+                  },
+                  {
+                   "n": 0
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 10.5
+                  },
+                  {
+                   "n": 0
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 10.5
+                  },
+                  {
+                   "n": 10.5
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             [
+              "rev_id",
+              {
+               "z": 1
+              }
+             ],
+             [
+              "visible",
+              {
+               "b": true
+              }
+             ]
+            ]
+           }
+          ]
+         }
+        ]
+       ]
+      }
+     ]
+    ]
+   },
+   "web_loads": {
+    "o": [
+     [
+      "project_name",
+      {
+       "s": "Plain job"
+      }
+     ],
+     [
+      "dpi",
+      {
+       "n": 150
+      }
+     ],
+     [
+      "pixels_per_foot",
+      {
+       "n": 33.25
+      }
+     ],
+     [
+      "page_labels",
+      {
+       "a": [
+        {
+         "s": "X1.0"
+        }
+       ]
+      }
+     ],
+     [
+      "notes",
+      {
+       "s": "Infinity and NaN, in words only"
+      }
+     ],
+     [
+      "measurements",
+      {
+       "o": [
+        [
+         "0",
+         {
+          "a": [
+           {
+            "o": [
+             [
+              "type",
+              {
+               "s": "area"
+              }
+             ],
+             [
+              "value",
+              {
+               "n": 12.25
+              }
+             ],
+             [
+              "points",
+              {
+               "a": [
+                {
+                 "a": [
+                  {
+                   "n": 0
+                  },
+                  {
+                   "n": 0
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 10.5
+                  },
+                  {
+                   "n": 0
+                  }
+                 ]
+                },
+                {
+                 "a": [
+                  {
+                   "n": 10.5
+                  },
+                  {
+                   "n": 10.5
+                  }
+                 ]
+                }
+               ]
+              }
+             ],
+             [
+              "rev_id",
+              {
+               "z": 1
+              }
+             ],
+             [
+              "visible",
+              {
+               "b": true
+              }
+             ]
+            ]
+           }
+          ]
+         }
+        ]
+       ]
+      }
+     ]
+    ]
+   }
+  }
+ ],
+ "texts": [
+  [
+   "{NaN: 1}",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "{Infinity: 1}",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "{\"a\": 1, NaN: 2}",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "{\"a\": 1, -Infinity: 2}",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[1Infinity]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[Infinity5]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[Infinity.5]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[Infinitye5]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[-NaN]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[+Infinity]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[--Infinity]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[- Infinity]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[1-Infinity]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[1e-Infinity]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[infinity]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[nan]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[NaNa]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[xNaN]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "inf",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "-inf",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[\"NaN\" NaN]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[\"a\\\\\"NaN]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[\"a\\\\\\\"NaN\"]",
+   {
+    "ok": true,
+    "value": {
+     "a": [
+      {
+       "s": "a\\\"NaN"
+      }
+     ]
+    }
+   }
+  ],
+  [
+   "[NaN,]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[,NaN]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "[ NaN ]",
+   {
+    "ok": true,
+    "value": {
+     "a": [
+      {
+       "n": "nan"
+      }
+     ]
+    }
+   }
+  ],
+  [
+   "NaN",
+   {
+    "ok": true,
+    "value": {
+     "n": "nan"
+    }
+   }
+  ],
+  [
+   " -Infinity ",
+   {
+    "ok": true,
+    "value": {
+     "n": "-inf"
+    }
+   }
+  ],
+  [
+   "Infinity",
+   {
+    "ok": true,
+    "value": {
+     "n": "inf"
+    }
+   }
+  ],
+  [
+   "{\"a\" :Infinity}",
+   {
+    "ok": true,
+    "value": {
+     "o": [
+      [
+       "a",
+       {
+        "n": "inf"
+       }
+      ]
+     ]
+    }
+   }
+  ],
+  [
+   "[\n-Infinity\n]",
+   {
+    "ok": true,
+    "value": {
+     "a": [
+      {
+       "n": "-inf"
+      }
+     ]
+    }
+   }
+  ],
+  [
+   "[1e999]",
+   {
+    "ok": true,
+    "value": {
+     "a": [
+      {
+       "n": "inf"
+      }
+     ]
+    }
+   }
+  ],
+  [
+   "[-1e999]",
+   {
+    "ok": true,
+    "value": {
+     "a": [
+      {
+       "n": "-inf"
+      }
+     ]
+    }
+   }
+  ],
+  [
+   "{\"NaN\":NaN}",
+   {
+    "ok": true,
+    "value": {
+     "o": [
+      [
+       "NaN",
+       {
+        "n": "nan"
+       }
+      ]
+     ]
+    }
+   }
+  ],
+  [
+   "{\"k\": \"Infinity\", \"v\": Infinity}",
+   {
+    "ok": true,
+    "value": {
+     "o": [
+      [
+       "k",
+       {
+        "s": "Infinity"
+       }
+      ],
+      [
+       "v",
+       {
+        "n": "inf"
+       }
+      ]
+     ]
+    }
+   }
+  ],
+  [
+   "\"Infinity\"",
+   {
+    "ok": true,
+    "value": {
+     "s": "Infinity"
+    }
+   }
+  ],
+  [
+   "\"\\\"NaN\"",
+   {
+    "ok": true,
+    "value": {
+     "s": "\"NaN"
+    }
+   }
+  ],
+  [
+   "{\"a\": [1, {\"b\": [NaN, -Infinity]}]}",
+   {
+    "ok": true,
+    "value": {
+     "o": [
+      [
+       "a",
+       {
+        "a": [
+         {
+          "n": 1
+         },
+         {
+          "o": [
+           [
+            "b",
+            {
+             "a": [
+              {
+               "n": "nan"
+              },
+              {
+               "n": "-inf"
+              }
+             ]
+            }
+           ]
+          ]
+         }
+        ]
+       }
+      ]
+     ]
+    }
+   }
+  ],
+  [
+   "[NaN NaN]",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "{\"a\": NaN, \"a\": 1}",
+   {
+    "ok": true,
+    "value": {
+     "o": [
+      [
+       "a",
+       {
+        "n": 1
+       }
+      ]
+     ]
+    }
+   }
+  ],
+  [
+   "{\"a\": [NaN], \"a\": 2}",
+   {
+    "ok": true,
+    "value": {
+     "o": [
+      [
+       "a",
+       {
+        "n": 2
+       }
+      ]
+     ]
+    }
+   }
+  ],
+  [
+   "{\"a\": NaN, \"a\": NaN}",
+   {
+    "ok": true,
+    "value": {
+     "o": [
+      [
+       "a",
+       {
+        "n": "nan"
+       }
+      ]
+     ]
+    }
+   }
+  ],
+  [
+   "{\"a\": {\"b\": NaN}, \"a\": {}}",
+   {
+    "ok": true,
+    "value": {
+     "o": [
+      [
+       "a",
+       {
+        "o": []
+       }
+      ]
+     ]
+    }
+   }
+  ],
+  [
+   "[{\"x\": NaN, \"x\": -Infinity}]",
+   {
+    "ok": true,
+    "value": {
+     "a": [
+      {
+       "o": [
+        [
+         "x",
+         {
+          "n": "-inf"
+         }
+        ]
+       ]
+      }
+     ]
+    }
+   }
+  ],
+  [
+   "{\"a\": {NaN: 1}, \"a\": 2}",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "{\"a\": NaN :1}",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ],
+  [
+   "{\"a\": Infinity\n:1}",
+   {
+    "ok": false,
+    "error": "JSONDecodeError"
+   }
+  ]
+ ]
+}

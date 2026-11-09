@@ -87,6 +87,8 @@ const IMPORTABLE = [
   'core/geom.js', 'core/units.js', 'core/measure.js', 'core/xlsx.js',
   // Every number as the desktop writes it (Python's rounding).
   'core/pyformat.js',
+  // The desktop's JSON: Infinity, -Infinity and NaN where Python's json reads them.
+  'core/py-json.js',
   // The printed reports' markup (the Report Center is reports.js's).
   'ui/report-html.js',
   'core/revisions.js',
