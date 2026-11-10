@@ -1254,7 +1254,10 @@ export class ItemsPanel extends EventTarget {
 
   _updateFoot(pairs, wholeJob = false) {
     if (!this.footEl) return;
-    if (!pairs.length) { this.footEl.textContent = ''; return; }
+    // Nothing listed, nothing totalled: no tooltip either -- the last one
+    // ("Totals of the takeoff House only …", "2 items are … NOT COUNTED")
+    // would stand over totals that are not there.
+    if (!pairs.length) { this.footEl.textContent = ''; this.footEl.title = ''; return; }
     // While the list shows one sheet the totals are still the whole job's
     // (the reports' and the exports'), and the line says so -- as filtered
     // when ALL / LAB / MAT, the floor or the group filter is narrowing them,

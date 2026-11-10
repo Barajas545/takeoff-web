@@ -43,7 +43,8 @@
 // not know; the web cannot heal -- that would be a write -- so a tag with no
 // record is still another takeoff, still hidden and still said, never folded
 // into Main), otherTakeoffsWords, leftInTakeoffLabel, and the words the
-// web says of the other takeoffs (takeoffsSaid, takeoffsOpenWords).
+// web says of the other takeoffs (takeoffsSaid, takeoffsOpenWords,
+// otherTakeoffItemWords).
 //
 // Pure: no DOM, no Project. The metadata and the store are handed in.
 
@@ -62,6 +63,22 @@ export const TAKEOFF_NAME_MAX = 60;
 export const WEB_TAKEOFF = '';
 
 const isDict = v => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** A tag or a takeoff's id, read as the desktop reads every one of them:
+ *  Python's `str(x or "").strip()`. That is classStrip, but for the values
+ *  str() spells its own way and py-json reads out of a file: NaN is TRUE
+ *  in Python ('nan' -- another takeoff, never Main), the infinities are
+ *  'inf' / '-inf' and True is 'True'. (A float written 5.0 still reads
+ *  '5': JSON.parse cannot tell it from 5.) */
+function idStr(v) {
+  if (typeof v === 'number' && !Number.isFinite(v)) {
+    if (Number.isNaN(v)) return 'nan';
+    return v > 0 ? 'inf' : '-inf';
+  }
+  if (v === true) return 'True';
+  return classStrip(v);
+}
+
 // Python's isalnum() for a name: a letter or a number somewhere in it.
 const HAS_ALNUM = /[\p{L}\p{N}]/u;
 
@@ -75,12 +92,12 @@ export function takeoffListScoped(m) {
 }
 
 /** The takeoff an item is filed in: '' is Main. A shared mark reads '' too:
- *  a tag on one is not read. Read as Python's `str(x or "").strip()` --
- *  never trim(), which strips U+FEFF and keeps \x1c-\x1f and U+0085, and
+ *  a tag on one is not read. Read as Python's `str(x or "").strip()` (idStr)
+ *  -- never trim(), which strips U+FEFF and keeps \x1c-\x1f and U+0085, and
  *  would put a padded tag in another takeoff than the desktop reads.
  *  (desktop takeoff_list_of) */
 export function takeoffListOf(m) {
-  return takeoffListScoped(m) ? classStrip(m[TAKEOFF_LIST_KEY]) : '';
+  return takeoffListScoped(m) ? idStr(m[TAKEOFF_LIST_KEY]) : '';
 }
 
 /** Is this item in takeoff `listId` ('' = Main)? A shared mark is in all of
@@ -88,10 +105,11 @@ export function takeoffListOf(m) {
 export function inTakeoffList(m, listId) {
   // The paint asks this of every item, every frame: an untagged item asked
   // the Main question answers at once. (Only for Main: a shared mark is in
-  // every takeoff, so the fast path cannot answer for another id.)
-  if (!listId && (!m || m[TAKEOFF_LIST_KEY] === undefined)) return true;
+  // every takeoff, so the fast path cannot answer for another id; and NaN,
+  // falsy here, is the takeoff 'nan' there -- see idStr.)
+  if (!listId && !Number.isNaN(listId) && (!m || m[TAKEOFF_LIST_KEY] === undefined)) return true;
   if (!takeoffListScoped(m)) return true;
-  return takeoffListOf(m) === classStrip(listId);
+  return takeoffListOf(m) === idStr(listId);
 }
 
 /** THE ONE WAY the tag is written: SET for any takeoff but Main on an item
@@ -99,7 +117,7 @@ export function inTakeoffList(m, listId) {
  *  (desktop _set_takeoff_list) */
 export function setTakeoffList(d, listId) {
   if (!isDict(d)) return;
-  const lid = classStrip(listId);
+  const lid = idStr(listId);
   if (lid && takeoffListScoped(d)) d[TAKEOFF_LIST_KEY] = lid;
   else delete d[TAKEOFF_LIST_KEY];
 }
@@ -162,7 +180,7 @@ export function takeoffLists(md) {
   const taken = new Set([pyCasefold(mainTakeoffLabel(md))]);
   for (const r of recs) {
     if (!isDict(r)) continue;
-    const lid = classStrip(r.list_id);
+    const lid = idStr(r.list_id);
     if (!lid || seen.has(lid)) continue;
     seen.add(lid);
     const rec = { ...r };
@@ -178,7 +196,7 @@ export function takeoffLists(md) {
 /** A takeoff's name: Main's for '', the registry's for one it has, '' for
  *  an id the job has no record of. (desktop takeoff_list_label) */
 export function takeoffListLabel(md, listId) {
-  const lid = classStrip(listId);
+  const lid = idStr(listId);
   if (!lid) return mainTakeoffLabel(md);
   for (const r of takeoffLists(md)) if (r.list_id === lid) return r.label;
   return '';
@@ -225,7 +243,7 @@ export function takeoffNamingOf(md, store, active = WEB_TAKEOFF) {
   if (!hasOtherTakeoffs(md, store)) return null;
   const names = new Map([['', mainTakeoffLabel(md)]]);
   for (const r of takeoffLists(md)) names.set(r.list_id, r.label);
-  return [classStrip(active), names];
+  return [idStr(active), names];
 }
 
 /** How many items one takeoff has: each item once, by its main shape (a
@@ -245,7 +263,7 @@ function itemCount(store, id) {
  * string order, with label '' and known false.
  */
 export function otherTakeoffs(md, store, active = WEB_TAKEOFF) {
-  const act = classStrip(active);
+  const act = idStr(active);
   const out = [];
   if (act) out.push({ id: '', label: mainTakeoffLabel(md), known: true, n: itemCount(store, '') });
   for (const r of takeoffLists(md)) {
@@ -276,7 +294,7 @@ export function otherTakeoffsWords(others) {
  *  left in an unknown takeoff in Main). READ ONLY, and the one reader of
  *  takeoff_list_active: it is one clause of the sentence said on open. */
 export function leftInTakeoffLabel(md) {
-  const lid = classStrip(isDict(md) ? md.takeoff_list_active : undefined);
+  const lid = idStr(isDict(md) ? md.takeoff_list_active : undefined);
   if (!lid) return '';
   for (const r of takeoffLists(md)) if (r.list_id === lid) return r.label;
   return '';
@@ -295,6 +313,18 @@ export function takeoffsSaid(md, store, active = WEB_TAKEOFF) {
   if (!hasOtherTakeoffs(md, store)) return null;
   const others = otherTakeoffs(md, store, active);
   return { label: takeoffListLabel(md, active), others, words: otherTakeoffsWords(others) };
+}
+
+/** What is said when a shape painted here is part of an item filed in
+ *  another takeoff -- a split item (spec G5): a run with no tag, its main
+ *  shape Deck's, as a 3.07 Add Shape on a 3.08 job leaves one. The item is
+ *  that takeoff's, not listed here, so its form is not opened here either:
+ *  the web edits the takeoff it is in only. `name` is the item's as the
+ *  app says it (counting.js deleteName). */
+export function otherTakeoffItemWords(md, m, name) {
+  const label = takeoffListLabel(md, takeoffListOf(m));
+  const where = label ? `the takeoff ${label}` : 'a takeoff this job has no record of';
+  return `“${name}” is an item of ${where}, worked on in the desktop app — its properties are not edited here.`;
 }
 
 /** The sentence said once as a job of several takeoffs opens, '' for a job

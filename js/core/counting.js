@@ -651,9 +651,6 @@ export function takeoffMoveWords(before, after, future = false, limit = 4, named
   return bits.join('; ');
 }
 
-// ── an item's associated materials go wherever the item goes ────────────
-
-/** Python's _ai_total: a material's quantity for its item's quantity. */
 /**
  * What Delete sheet owes about the takeoffs he is NOT in (desktop
  * _hidden_takeoffs_words): their items on sheet `idx`, on any drawing of it,
@@ -662,6 +659,13 @@ export function takeoffMoveWords(before, after, future = false, limit = 4, named
  * Each item once. An item with shapes on other sheets too does not go:
  * only its part on this sheet does, and that is said apart. '' without
  * `naming` (a job with only Main), and when there are none.
+ *
+ * A takeoff the job has no record of (a tag the registry does not hold:
+ * the desktop's open-time heal registers every one, so it never words one;
+ * the web cannot heal) is said as what it is -- "2 items of a takeoff this
+ * job has no record of", "3 items of 2 takeoffs this job has no record of"
+ * -- never "the takeoff another takeoff". Beside a takeoff it knows, the
+ * desktop's own words: "(2 in Deck, 1 in another takeoff)".
  */
 export function hiddenTakeoffsWords(measurements, idx, naming) {
   const pair = naming ? namingPair(naming) : null;
@@ -688,10 +692,19 @@ export function hiddenTakeoffsWords(measurements, idx, naming) {
     by.get(lid).add(truthy(gid) ? gid : m);
   }
   if (!whole.size && !part.size) return '';
-  const parts = by => takeoffOrder(names, by.keys()).map(lid => [takeoffNameIn(names, lid), by.get(lid).size]);
-  const of = (ps, n) => (ps.length === 1
-    ? `${n} item${n === 1 ? '' : 's'} of the takeoff ${ps[0][0]}`
-    : `${n} items of other takeoffs (${ps.map(([nm, c]) => `${c} in ${nm}`).join(', ')})`);
+  const known = lid => names instanceof Map && !!names.get(lid);
+  const parts = by => takeoffOrder(names, by.keys())
+    .map(lid => [takeoffNameIn(names, lid), by.get(lid).size, known(lid)]);
+  const of = (ps, n) => {
+    if (!ps.some(([, , k]) => k)) {
+      return ps.length === 1
+        ? `${n} item${n === 1 ? '' : 's'} of a takeoff this job has no record of`
+        : `${n} items of ${ps.length} takeoffs this job has no record of`;
+    }
+    return ps.length === 1
+      ? `${n} item${n === 1 ? '' : 's'} of the takeoff ${ps[0][0]}`
+      : `${n} items of other takeoffs (${ps.map(([nm, c]) => `${c} in ${nm}`).join(', ')})`;
+  };
   const out = [];
   const pw = parts(whole);
   const pp = parts(part);
@@ -706,6 +719,9 @@ export function hiddenTakeoffsWords(measurements, idx, naming) {
   return out.join(' ');
 }
 
+// ── an item's associated materials go wherever the item goes ────────────
+
+/** Python's _ai_total: a material's quantity for its item's quantity. */
 function aiTotal(ai, parentQty) {
   const qty = ('qty' in ai) ? ai.qty : (('qty_per' in ai) ? ai.qty_per : 0.0);
   const mode = ('qty_mode' in ai) ? ai.qty_mode : (('qty_per' in ai) ? 'per_unit' : 'total');

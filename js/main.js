@@ -42,7 +42,7 @@ import {
   CountingModel, applyBooking, takeoffMoveWords, takeoffQuantityWords, isTakeoffItem,
   setTakeoffNaming, takeoffNaming, hiddenTakeoffsWords,
 } from './core/counting.js';
-import { takeoffNamingOf, WEB_TAKEOFF, hasOtherTakeoffs, takeoffsOpenWords } from './core/takeoff-lists.js';
+import { takeoffNamingOf, WEB_TAKEOFF, hasOtherTakeoffs, takeoffsOpenWords, otherTakeoffItemWords } from './core/takeoff-lists.js';
 import { deleteItemQuestion } from './core/counting.js';
 import { importPdf, canvasToPng } from './core/pdf-import.js';
 import {
@@ -1552,6 +1552,37 @@ function sayLeftOutAtOpen() {
   if (!also) return;
   sayPrice(also);
   if (!statusLineShown()) setTimeout(() => sayToFinger(also), 0);
+  else holdOnOneLine(also);
+}
+
+/**
+ * The status bar is one line, 24 px high, and a sentence longer than it
+ * wrapped out of it: its first line over the bar's top edge, the second
+ * cut off by the window's, the scale readout squeezed onto two lines. While
+ * the line carries `words` it is kept on its one line -- cut with an
+ * ellipsis, the whole line in its tooltip -- and let go once the line has
+ * moved on (the next sentence, the hint it falls back to). Only the
+ * sentence a job of several takeoffs says on open asks this: a job with
+ * Main alone never does, and its line is v31's.
+ */
+let oneLineWatch = null;
+function holdOnOneLine(words) {
+  const el = $('statusText');
+  if (!el || typeof MutationObserver === 'undefined') return;
+  if (oneLineWatch) oneLineWatch.disconnect();
+  let held = false;
+  const watch = new MutationObserver(() => look());
+  const look = () => {
+    const on = el.textContent.includes(words);
+    el.classList.toggle('one-line', on);
+    if (on) el.title = el.textContent;
+    else el.removeAttribute('title');
+    if (on) held = true;
+    else if (held) { watch.disconnect(); if (oneLineWatch === watch) oneLineWatch = null; }
+  };
+  oneLineWatch = watch;
+  watch.observe(el, { childList: true, characterData: true, subtree: true });
+  look();
 }
 
 /** Whether a version of the sheet, rather than the sheet itself, is on screen. */
@@ -1658,8 +1689,15 @@ async function showSheetVersion(page, revId, { announce = true, flip = true, set
       // takeoff's on the drawing, is not a drawing nobody has taken off
       // (the desktop's show_sheet_version).
       const onPage = app.project.measurements[page] || [];
-      const n = onPage.filter(m => !m.group_child && !m.rev_id && controller.inActiveList(m)).length;
+      const own = onPage.filter(m => !m.rev_id && controller.inActiveList(m));
+      let n = own.filter(m => !m.group_child).length;
       const k = n ? 0 : controller.otherTakeoffsHere(onPage);
+      // A run of his item (its main shape on another sheet) is his work
+      // here too, painted and tappable: beside another takeoff's, it is
+      // counted -- each item once -- as the desktop counts every shape of
+      // version_items, never "nothing in House". (With Main alone, v31's
+      // count, which leaves runs out, as it was.)
+      if (k) n = new Set(own.filter(m => m.group_child).map(m => m.group_id)).size;
       setStatus(n
         ? `Back on this sheet's own drawing — ${n} item${n === 1 ? '' : 's'} here`
         : k ? `Back on this sheet's own drawing — nothing in ${controller.takeoffLabel()} on it yet `
@@ -5144,6 +5182,14 @@ async function openProperties(item) {
   // are the main shape's, and what a run was given of its own the desktop
   // writes over (_propagate_group_props).
   item = itemOfShape(item);
+  // ...and an item filed in another takeoff is that takeoff's: a run painted
+  // here (no tag) whose main shape is Deck's -- a split item, as a 3.07 Add
+  // Shape on a 3.08 job leaves one -- opens no form of Deck's item, as its
+  // row is not listed here (spec G5). The web edits the takeoff it is in.
+  if (!controller.inActiveList(item)) {
+    sayToFinger(otherTakeoffItemWords(app.project.metadata, item, deleteName(item)));
+    return;
+  }
   // A reference distance has no name, floor, trade, category or unit cost —
   // not blank ones, NONE. That is the desktop's _finalize_ref_distance, and
   // its reason holds here too: a field that exists is a field some report

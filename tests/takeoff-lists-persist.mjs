@@ -25,7 +25,12 @@
 //   T8  a job with only Main: a save gains none of the keys and no tag, and
 //       its items equal v31's save of the same edits (v31's own modules,
 //       read out of this repository's history at df6739d); a new job saves
-//       none of them.
+//       none of them. ONE difference from v31 is expected, and checked as
+//       the only one: a Group-filed multi-sheet item whose main shape goes
+//       (its run added by Add Shape, so carrying no in_group) hands its
+//       Group on to the promoted run -- in_group is in PROMOTE_KEYS since
+//       3.08, as in the desktop's _PROMOTE_KEYS (spec 10, R3-12a). v31's
+//       heir lost the Group.
 //   T11 the source: nothing outside takeoff-lists.js assigns, deletes or
 //       defaults the three keys; the one writer of the tag is
 //       setTakeoffList, called by promoteChild and addItem alone;
@@ -296,6 +301,54 @@ await path6('E22 dropShapes of a Main main shape whose run carries a stray Deck 
 }, { setup: p => { find(p, 'Wall M', 1, true)[TAG] = DECK; },
   expect: p => eq('E22: the heir is Main\'s: the stray tag is popped', TAG in find(p, 'Wall M', 1), false) });
 
+// A registry NOT in the normal form, on the same desktop-made bytes: every
+// web reader normalises a COPY (takeoffLists), so the file's own record --
+// a padded id, a repeated one, a blank one, a record that is no dict, a
+// field from the future, a non-ASCII and an astral label, the dict form --
+// comes back from an edit, an undo and a redo, a draft and a save exactly as
+// it was (spec 9.2). A save that wrote the normalised copy back would heal
+// the desktop's file behind its back.
+log('\n-- T6: a registry the desktop would normalise comes back as the file had it --');
+{
+  const ODD = {
+    'a list with odd records': [{ list_id: ` ${DECK} `, label: '  Deck ', color: [1, 2, 3], future: { a: 1 } },
+      { list_id: DECK, label: 'Again' }, { list_id: '', label: 'Blank' }, 'junk', null, 5,
+      { list_id: 'tl-pat00001', label: 'Pátio \u{1F3E0}' }, { label: 'No id' }],
+    'the dict form': { [DECK]: 'Deck', 'tl-pat00001': { label: 'Patio', x: 1 }, 'tl-none': null },
+  };
+  for (const [what, reg] of Object.entries(ODD)) {
+    const o = await M.openProject(new Blob([BYTES]));
+    o.metadata.takeoff_lists = structuredClone(reg);
+    o.metadata.takeoff_main_label = ' House ';
+    o.metadata.takeoff_list_active = 'tl-pat00001 ';
+    const sent = KEYS.map(k => JSON.stringify(o.metadata[k]));
+    const p = new M.Project();
+    p.loadFrom({ metadata: o.metadata, annotations: o.annotations, measurements: o.measurements,
+      pageCount: o.pageCount, revisionCounts: o.revisions.map(s => s.length) });
+    const store = new M.PageStore();
+    store.setFromProject(o);
+    ok(`odd registry, ${what}: the web reads it as the desktop would (a normalised copy), and Deck is another takeoff`,
+      TL.takeoffLists(p.metadata).some(r => r.list_id === DECK) && TL.hasOtherTakeoffs(p.metadata, p.measurements));
+    const { c } = controllerFor(p, 0);
+    p.addItem(M.STANDALONE_PAGE, { type: 'standalone', name: 'Glue', qty: 1, unit: 'ea', value: 1 }, { label: 'Add item' });
+    c._file(0, { type: 'area', name: 'New', label: 'New', points: [[0, 0], [50, 0], [50, 50]], value: 12.5 });
+    M.renameClassification(p, 'floor_level', 'Level 1', 'Level 1A', { takeoff: TL.WEB_TAKEOFF });
+    p.dropShapes([find(p, 'Deck boards', 0)._uid]);
+    p.updateItem(find(p, 'Slab')._uid, { notes: 'x' });
+    p.undo(); p.redo();
+    eq(`odd registry, ${what}: after the edits, an undo and a redo the live metadata holds the file's record`,
+      KEYS.map(k => JSON.stringify(p.metadata[k])), sent);
+    const draft = structuredClone(p.buildSaveMetadata());
+    eq(`odd registry, ${what}: ...a draft carries it as it was`, KEYS.map(k => JSON.stringify(draft[k])), sent);
+    p.loadFrom({ metadata: draft, annotations: draft.annotations, measurements: draft.measurements,
+      pageCount: p.pageCount, revisionCounts: o.revisions.map(s => s.length) });
+    p.markDirty();
+    const re = await M.openProject(new Blob([await saveBytes(p, store)]));
+    eq(`odd registry, ${what}: ...and the file saved after it holds the three keys byte for byte`,
+      KEYS.map(k => JSON.stringify(re.metadata[k])), sent);
+  }
+}
+
 // ═══ T7: new work is Main ════════════════════════════════════════════════
 log('\n-- T7: new work is Main, in a job the desktop left in Deck --');
 {
@@ -428,6 +481,33 @@ for (const [name, edit] of MAIN_EDITS) {
   if (v31) {
     const was = await savedAfter(v31, edit);
     eq(`Main only · ${name}: the save is v31's save, metadata and items`, canon(now), canon(was));
+  }
+}
+{
+  // The one expected difference: Wall M filed in the Group Stairs on its
+  // main shape (X1.0) only -- its X2.0 run added by Add Shape, which leaves
+  // in_group off a run -- and the main shape deleted on the canvas.
+  const stairs = Object.values((await M.openProject(new Blob([MAIN_ONLY]))).measurements).flat()
+    .find(m => m.type === 'group' && m.name === 'Stairs');
+  const GI = stairs && stairs.group_item_id;
+  ok('Main only: the Group Stairs is there to file Wall M in', !!GI);
+  const edit = ({ p }) => {
+    find(p, 'Wall M', 0).in_group = GI;
+    ok('Main only · the Group-filed item\'s run carries no in_group (as Add Shape leaves it)',
+      !('in_group' in find(p, 'Wall M', 1, true)));
+    p.dropShapes([find(p, 'Wall M', 0)._uid]);
+  };
+  const heir = s => (s.measurements[1] || []).find(m => m.name === 'Wall M' && !m.group_child);
+  const now = await savedAfter(M, edit);
+  ok('Main only · a Group-filed item\'s main shape dropped: none of the three keys, no tag',
+    KEYS.every(k => !(k in now.meta)) && tagsIn(now.measurements) === 0);
+  eq('Main only · ...the promoted run keeps the item\'s Group, as desktop 3.08\'s _promote_child does (in_group in '
+    + 'PROMOTE_KEYS)', heir(now) && heir(now).in_group, GI);
+  if (v31) {
+    const was = await savedAfter(v31, edit);
+    eq('Main only · ...where v31\'s heir lost it', heir(was) ? heir(was).in_group ?? null : 'no heir', null);
+    if (heir(now)) delete heir(now).in_group;
+    eq('Main only · ...and that one key is the only difference from v31\'s save, metadata and items', canon(now), canon(was));
   }
 }
 {

@@ -1067,6 +1067,11 @@ button.es-lib-manage { background: none; border: 0; cursor: pointer; font-family
 }
 .status-text { white-space: pre-line; overflow: hidden; text-overflow: ellipsis; }
 .status-right { margin-left: auto; display: flex; gap: 14px; color: var(--text-faint); }
+/* The sentence a job of several takeoffs says on open (main.js
+   holdOnOneLine): kept on the bar's one line, cut with an ellipsis and whole
+   in its tooltip, the scale readout beside it on its own one line -- never
+   wrapped out of the 24px bar. Off again once the line moves on. */
+.status-text.one-line { white-space: nowrap; flex: 1 1 0; min-width: 0; }
 
 /* ── overlays ─────────────────────────────────────────────────────────── */
 

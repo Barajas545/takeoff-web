@@ -3483,6 +3483,17 @@ function holding(r, fn) {
   eq('...Main\'s and Deck\'s: only Main\'s counted, nothing said of Deck\'s',
     await said([area('Slab'), area('Deck boards', { takeoff_list: DECK })]),
     ["Back on this sheet's own drawing — 1 item here"]);
+  // A run of Main's item (its main shape on another sheet), painted and
+  // tappable here, beside Deck's: Main's work is on it -- the desktop counts
+  // every shape of version_items -- so never "nothing in Main"; two runs of
+  // one item are one item.
+  eq('...a run of Main\'s item beside Deck\'s: it is Main\'s work here, counted once per item',
+    await said([area('Wall M', { group_id: 'g1', group_child: true }), area('Wall M', { group_id: 'g1', group_child: true }),
+      area('Deck boards', { takeoff_list: DECK }), area('Rail', { takeoff_list: DECK })]),
+    ["Back on this sheet's own drawing — 1 item here"]);
+  eq('...a Deck-tagged run of Main\'s item is not Main\'s',
+    await said([area('Wall M', { group_id: 'g1', group_child: true, takeoff_list: DECK }), area('Deck boards', { takeoff_list: DECK })]),
+    ["Back on this sheet's own drawing — nothing in Main on it yet (2 items here are in other takeoffs)"]);
 }
 
 // ═══ 9. the live differential ═══════════════════════════════════════════

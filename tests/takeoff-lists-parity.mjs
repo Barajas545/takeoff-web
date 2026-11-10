@@ -187,6 +187,38 @@ function checkTruth(T, tag) {
   }
   ok(`${tag}: takeoffOthersMovedWords == takeoff_others_moved_words, a raising hook included (${T.moved.length + 1})`,
     !badMoved.length, badMoved.slice(0, 4).join('\n  '));
+
+  // The values str() spells its own way and py-json reads out of a file --
+  // NaN, the infinities, true -- recorded by name (JSON cannot carry them)
+  // and made again here. NaN is the one that moves an item: Python calls it
+  // TRUE, so its tag reads 'nan' -- another takeoff, never Main.
+  const SPECIAL = { nan: NaN, inf: Infinity, '-inf': -Infinity, True: true };
+  const sp = T.specials || [];
+  const badSp = [];
+  for (const s of sp) {
+    const v = SPECIAL[s.value];
+    if (s.type === 'registry') {
+      const md = { takeoff_lists: [{ list_id: v, label: 'Odd' }, { list_id: 'tl-1a2b3c4d', label: 'Deck' }],
+        takeoff_list_active: v };
+      const got = { lists: TL.takeoffLists(md), labels: [v, 'nan', 'True', 'tl-1a2b3c4d'].map(i => TL.takeoffListLabel(md, i)),
+        naming: naming(TL.takeoffNamingOf(md, {}, '')), naming_in: naming(TL.takeoffNamingOf(md, {}, v)) };
+      const want = { lists: s.lists, labels: s.labels, naming: s.naming, naming_in: s.naming_in };
+      if (canon(got) !== canon(want)) badSp.push(`${s.value} registry: ${short(got)}`);
+      continue;
+    }
+    const m = { type: s.type, takeoff_list: v };
+    const d = { type: s.type, name: 'x', takeoff_list: 'tl-1a2b3c4d' };
+    TL.setTakeoffList(d, v);
+    const asked = [{ type: s.type }, { type: s.type, takeoff_list: 'nan' }, { type: s.type, takeoff_list: 'True' },
+      { type: s.type, takeoff_list: 'tl-1a2b3c4d' }];
+    const got = { of: TL.takeoffListOf(m), in: T.ids.map(i => TL.inTakeoffList(m, i)), asked: asked.map(x => TL.inTakeoffList(x, v)), set: d };
+    const want = { of: s.of, in: s.in, asked: s.asked, set: s.set };
+    if (JSON.stringify(got) !== JSON.stringify(want) || JSON.stringify(s.view) !== JSON.stringify(s.in)) {
+      badSp.push(`${s.value} ${s.type}: ${short(got)} (desktop ${short(want)})`);
+    }
+  }
+  ok(`${tag}: a tag or an id of NaN, Infinity, -Infinity or true reads as Python's str() reads it (${sp.length})`,
+    sp.length >= 20 && !badSp.length, badSp.slice(0, 4).join('\n  ') || `${sp.length} recorded`);
 }
 
 // ═══ 1. the committed snapshot ═══════════════════════════════════════════
@@ -286,6 +318,16 @@ ok('this harness is in the PORTABLE list', /PORTABLE = \[[\s\S]*'takeoff-lists-p
 const src = await readFile(new URL('../js/core/takeoff-lists.js', import.meta.url), 'utf-8');
 ok('no look-behind in the module (Safari before 16.4 refuses a whole module with one)', !/\(\?<[=!]/.test(src));
 ok('the module never reads a tag with trim() (it would part from Python\'s strip)', !/\.trim\(\)/.test(src.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '')));
+{
+  // counting.js: the Delete sheet words sit beside the other takeoff words,
+  // before the materials' heading -- not between aiTotal and its comment.
+  const ct = await readFile(new URL('../js/core/counting.js', import.meta.url), 'utf-8');
+  const head = ct.indexOf('// ── an item\'s associated materials go wherever the item goes');
+  const hid = ct.indexOf('export function hiddenTakeoffsWords(');
+  ok('counting.js: hiddenTakeoffsWords comes after takeoffMoveWords and before the materials\' heading, and aiTotal\'s '
+    + 'doc comment sits on aiTotal', hid > ct.indexOf('export function takeoffMoveWords(') && head > hid
+    && ct.includes('/** Python\'s _ai_total: a material\'s quantity for its item\'s quantity. */\nfunction aiTotal('));
+}
 
 // ═══ 4. live ═════════════════════════════════════════════════════════════
 let live = 'skipped: no PTT_DESKTOP_SRC';

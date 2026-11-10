@@ -585,6 +585,67 @@ log('\n-- T4: nothing of Deck is selected, menued or dragged --');
   }
 }
 
+{
+  // A split item the other way (spec G5): Deck's main shape, a run with no
+  // tag -- painted and tappable here, as every untagged shape is. Its form is
+  // its item's (main.js itemOfShape), and that item is Deck's: Properties…
+  // from the run's own menu (a long press on its pixels, a real
+  // ToolController) opens no form and writes nothing to Deck's item -- said,
+  // never silent. A run of House's item opens House's form, as before; and a
+  // job with only Main opens every one, as v31 did. main.js's itemOfShape
+  // and openProperties are lifted by text and run.
+  const fnOf = name => {
+    const a = MAIN.search(new RegExp(`\\n(?:async )?function ${name}\\(`)) + 1;
+    return a > 0 ? MAIN.slice(a, MAIN.indexOf('\n}\n', a) + 2) : null;
+  };
+  const OPEN = fnOf('openProperties');
+  const OF = fnOf('itemOfShape');
+  ok('main.js has openProperties and itemOfShape', !!OPEN && !!OF);
+  const CT = await import(pathToFileURL(path.join(ROOT, 'js/core/counting.js')).href);
+  const LP = M.LONG_PRESS_MS || 500;
+  const splitRun = o => { delete o.measurements[2].find(m => m.name === 'Deck boards' && m.group_child)[TAG]; };
+  const props = async ({ edit, page, name }) => {
+    const p = await fresh({ edit });
+    const r = ctlRig(p, page);
+    const run = find(p, name, page, true);
+    const [x, y] = run.points[0];
+    r.on.pointerdown(r.ev('pointerdown', x, y, 'touch'));
+    await wait(LP + 80);
+    r.on.pointerup(r.ev('pointerup', x, y, 'touch'));
+    await settle();
+    const st = { asked: [], said: [], menus: r.st.menus.map(nameOf) };
+    const env = {
+      app: { project: p, currentPage: page }, controller: r.c, deleteName: CT.deleteName,
+      otherTakeoffItemWords: TL.otherTakeoffItemWords, setStatus: t => st.said.push(t), sayToFinger: t => st.said.push(t),
+      refScaleWords: () => '', recompute() {},
+      D: { askItem: async a => { st.asked.push(a.existing); return { unit_cost: 99 }; },
+        askStandalone: async () => null, askOpening: async () => null, askSlopeRoof: async () => null, askTile: async () => null },
+    };
+    // eslint-disable-next-line no-new-func
+    const open = new Function('env', `with (env) { ${OF}\nreturn (${OPEN}); }`)(env);
+    const n0 = p.changeCount;
+    const before = JSON.stringify([...p.allItems()].map(([, m]) => m));
+    if (r.st.menus.length) await open(r.st.menus[0]);       // the menu's Properties… row
+    return { ...st, run, p, changed: p.changeCount !== n0 || JSON.stringify([...p.allItems()].map(([, m]) => m)) !== before };
+  };
+  const a = await props({ edit: splitRun, page: 2, name: 'Deck boards' });
+  eq('a split item: a long press on its untagged run (painted here) opens the run\'s menu', a.menus, [nameOf(a.run)]);
+  eq('...and its Properties… opens no form of Deck\'s item, writes nothing, and says why',
+    [a.asked.length, a.changed, a.said],
+    [0, false, ['“Deck boards” is an item of the takeoff Deck, worked on in the desktop app — its properties are not edited here.']]);
+  const b = await props({ edit: null, page: 1, name: 'Wall M' });
+  eq('a run of House\'s item: Properties… opens the form of its item (the main shape on X1.0), and the OK writes it',
+    [b.asked.map(m => [m.name, !!m.group_child, TL.takeoffListOf(m)]), b.changed, find(b.p, 'Wall M', 0).unit_cost],
+    [[['Wall M', false, '']], true, 99]);
+  const c = await props({ edit: o => { splitRun(o); mainOnly(o); }, page: 2, name: 'Deck boards' });
+  eq('Main-only: the same run\'s Properties… opens its item\'s form, as v31 did',
+    [c.asked.map(m => [m.name, !!m.group_child]), c.said], [[['Deck boards', false]], []]);
+  const d = await props({ edit: o => { splitRun(o); delete o.metadata.takeoff_lists; }, page: 2, name: 'Deck boards' });
+  eq('...a takeoff the job has no record of: said as what it is', d.said,
+    ['“Deck boards” is an item of a takeoff this job has no record of, worked on in the desktop app — its properties are '
+      + 'not edited here.']);
+}
+
 // ═══ T5: the SHEET chip ═════════════════════════════════════════════════
 log('\n-- T5: the SHEET chip says what another takeoff leaves out --');
 {
@@ -862,6 +923,31 @@ log('\n-- U9: Delete sheet names what of other takeoffs goes with it --');
     && c.removed.length === 1, JSON.stringify(c.asked));
   const d = await run({ sheet: 2, edit: mainOnly, during: p => { p.measurements[2].push({ ...p.measurements[2][1], _uid: 'late', name: 'Late' }); } });
   eq('Main-only, the same change during the question: deleted, as v31 deletes it', d.removed, [2]);
+
+  // A tag the job has no record of (the registry gone, every tag kept): the
+  // desktop's open-time heal registers every tag, so it never words one;
+  // the web cannot heal, and says the takeoff as what it is -- never "the
+  // takeoff another takeoff".
+  const hidden = q => (q.asked[0] || '').slice((q.asked[0] || '').indexOf(' It also holds') + 1);
+  const noRecord = o => { delete o.metadata.takeoff_lists; };
+  const e = await run({ sheet: 0, edit: noRecord });
+  eq('a takeoff the job has no record of: X1.0\'s question says what goes, in its own words',
+    [hidden(e), e.removed.length], ['It also holds 2 items of a takeoff this job has no record of, hidden here — they go '
+      + 'with it. And part of 1 item of a takeoff this job has no record of, hidden here, which is on other sheets too '
+      + '— the part on this sheet goes with it.', 1]);
+  const f = await run({ sheet: 2, edit: noRecord });
+  ok('...X3.0\'s too, and never "the takeoff another takeoff"', hidden(f).startsWith('It also holds 1 item of a '
+    + 'takeoff this job has no record of, hidden here — it goes with it.') && !/the takeoff another takeoff/.test(f.asked[0]),
+  JSON.stringify(f.asked));
+  // Window 2 in a second takeoff of no record: two of them, said as two.
+  const otherTag = o => { o.measurements[0].find(m => m.name === 'Window 2')[TAG] = 'tl-norecord'; };
+  const g = await run({ sheet: 0, edit: o => { noRecord(o); otherTag(o); } });
+  ok('...two takeoffs of no record: "of 2 takeoffs this job has no record of"', hidden(g).startsWith('It also holds 2 '
+    + 'items of 2 takeoffs this job has no record of, hidden here — they go with it.'), JSON.stringify(g.asked));
+  // ...and one of them beside Deck, which the job knows: the desktop's words.
+  const h = await run({ sheet: 0, edit: otherTag });
+  ok('...one beside Deck: the desktop\'s own words, "(1 in Deck, 1 in another takeoff)"', hidden(h).startsWith('It also '
+    + 'holds 2 items of other takeoffs (1 in Deck, 1 in another takeoff), hidden here — they go with it.'), JSON.stringify(h.asked));
 }
 
 // A job with only Main: the list, its notes, its title and its foot, page by
@@ -1038,6 +1124,17 @@ log('\n-- T13: the words a job of several takeoffs is said in --');
       && f3 === `House only, all sheets, filtered: ${g3.slice('Whole job, filtered: '.length)}`, JSON.stringify([f3, g3]));
     const [[f4], [g4]] = pair(null, false, 'material');
     ok('the full list filtered: still "House only: " (v31 has no lead there)', f4 === `House only: ${g4}`, JSON.stringify([f4, g4]));
+    // A filter that lists nothing (LAB: no labor here): no totals, and no
+    // tooltip over the totals that are not there -- in a job with Main alone
+    // too, where v31 left its NOT COUNTED words standing over an empty foot.
+    for (const [what, q, cq] of [['a job of several takeoffs', p0, c], ['a job with Main alone', pm, cm]]) {
+      const a = panelRig(q, cq);
+      const before = a.panel.footEl.title;
+      a.panel.costFilter = 'labor'; a.panel.refresh();
+      eq(`${what}: LAB lists nothing -- the foot says nothing, and the tooltip it had goes with it`,
+        [!!before, a.rows().length, a.foot(), a.panel.footEl.title], [true, 0, '', '']);
+      a.restore();
+    }
     // two other takeoffs
     const p2 = await fresh({ edit: o => {
       o.metadata.takeoff_lists = [...o.metadata.takeoff_lists, { list_id: 'tl-patio001', label: 'Patio' }];
@@ -1141,8 +1238,9 @@ log('\n-- T13: the words a job of several takeoffs is said in --');
 
   // ── main.js: the sentence on open (U7) ──
   const openSaid = (src, p, statusShown, Model = M.CountingModel) => {
-    const st = { priced: [], finger: [], timers: [] };
+    const st = { priced: [], finger: [], timers: [], held: [] };
     const fn = liftFn(src, 'sayLeftOutAtOpen', {
+      holdOnOneLine: t => st.held.push(t),
       countingModel: () => new Model({ metadata: p.metadata, measurements: p.measurements, pageCount: p.pageCount }),
       sayPrice: t => st.priced.push(typeof t === 'function' ? t() : t), app: { project: p },
       takeoffsOpenWords: TL.takeoffsOpenWords, statusLineShown: () => statusShown,
@@ -1160,9 +1258,11 @@ log('\n-- T13: the words a job of several takeoffs is said in --');
     const cc0 = [p.changeCount, p.dirty];
     const a = openSaid(MAIN, p, true);
     eq('on open: the sentence, said last, through sayPrice -- and the desktop left the job in Deck', a.priced.at(-1), OPEN + LEFT);
-    eq('...no toast where the status line is drawn', a.finger, []);
+    eq('...no toast where the status line is drawn -- the line holds it on its one line instead (holdOnOneLine)',
+      [a.finger, a.held], [[], [OPEN + LEFT]]);
     const b = openSaid(MAIN, p, false);
-    eq('...a phone (no status line): the same sentence as a toast too', [b.priced.at(-1), b.finger], [OPEN + LEFT, [OPEN + LEFT]]);
+    eq('...a phone (no status line): the same sentence as a toast too', [b.priced.at(-1), b.finger, b.held],
+      [OPEN + LEFT, [OPEN + LEFT], []]);
     eq('...and nothing written', [p.changeCount, p.dirty], cc0);
     const pNo = await fresh({ edit: o => { delete o.metadata.takeoff_lists; } });
     eq('a tag with no record: its own words, and no "left in" (the desktop opens a job left in no takeoff it knows in Main)',
@@ -1251,6 +1351,8 @@ log('\n-- T13: the words a job of several takeoffs is said in --');
     }
     eq('Main-only: on open, what is said is v31\'s, and no toast', [openSaid(MAIN, pm, false).priced, openSaid(MAIN, pm, false).finger],
       [openSaid(V31_MAIN, pOld, false, v31.CountingModel).priced, []]);
+    eq('Main-only: ...and the status line is never held on one line (its line is v31\'s)',
+      [openSaid(MAIN, pm, true).held, openSaid(MAIN, pm, false).held], [[], []]);
     eq('Main-only: the tile tips are v31\'s', await tips(pm), Object.fromEntries(Object.entries(new v31.CountingModel({
       metadata: pOld.metadata, measurements: pOld.measurements, pageCount: pOld.pageCount }).sheetTileStates())
       .map(([k, s]) => [k, s.tip])));

@@ -5,9 +5,13 @@
 // (mouse, the standard layout) and a phone's (touch).
 //
 //   A. Opening it SAYS so, once, after "Opened …": in the status line where
-//      it is drawn, and as the finger's toast on a phone (no status line
+//      it is drawn -- on the bar's one line, inside the bar and the window,
+//      the scale readout beside it on its own one line, the whole line in
+//      its tooltip -- and as the finger's toast on a phone (no status line
 //      there). The project title and the tab name the takeoff: "Two
-//      Takeoffs — House". Nothing is marked unsaved.
+//      Takeoffs — House", the title on screen where he can read it (on a
+//      phone, at the far end of the menubar a finger swipes along). Nothing
+//      is marked unsaved.
 //   B. The Items list's first line says which takeoff it is of, on screen
 //      (the column at a desktop's width, the drawer on a phone).
 //   C. On X1.0's own drawing, by real pointer events at a shape's exact
@@ -347,7 +351,6 @@ async function layout(L) {
         toast: t && !t.hidden && cs.display !== 'none' && cs.visibility !== 'hidden' && tr.width > 0
           && tr.left >= 0 && tr.right <= innerWidth && tr.top >= 0 && tr.bottom <= innerHeight ? t.textContent : null,
         title: document.getElementById('projTitle').textContent, tab: document.title,
-        titleShown: document.getElementById('projTitle').getBoundingClientRect().width > 0,
         dirty: TakeoffApp.app.project.dirty, dialog: !!document.querySelector('.modal:not([hidden]), dialog[open]') };
     })()`);
     if (said.status.includes(OPEN_WORDS) && (!L.touch || said.toast)) break;
@@ -368,9 +371,48 @@ async function layout(L) {
       && said.status.indexOf(OPEN_WORDS, words + 1) < 0, said.status);
     ok(`${L.name}: A. the status line is drawn here, and no toast`, said.statusDrawn && said.toast === null, said);
   }
-  eq(`${L.name}: A. the project title and the tab name the takeoff`, [said.title, said.tab, said.titleShown],
-    ['Two Takeoffs — House', 'Two Takeoffs — House — Professional Takeoff Tools', true]);
+  if (!L.mobile) {
+    // The bar is one line, 24 px: the sentence on it, not wrapped out of it
+    // (its line boxes, read with a Range: a flex item's own box is one
+    // rect however many lines its text takes).
+    const fit = await evaluate(`(() => {
+      const bar = document.querySelector('.statusbar').getBoundingClientRect();
+      const boxes = el => { const r = document.createRange(); r.selectNodeContents(el);
+        return [...r.getClientRects()].filter(b => b.width > 0 && b.height > 0).map(b => [b.top, b.bottom]); };
+      const lines = l => { const tops = l.map(b => b[0]).sort((a, b) => a - b);
+        return tops.filter((t, i) => i === 0 || t - tops[i - 1] > 4).length; };
+      const inside = l => l.every(([t, b]) => t >= bar.top - 0.5 && b <= bar.bottom + 0.5 && b <= innerHeight);
+      const st = document.getElementById('statusText');
+      const s = boxes(st), right = boxes(document.querySelector('.status-right'));
+      return { lines: lines(s), rightLines: lines(right), inside: inside(s) && inside(right),
+        tip: st.title === st.textContent && st.textContent.includes(${JSON.stringify(OPEN_WORDS)}),
+        bar: [bar.top, bar.bottom, innerHeight], s, right };
+    })()`);
+    ok(`${L.name}: A. ...on the status bar's one line, inside the bar and the window, the scale readout on its own one line`,
+      fit.lines === 1 && fit.rightLines <= 1 && fit.inside, fit);
+    ok(`${L.name}: A. ...and the whole line is its tooltip`, fit.tip, fit);
+  }
+  eq(`${L.name}: A. the project title and the tab name the takeoff`, [said.title, said.tab],
+    ['Two Takeoffs — House', 'Two Takeoffs — House — Professional Takeoff Tools']);
   ok(`${L.name}: A. nothing is marked unsaved`, said.dirty === false);
+  // ...and the title is SEEN: its centre inside the window, nothing over it.
+  // The toolbars are brought down first; on a phone the title sits at the
+  // far end of the menubar, which scrolls sideways -- a finger swipes it
+  // along, as he would, until the title is in view.
+  await pullDown();
+  const TITLE = `document.getElementById('projTitle')`;
+  let seen = await at(TITLE);
+  for (let i = 0; i < 6 && !seen && L.touch; i++) {
+    const bar = await evaluate(`(() => { const r = document.querySelector('.menubar').getBoundingClientRect();
+      return [r.top + r.height / 2, Math.min(r.right, innerWidth)]; })()`);
+    await drag(bar[1] - 30, bar[0], 30, bar[0]);
+    seen = await at(TITLE);
+  }
+  await shot('title');
+  ok(`${L.name}: A. the title is on screen where he can read it${L.touch ? ' (the menubar swiped along by a finger)' : ''}`,
+    !!seen, await evaluate(`(() => { const r = ${TITLE}.getBoundingClientRect();
+      return { rect: [r.left, r.top, r.width, r.height], innerWidth,
+        scrolled: document.querySelector('.menubar').scrollLeft }; })()`));
 
   // ── Edit Mode, by a real tap ──
   if (L.mobile) {
@@ -388,6 +430,15 @@ async function layout(L) {
   }
   await sleep(500);
   if (!ok(`${L.name}: Edit Mode is on`, await evaluate('TakeoffApp.app.editing'))) return;
+  if (!L.mobile) {
+    // Edit Mode said its own sentence: the line has moved on, and the hold
+    // that kept the takeoffs sentence on one line has let it go.
+    const after = await evaluate(`(() => { const st = document.getElementById('statusText');
+      return { text: st.textContent, has: st.textContent.includes(${JSON.stringify(OPEN_WORDS)}),
+        oneLine: st.classList.contains('one-line'), tip: st.getAttribute('title') }; })()`);
+    ok(`${L.name}: A. once the status line has moved on, it is its own again (no one-line hold, no tooltip)`,
+      !after.has && !after.oneLine && after.tip === null && !!after.text, after);
+  }
 
   // ── B. the Items list says which takeoff it is of ──
   if (L.mobile) {

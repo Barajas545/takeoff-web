@@ -36663,5 +36663,1175 @@
    "out": "Which drawing a sheet counts from is one choice for every takeoff, so this will also move what is taken off in House."
   }
  ],
- "moved_naming_raises": ""
+ "moved_naming_raises": "",
+ "specials": [
+  {
+   "value": "nan",
+   "type": "area",
+   "of": "nan",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    true,
+    false,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "nan"
+   }
+  },
+  {
+   "value": "nan",
+   "type": "standalone",
+   "of": "nan",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    true,
+    false,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "nan"
+   }
+  },
+  {
+   "value": "nan",
+   "type": "group",
+   "of": "nan",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    true,
+    false,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "nan"
+   }
+  },
+  {
+   "value": "nan",
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": "nan",
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": "nan",
+   "type": "registry",
+   "lists": [
+    {
+     "list_id": "nan",
+     "label": "Odd"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "labels": [
+    "Odd",
+    "Odd",
+    "",
+    "Deck"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "nan",
+      "Odd"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "nan",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "nan",
+      "Odd"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": "inf",
+   "type": "area",
+   "of": "inf",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    false,
+    false,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "inf"
+   }
+  },
+  {
+   "value": "inf",
+   "type": "standalone",
+   "of": "inf",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    false,
+    false,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "inf"
+   }
+  },
+  {
+   "value": "inf",
+   "type": "group",
+   "of": "inf",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    false,
+    false,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "inf"
+   }
+  },
+  {
+   "value": "inf",
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": "inf",
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": "inf",
+   "type": "registry",
+   "lists": [
+    {
+     "list_id": "inf",
+     "label": "Odd"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "labels": [
+    "Odd",
+    "",
+    "",
+    "Deck"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "inf",
+      "Odd"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "inf",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "inf",
+      "Odd"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": "-inf",
+   "type": "area",
+   "of": "-inf",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    false,
+    false,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "-inf"
+   }
+  },
+  {
+   "value": "-inf",
+   "type": "standalone",
+   "of": "-inf",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    false,
+    false,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "-inf"
+   }
+  },
+  {
+   "value": "-inf",
+   "type": "group",
+   "of": "-inf",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    false,
+    false,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "-inf"
+   }
+  },
+  {
+   "value": "-inf",
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": "-inf",
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": "-inf",
+   "type": "registry",
+   "lists": [
+    {
+     "list_id": "-inf",
+     "label": "Odd"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "labels": [
+    "Odd",
+    "",
+    "",
+    "Deck"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "-inf",
+      "Odd"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "-inf",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "-inf",
+      "Odd"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": "True",
+   "type": "area",
+   "of": "True",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    false,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "True"
+   }
+  },
+  {
+   "value": "True",
+   "type": "standalone",
+   "of": "True",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    false,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "True"
+   }
+  },
+  {
+   "value": "True",
+   "type": "group",
+   "of": "True",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked": [
+    false,
+    false,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "True"
+   }
+  },
+  {
+   "value": "True",
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": "True",
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": "True",
+   "type": "registry",
+   "lists": [
+    {
+     "list_id": "True",
+     "label": "Odd"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "labels": [
+    "Odd",
+    "",
+    "Odd",
+    "Deck"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "True",
+      "Odd"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "True",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "True",
+      "Odd"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  }
+ ]
 }

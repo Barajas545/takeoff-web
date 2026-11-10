@@ -422,6 +422,46 @@ for md in METAS:
     registries.append(out)
 
 
+# Values str() spells its own way, which py-json reads out of a file (bare
+# NaN / Infinity / -Infinity, true) and JSON cannot carry: recorded by NAME
+# and made again on each side. NaN is the one that moves an item: Python
+# calls float('nan') TRUE, so str(x or "") reads 'nan' -- another takeoff,
+# never Main.
+SPECIALS = {"nan": float("nan"), "inf": float("inf"),
+            "-inf": float("-inf"), "True": True}
+specials = []
+for name, v in SPECIALS.items():
+    for t in ["area", "standalone", "group", "textnote", "page_ref"]:
+        m = {"type": t, "takeoff_list": v}
+        d = {"type": t, "name": "x", "takeoff_list": DECK}
+        NS["_set_takeoff_list"](d, v)
+        asked = [{"type": t}, {"type": t, "takeoff_list": "nan"},
+                 {"type": t, "takeoff_list": "True"},
+                 {"type": t, "takeoff_list": DECK}]
+        specials.append({
+            "value": name, "type": t,
+            "of": NS["takeoff_list_of"](m),
+            "in": [NS["in_takeoff_list"](m, i) for i in IDS],
+            "view": [canvas(active=i).in_active_list(m) for i in IDS],
+            # the special as the takeoff asked about
+            "asked": [NS["in_takeoff_list"](x, v) for x in asked],
+            "set": d,
+        })
+    md = {"takeoff_lists": [{"list_id": v, "label": "Odd"},
+                            {"list_id": DECK, "label": "Deck"}],
+          "takeoff_list_active": v}
+    w = window(md)
+    nm = w._takeoff_naming_now()
+    specials.append({
+        "value": name, "type": "registry",
+        "lists": w.takeoff_lists(),
+        "labels": [w.takeoff_list_label(i) for i in [v, "nan", "True", DECK]],
+        "naming": [nm[0], [[k, x] for k, x in nm[1].items()]],
+        "naming_in": (lambda n: [n[0], [[k, x] for k, x in n[1].items()]])(
+            window(md, active=v)._takeoff_naming_now()),
+    })
+
+
 def _store():
     """A job of two takeoffs and a third the registry does not know,
     with every shape a count could stumble on."""
@@ -545,6 +585,7 @@ TRUTH = {
     "where": where,
     "moved": moved,
     "moved_naming_raises": raising,
+    "specials": specials,
 }
 text = json.dumps(TRUTH, indent=1, sort_keys=False) + "\n"
 if WRITE:
