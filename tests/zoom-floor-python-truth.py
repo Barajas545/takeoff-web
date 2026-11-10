@@ -133,6 +133,10 @@ WIN_STUBS = {
     "mark_version", "item_on_drawing", "_activate_on_this_sheet",
     "_edit_group_item", "_edit_standalone_item",
     "_shape_cycle_gid", "_shape_cycle_idx",
+    # 3.08: what show_sheet_version says of a drawing with nothing of
+    # the takeoff he is in on it. The web is in Main; version_items is
+    # [] here, so the words are never reached by a scenario.
+    "_other_takeoffs_here", "active_takeoff_list", "takeoff_list_label",
 }
 SET_METHODS = ["_zoom_floor_words"]
 REF_METHODS = ["wheelEvent"]
@@ -538,6 +542,16 @@ class Win(NS["WinBase"]):
 
     def _sync_revision_highlight(self):
         pass
+
+    # 3.08: a job with Main alone -- nothing of another takeoff anywhere
+    def _other_takeoffs_here(self, page):
+        return 0
+
+    def active_takeoff_list(self):
+        return ""
+
+    def takeoff_list_label(self, list_id):
+        return "Main" if not list_id else ""
 
     def _counts_here_clause(self, page, rev_id):
         return ""

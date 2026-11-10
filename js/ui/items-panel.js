@@ -28,6 +28,7 @@ import {
   pyTitle, pyCapitalize, classStrip, rowsNow,
 } from '../core/classify.js';
 import { holdGesture } from './hold.js';
+import { inTakeoffList, WEB_TAKEOFF } from '../core/takeoff-lists.js';
 import { pyFixed } from '../core/pyformat.js';
 import { itemCost } from '../core/measure.js';
 
@@ -228,7 +229,7 @@ export class ItemsPanel extends EventTarget {
    *  Counted over the whole job, so a filter or a page turn never opens it
    *  (desktop _open_solo_on_add). */
   _openSoloOnAdd() {
-    const n = soloCount(this.project.measurements);
+    const n = soloCount(this.project.measurements, this._inList());
     if (this._soloCount !== null && n > this._soloCount) this.collapsed.delete(SOLO_KEY);
     this._soloCount = n;
   }
@@ -400,6 +401,13 @@ export class ItemsPanel extends EventTarget {
 
   // ── build ───────────────────────────────────────────────────────────
 
+  /** m => is it in the takeoff he is in? (the canvas's own test, handed in
+   *  as host.inActiveList; Main's without one). What the list shows,
+   *  totals and offers is that takeoff's -- as the drawing paints it. */
+  _inList() {
+    return this.host.inActiveList || (m => inTakeoffList(m, WEB_TAKEOFF));
+  }
+
   refresh() {
     const p = this.project;
     const floorsAll = [];
@@ -412,11 +420,13 @@ export class ItemsPanel extends EventTarget {
     this._model = this.host.counting?.() || new CountingModel({
       metadata: p.metadata, measurements: p.measurements, pageCount: p.pageCount });
     this._counts = new Map();
+    const inList = this._inList();
 
     for (const key of Object.keys(p.measurements)) {
       for (const m of p.measurements[key]) {
         if (EXCLUDED.has(m.type)) continue;
         if (m.group_child) continue;          // child shapes roll up into the master
+        if (!inList(m)) continue;             // another takeoff's: hidden, as on the canvas
         const fl = classStrip(m.floor_level);
         const cat = classStrip(m.category);
         // Collect every existing value BEFORE filtering, so the filter combos
@@ -439,6 +449,7 @@ export class ItemsPanel extends EventTarget {
     for (const key of Object.keys(p.measurements)) {
       for (const m of p.measurements[key]) {
         if (m.type !== 'group' || m.group_child) continue;
+        if (!inList(m)) continue;             // another takeoff's Group
         if (this.costFilter !== 'all' && (m.cost_type || 'material') !== this.costFilter) continue;
         if (this.floorFilter !== null && classStrip(m.floor_level) !== this.floorFilter) continue;
         if (this.groupFilter !== null && classStrip(m.category) !== this.groupFilter) continue;
@@ -503,7 +514,7 @@ export class ItemsPanel extends EventTarget {
         this._updateFoot(whole, true);
         return;
       }
-      const sheet = sheetRows(this._model, all, built);
+      const sheet = sheetRows(this._model, all, built, inList);
       this._sheetView = { page: built.page, revId: built.revId || '', revPage: built.revPage ?? null };
       this._sheetKey = sheetKeyOf(this._sheetView);
       this._here = sheet.here;

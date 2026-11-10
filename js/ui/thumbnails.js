@@ -8,12 +8,15 @@
 
 export class Thumbnails {
   constructor({ listEl, panelEl, project, pages, onPick, revisionCounts,
-                onSlideVersion, versionState, tileStates }) {
+                onSlideVersion, versionState, tileStates, inView }) {
     this.listEl = listEl;
     this.panelEl = panelEl;
     this.project = project;
     this.pages = pages;
     this.onPick = onPick;
+    // m => is it in the takeoff he is in? The badge counts what the drawing
+    // paints: another takeoff's items are said in its tooltip, not counted.
+    this.inView = inView || (() => true);
     // Sliding a card sideways walks that sheet's versions: (index, step).
     this.onSlideVersion = onSlideVersion || null;
     // () => { page, old, which, count } — which sheet is showing something
@@ -122,10 +125,19 @@ export class Thumbnails {
     no.title = name ? `${label} — ${name}` : label;
     el.querySelector('.thumb-name').textContent = name;
     el.querySelector('.thumb-name').title = name;
-    const items = (this.project.measurements[i] || []).filter(m => !m.group_child).length;
+    // The takeoff he is in only, as the drawing paints it; the rest is said.
+    // With nothing of his on the sheet there is no badge at all -- the
+    // desktop paints nothing of another takeoff on a card either.
+    let items = 0;
+    let more = 0;
+    for (const m of this.project.measurements[i] || []) {
+      if (m.group_child) continue;
+      if (this.inView(m)) items += 1; else more += 1;
+    }
     const badge = el.querySelector('.thumb-badge');
     badge.textContent = items ? String(items) : '';
-    badge.title = items ? `${items} takeoff item${items === 1 ? '' : 's'} on this sheet` : '';
+    badge.title = items ? `${items} takeoff item${items === 1 ? '' : 's'} on this sheet`
+      + (more ? ` (${more} more in other takeoffs)` : '') : '';
 
     // How many times this sheet was re-issued. One dot per revision that
     // carries it, so a glance down the list shows which drawings changed —

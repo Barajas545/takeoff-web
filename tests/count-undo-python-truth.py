@@ -55,7 +55,11 @@ CLASS = "GLPageWidget"
 METHODS = ["_rearm_count", "arm_count", "forget_armed_count",
            "_inherit_count_framing", "item_rev_id"]
 ATTRS = ["_COUNT_TEMPLATE", "CLASS_FIELDS"]
-MODULE_FUNCS = ["page_sort_key"]
+# ...and, since 3.08, which takeoff a count is in: a count hands its framing
+# over only within its OWN takeoff (a RELATION). Their module closure
+# (takeoff_list_scoped, is_takeoff_item, is_group and the type constants)
+# is walked below, not listed by hand.
+MODULE_FUNCS = ["page_sort_key", "in_takeoff_list", "takeoff_list_of"]
 # The stand-in's data, and the things that are not this file's to run: the
 # likeness ranking (the web uses _uid), the Item box (recorded), the window
 # (it answers "is this priced?" with the web's own answer), the framing
@@ -98,9 +102,42 @@ for node in cls.body:
             and isinstance(node.targets[0], ast.Name)
             and node.targets[0].id in ATTRS):
         attrs[node.targets[0].id] = ast.literal_eval(node.value)
+TOP = {}
 for node in tree.body:
-    if isinstance(node, ast.FunctionDef) and node.name in MODULE_FUNCS:
-        funcs[node.name] = segment(node, "module")
+    if isinstance(node, ast.FunctionDef):
+        TOP.setdefault(node.name, node)
+    elif isinstance(node, ast.Assign):
+        for _t in node.targets:
+            if isinstance(_t, ast.Name):
+                TOP.setdefault(_t.id, node)
+
+
+def _free_of(node):
+    loc = set()
+    if isinstance(node, ast.FunctionDef):
+        loc = {a.arg for a in node.args.args + node.args.kwonlyargs}
+    for n in ast.walk(node):
+        if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store):
+            loc.add(n.id)
+        elif isinstance(n, ast.arg):
+            loc.add(n.arg)
+        elif isinstance(n, (ast.Import, ast.ImportFrom)):
+            loc.update((a.asname or a.name).split(".")[0] for a in n.names)
+    return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)
+            and isinstance(n.ctx, ast.Load)} - loc
+
+
+_queue, _nodes = list(MODULE_FUNCS), {}
+while _queue:
+    _nm = _queue.pop(0)
+    if _nm in _nodes or _nm not in TOP:
+        continue
+    _nodes[_nm] = TOP[_nm]
+    _queue += sorted(n for n in _free_of(TOP[_nm]) if n in TOP)
+# in source order, so a constant that reads another runs after it
+for _nm, node in sorted(_nodes.items(), key=lambda kv: kv[1].lineno):
+    funcs[_nm] = (segment(node, "module") if isinstance(node, ast.FunctionDef)
+                  else "".join(lines[node.lineno - 1:node.end_lineno]))
 missing = (sorted(set(METHODS) - set(bodies)) + sorted(set(ATTRS) - set(attrs))
            + sorted(set(MODULE_FUNCS) - set(funcs)))
 if missing:
@@ -108,10 +145,16 @@ if missing:
 
 # ── the closure check ─────────────────────────────────────────────────────
 allowed_self = set(METHODS) | set(ATTRS) | STUBS
-allowed_free = set(MODULE_FUNCS) | set(STAND_INS)
+allowed_free = set(funcs) | set(STAND_INS)
 problems = []
 for name, body in list(bodies.items()) + list(funcs.items()):
     fn = ast.parse(body).body[0]
+    if not isinstance(fn, ast.FunctionDef):
+        for f in sorted(_free_of(fn) - allowed_free):
+            if not hasattr(builtins, f):
+                problems.append("%s reads the module-level name %s, which is "
+                                "not lifted" % (name, f))
+        continue
     touched = {n.attr for n in ast.walk(fn)
                if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name)
                and n.value.id == "self"}
@@ -137,7 +180,7 @@ for name, body in list(bodies.items()) + list(funcs.items()):
             and isinstance(n.ctx, ast.Load)} - bound - {"self"}
     # a module function may read only builtins: it is lifted on its own
     for f in sorted(free):
-        if not hasattr(builtins, f) and (name in funcs or f not in allowed_free):
+        if not hasattr(builtins, f) and f not in allowed_free:
             problems.append("%s reads the module-level name %s, which is not "
                             "lifted" % (name, f))
 if problems:
@@ -233,7 +276,7 @@ def state(g, target=None, spec=None):
 cases = json.loads(sys.stdin.read() or "{}")
 out = {"COUNT_TEMPLATE": list(attrs["_COUNT_TEMPLATE"]),
        "CLASS_FIELDS": list(attrs["CLASS_FIELDS"]),
-       "lifted": METHODS + ATTRS + MODULE_FUNCS, "rearm": [], "arm": [], "forget": None,
+       "lifted": METHODS + ATTRS + list(funcs), "rearm": [], "arm": [], "forget": None,
        "inherit": []}
 
 # _rearm_count: `place` as _armed_count_place reads it before the swap.

@@ -1679,11 +1679,18 @@ function inheritJob(k) {
     revisions: structuredClone(INHERIT_REVS), sheet_version: { ...k.sheet_version } },
   annotations: {}, measurements: structuredClone(k.store), pageCount: 3, revisionCounts: [2] };
 }
+// Since 3.08 a candidate may be another takeoff's (its own random stream,
+// so the jobs above are the jobs they were): a Deck-framed namesake hands
+// nothing over to a count the web files in Main (a RELATION: the takeoff
+// the NEW count is in), a tag of only spaces is Main, a padded Deck tag
+// is Deck's.
+const INHERIT_TAGS = ['tl-deck0001', ' ', ' tl-deck0001 '];
 function inheritCases() {
   const r = sessionRng(4242);
+  const rt = sessionRng(3080);
   const pick = a => a[Math.floor(r() * a.length)];
   const out = [];
-  for (let i = 0; i < 600; i += 1) {
+  for (let i = 0; i < 800; i += 1) {
     const store = {};
     const n = 1 + Math.floor(r() * 4);
     for (let j = 0; j < n; j += 1) {
@@ -1691,6 +1698,7 @@ function inheritCases() {
       const name = pick(['Posts', 'Posts', 'Posts', 'Hangers', 'Posts ']);
       const m = { type: r() < 0.9 ? 'count' : 'polyline', name, label: name, points: [[10 + j, 10]],
         value: 1, floor_level: 'Level 1', category: 'Wood Framing', sort_order: 100 + j * 10 };
+      if (rt() < 0.35) m.takeoff_list = INHERIT_TAGS[Math.floor(rt() * INHERIT_TAGS.length)];
       if (pg < 2 && r() < 0.45) { m.rev_id = 'r1'; m.rev_page = r() < 0.8 ? pg : 1 - pg; }
       const fr = r();
       const at = (store[pg] || []).length;
@@ -1819,14 +1827,32 @@ const SESSION_DIRECTED = [
     ['ver', 'r1'], ['tap', 'Outlets', 'Level 2'], ['tap'], ['ver', ''], ['tap'], ['ver', 'r1'], ['tap'],
     ['undo'], ['undo'], ['undo'], ['tap'], ['ver', ''], ['tap']],
 ];
+// ...and since 3.08 the same counts with another takeoff's namesakes on
+// both sheets, ahead of Main's (desktop 3.08: the takeoff he is in --
+// version_items): the name join, a held count and Carry on with never go
+// onto Deck's, and every new tap is filed in Main, untagged. A Deck count
+// takes no tap, so its marks stay as they were.
+const SESSION_DECK = 'tl-deck0001';
+const SESSION_SEEDED_TL = {
+  0: [seed('Outlets', 'Level 1', 4, { sort_order: 50, count_number: 5, takeoff_list: SESSION_DECK }),
+    ...SESSION_SEEDED[0],
+    seed('Switches', 'Level 1', 2, { sort_order: 250, count_number: 6, takeoff_list: ` ${SESSION_DECK} ` })],
+  1: [seed('Switches', 'Level 1', 5, { sort_order: 260, count_number: 7, takeoff_list: SESSION_DECK }),
+    ...SESSION_SEEDED[1]],
+};
 function sessions() {
   const out = SESSION_DIRECTED.map(ops => ({ seed: 'directed', ops, sheets: 2, items: {} }));
   for (let s = 1; s <= 60; s += 1) out.push({ seed: s, ops: sessionOps(s, 40), sheets: 2, items: {} });
   for (let s = 1001; s <= 1060; s += 1) {
     out.push({ seed: s, ops: sessionOps(s, 40), sheets: 2, items: SESSION_SEEDED });
   }
+  for (let s = 2001; s <= 2040; s += 1) {
+    out.push({ seed: s, ops: sessionOps(s, 40), sheets: 2, items: SESSION_SEEDED_TL });
+  }
   return out;
 }
+/** Which takeoff a row's count is in, as the desktop reads it: '' is Main. */
+const tagOf = m => String(m.takeoff_list || '').trim();
 
 /** One session through the web's controller: the state after every step. */
 async function webSession(ops, items) {
@@ -1866,7 +1892,9 @@ async function webSession(ops, items) {
     const rows = [];
     for (const pg of [0, 1]) {
       for (const m of W.p.measurements[pg] || []) {
-        if (m.type === 'count') rows.push([pg, m.name, m.floor_level, String(m.rev_id || ''), (m.points || []).length]);
+        if (m.type === 'count') {
+          rows.push([pg, m.name, m.floor_level, String(m.rev_id || ''), (m.points || []).length, tagOf(m)]);
+        }
       }
     }
     const t = W.c.countTarget;
@@ -1890,6 +1918,10 @@ async function tapRulesDifferential() {
       const child = execFile('python', ['-B', path.join(here, 'count-undo-desktop-model.py'), DESKTOP_SRC],
         { windowsHide: true, maxBuffer: 1 << 28, env: { ...process.env, PTT_DESKTOP_SRC: DESKTOP_SRC } },
         (err, out, errOut) => (err ? reject(new Error(errOut || err.message)) : resolve(JSON.parse(out))));
+      // A harness that stops before it reads its input (a closure break)
+      // closes the pipe: said through the callback's error, not a crash
+      // with "write EOF" and no word of why.
+      child.stdin.on('error', () => {});
       child.stdin.end(JSON.stringify(list));
     });
   } catch (err) {
@@ -1929,6 +1961,7 @@ if (!(await haveDesktopSource())) {
       const child = execFile('python', ['-B', path.join(here, 'count-undo-python-truth.py'), DESKTOP_SRC],
         { windowsHide: true, maxBuffer: 1 << 26, env: { ...process.env, PTT_DESKTOP_SRC: DESKTOP_SRC } },
         (err, out, errOut) => (err ? reject(new Error(errOut || err.message)) : resolve(JSON.parse(out))));
+      child.stdin.on('error', () => {});          // as above: a closure break is said, not a crash
       child.stdin.end(JSON.stringify({ rearm: REARM, arm: ARM, inherit: INHERIT }));
     });
   } catch (err) {
@@ -1993,10 +2026,20 @@ if (!(await haveDesktopSource())) {
       // A new count under a framed name: the web asks or says so exactly
       // where the desktop's own _inherit_count_framing hands framing over.
       let differ = 0, handed = 0;
+      // ...and the cases where only another takeoff's namesake is framed and
+      // priced (the web never asks there, R1), counted so they cannot vanish.
+      let deckOnly = 0;
       INHERIT.forEach((k, i) => {
         const want = truth.inherit[i];
         const web = webInherit(k);
         if (want.inherited) handed += 1;
+        const framedPriced = Object.entries(k.store).flatMap(([pg, list]) => list
+          .map((m, j) => [m, k.priced[pg][j]])).filter(([m, pr]) => pr && m.type === 'count'
+          && m.name === k.name && m.framing && Object.keys(m.framing).length);
+        if (framedPriced.length && framedPriced.every(([m]) => String(m.takeoff_list || '').trim())) {
+          deckOnly += 1;
+          if (web !== false) ok(`case ${i}: a namesake framed only in another takeoff makes the web ask`, false);
+        }
         if (web !== want.inherited) {
           differ += 1;
           if (differ <= 3) {
@@ -2009,6 +2052,8 @@ if (!(await haveDesktopSource())) {
         + 'the desktop\'s own _inherit_count_framing hands framing over', differ, 0);
       ok(`...and the cases reach both answers (${handed} handed over, ${INHERIT.length - handed} not)`,
         handed >= 100 && INHERIT.length - handed >= 100);
+      ok(`...and ${deckOnly} of them have their only framed, priced namesakes in another takeoff `
+        + '(nothing handed over, the web does not ask)', deckOnly >= 20);
       ok('...and the desktop said where it came from on every one it handed over',
         truth.inherit.every(w => !w.inherited || (typeof w.from === 'string' && /continues on this sheet/.test(w.said || ''))));
     }

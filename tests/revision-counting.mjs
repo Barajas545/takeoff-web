@@ -72,6 +72,7 @@ import { ToolController } from '../js/tools/controller.js';
 import { choiceDialog } from '../js/ui/dialogs.js';
 import { collectItems, collectRows } from '../js/ui/reports.js';
 import { parsePyJson, stringifyPyJson } from '../js/core/py-json.js';
+import { inTakeoffList, WEB_TAKEOFF } from '../js/core/takeoff-lists.js';
 import {
   LIBRARY, DESKTOP_SRC, DATA, haveLibrary, haveDesktopSource, walkProjects,
 } from './config.mjs';
@@ -917,12 +918,16 @@ function checkSheet(input, recs, label, { dom = true } = {}) {
   const pos = new Map();
   for (const k of model.pageKeys()) model.items(k).forEach((m, i) => pos.set(m, [k, i]));
   // the rows the web's refresh lists before the chip: its own filter walk
+  // -- and, since 3.08, only the takeoff he is in (Main, the web's), as the
+  // desktop's refresh walks it (`if not gl.in_active_list(m): continue`)
+  const inList = m => inTakeoffList(m, WEB_TAKEOFF);
   const listed = (cost, floor, group) => {
     const out = [];
     for (const key of Object.keys(model.meas)) {
       for (const m of model.meas[key]) {
         if (['distance', 'textnote', 'page_ref', 'pitch', 'ref_distance', 'group'].includes(m.type)) continue;
         if (m.group_child) continue;
+        if (!inList(m)) continue;
         const fl = String(m.floor_level || '').trim();
         const cat = String(m.category || '').trim();
         if (cost !== 'all' && (m.cost_type || 'material') !== cost) continue;
@@ -956,7 +961,7 @@ function checkSheet(input, recs, label, { dom = true } = {}) {
     if (r.empty) continue;
     const view = viewOfRec(r);
     const all = listed(r.cost, r.floor, r.group);
-    const sh = sheetRows(model, all, view);
+    const sh = sheetRows(model, all, view, inList);
     once(`${tag} · the rows`, byPos(sh.rows.map(([, m]) => m)), r.rows.map(x => x.at));
     once(`${tag} · the items on no sheet`, byPos(sh.solo.map(([, m]) => m)), r.solo);
     once(`${tag} · what is left out, by item`, [sh.hidden, sh.filtered], [r.hidden, r.filtered]);

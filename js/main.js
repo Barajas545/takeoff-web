@@ -222,6 +222,8 @@ const itemsPanel = new ItemsPanel({
     pageLabel: idx => pageFinalLabel(idx),
     // The panel asks before it offers a control that writes.
     readOnly: () => controller.readOnly,
+    // The takeoff he is in: the list shows its items only, as the drawing does.
+    inActiveList: m => controller.inActiveList(m),
     // The drawing on screen, for a list on one sheet; null with no sheet.
     view: () => sheetView(),
     // Where the chip is remembered: this browser's settings, never the file.
@@ -310,6 +312,8 @@ const thumbs = new Thumbnails({
   // A turn even onto the sheet on screen: the desktop's go_to_page centres
   // it and settles it again (set_page, _turn_zoom_settle).
   onPick: idx => goToPage(idx, { view: 'turn' }),
+  // The badge counts the items of the takeoff he is in, as the drawing paints.
+  inView: m => controller.inActiveList(m),
   // How many versions each sheet has beyond its own drawing, for the pips on
   // the cards. Recomputed only when the revision model changes — not per row.
   revisionCounts: () => revCountsBySheet,
@@ -570,7 +574,10 @@ function drawFrame() {
     // A temporary dimension is not one of them, and letting isolation swallow
     // it meant measuring in View Only reported a length, bumped the counter,
     // and drew nothing at all.
-    isVisible: m => (m.scratch ? m.visible !== false : app.project.isVisible(m)),
+    // ...and an item of another takeoff is not painted: what is painted is
+    // what a tap can find (ToolController.inActiveList, the desktop's
+    // version_items). One property read per item on a job with no tags.
+    isVisible: m => (m.scratch ? m.visible !== false : app.project.isVisible(m) && controller.inActiveList(m)),
     selected: controller.selected,
     hoverId: controller.hoverId,
     hoverVertex: controller.hoverVertex,
@@ -1630,11 +1637,17 @@ async function showSheetVersion(page, revId, { announce = true, flip = true, set
   const want = String(revId || '');
   if (!want) {
     if (clearVersion() && announce) {
-      const n = (app.project.measurements[page] || [])
-        .filter(m => !m.group_child && !m.rev_id).length;
+      // The items of the takeoff he is in; nothing of it, with another
+      // takeoff's on the drawing, is not a drawing nobody has taken off
+      // (the desktop's show_sheet_version).
+      const onPage = app.project.measurements[page] || [];
+      const n = onPage.filter(m => !m.group_child && !m.rev_id && controller.inActiveList(m)).length;
+      const k = n ? 0 : controller.otherTakeoffsHere(onPage);
       setStatus(n
         ? `Back on this sheet's own drawing — ${n} item${n === 1 ? '' : 's'} here`
-        : "Back on this sheet's own drawing — nothing taken off it yet");
+        : k ? `Back on this sheet's own drawing — nothing in ${controller.takeoffLabel()} on it yet `
+          + `(${k} item${k === 1 ? '' : 's'} here ${k === 1 ? 'is' : 'are'} in other takeoffs)`
+          : "Back on this sheet's own drawing — nothing taken off it yet");
     }
     return true;
   }

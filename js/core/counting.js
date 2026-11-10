@@ -1608,10 +1608,17 @@ function strOr(v) {
  *   filtered -- how many items painted here the cost, floor and group
  *             filters took out, BY ITEM.
  *
+ * `inList` (m => is it in the takeoff he is in?, the panel's
+ * host.inActiveList): an item of another takeoff painted here is not
+ * listed, and never counted as hidden by the FILTERS -- an empty Deck sheet
+ * must not say the filters are hiding Main's walls. It is said as what it
+ * is (hidden.takeoffs, only when there are some: a job with one takeoff
+ * reads as 3.07). Asked of the item's main shape, as the desktop asks it.
+ *
  * One pass over the job for the main shapes -- never a measurementGroup per
  * row, which walks the whole job each time.
  */
-export function sheetRows(model, all, view) {
+export function sheetRows(model, all, view, inList = null) {
   const cur = view.page;
   const masters = new Map();
   const pages = new Map();
@@ -1632,6 +1639,7 @@ export function sheetRows(model, all, view) {
   const here = new Map();
   const other = new Set();
   const waits = new Set();
+  const elsewhere = new Set();
   const markOf = s => model.markVersion(cur, s);
   for (const m of model.items(cur)) {
     if (NOT_ROWS.has(m.type)) continue;
@@ -1639,6 +1647,11 @@ export function sheetRows(model, all, view) {
     if (truthy(m.group_child)) {
       item = masters.get(m.group_id);
       if (item === undefined) continue;
+    }
+    if (inList && !inList(item)) {
+      // Another takeoff's item: not listed, said as what it is.
+      if (onThisVersion(m, view.revId, view.revPage, markOf)) elsewhere.add(item);
+      continue;
     }
     if (onThisVersion(m, view.revId, view.revPage, markOf)) {
       if (!here.has(item)) here.set(item, []);
@@ -1662,6 +1675,8 @@ export function sheetRows(model, all, view) {
     else if (waits.has(m)) hidden.waiting += 1;
     else hidden.sheets += 1;
   }
+  // Only when there are some: a job with one takeoff reads as 3.07.
+  if (elsewhere.size) hidden.takeoffs = elsewhere.size;
   // Painted here, but taken out by the other filters: an empty list must
   // not read as an empty drawing.
   const listed = new Set(all.map(([, m]) => m));
@@ -1676,10 +1691,13 @@ export function hiddenWords(hidden) {
   const d = (hidden && hidden.drawings) || 0;
   const s = (hidden && hidden.sheets) || 0;
   const w = (hidden && hidden.waiting) || 0;
+  const t = (hidden && hidden.takeoffs) || 0;
   const out = [];
   if (d) out.push(`${d} on ${d === 1 ? 'another drawing' : 'other drawings'} of this sheet`);
   if (s) out.push(`${s} on ${s === 1 ? 'another sheet' : 'other sheets'}`);
   if (w) out.push(`${w} waiting on no drawing`);
+  // Painted on this drawing, in a takeoff he is not in.
+  if (t) out.push(`${t} in ${t === 1 ? 'another takeoff' : 'other takeoffs'}`);
   return out;
 }
 
@@ -1912,10 +1930,11 @@ export function notCountedHereWhy(model, page, pageIdx, m, here) {
 }
 
 /** How many items there are on no sheet (desktop _open_solo_on_add's
- *  count): one more than at the last build opens NOT ON A SHEET. */
-export function soloCount(measurements) {
+ *  count): one more than at the last build opens NOT ON A SHEET -- of the
+ *  takeoff he is in (`inList`), as the list shows them. */
+export function soloCount(measurements, inList = null) {
   return ((measurements && (measurements[STANDALONE] || measurements[String(STANDALONE)])) || [])
-    .filter(isStandaloneItem).length;
+    .filter(m => isStandaloneItem(m) && (!inList || inList(m))).length;
 }
 
 /** The shapes of one item painted on the drawing on screen (desktop

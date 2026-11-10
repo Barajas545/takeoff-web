@@ -29,6 +29,9 @@ import { STANDALONE_PAGE } from '../core/takeoff-file.js';
 import { onThisVersion, itemRevId } from '../core/revisions.js';
 import { CountingModel, applyBooking } from '../core/counting.js';
 import {
+  WEB_TAKEOFF, inTakeoffList, takeoffListLabel, takeoffListScoped,
+} from '../core/takeoff-lists.js';
+import {
   MARKUP_TOOLS, MARKUP_HINTS, MarkupState, beginStroke, extendStroke,
   rectFrom, rectIsWorthKeeping, annotationsUnderEraser, makeTextNote,
   makeCallout, HIGHLIGHT_COLORS, PEN_COLORS,
@@ -281,6 +284,12 @@ export class ToolController extends EventTarget {
     this.snapToFirst = false;
 
     this.selected = new Set();
+    // The takeoff he is in (desktop GLPageWidget._takeoff_list_active): Main,
+    // always, this round -- set here and nowhere else, and never from the
+    // job's takeoff_list_active (a job the desktop left in Deck opens here
+    // in Main, and says so). What is painted, tapped, deleted, listed and
+    // counted onto is this takeoff's (inActiveList).
+    this.activeTakeoffList = WEB_TAKEOFF;
     this.hoverId = null;
     this.hoverVertex = null;
     this.dragVertex = null;
@@ -1965,9 +1974,16 @@ export class ToolController extends EventTarget {
   }
 
   /** A selection made FOR the drawing -- the Items list's click, a jump to
-   *  an item (desktop select_measurement): always said, and looked for. */
+   *  an item (desktop select_measurement): always said, and looked for.
+   *  Only an item of the takeoff he is in: another takeoff's is not
+   *  painted, so it is not selectable (in_active_list). The drawing is not
+   *  asked here -- a row's flip-then-select puts its drawing up first. */
   select(ids) {
-    this.selected = new Set(Array.isArray(ids) ? ids : [ids]);
+    const want = (Array.isArray(ids) ? ids : [ids]).filter(id => {
+      const f = this.project.findItem(id);
+      return !f || this.inActiveList(f.item);
+    });
+    this.selected = new Set(want);
     this.emit('selection-changed', { ids: [...this.selected], reveal: true });
     this.emit('changed');
   }
@@ -2470,6 +2486,10 @@ export class ToolController extends EventTarget {
     let model = null;
     for (const [pg, m] of this.project.allItems()) {
       if (!m || m.type !== 'count' || m.name !== name || !pyTruthy(m.framing)) continue;
+      // Of the takeoff the NEW count is filed in (a relation, never the one
+      // on screen): Deck's Posts are not made of what Main's were answered
+      // with. The new count is Main's, always, this round.
+      if (!inTakeoffList(m, this.activeTakeoffList)) continue;
       if (pg === page && itemRevId(m) === here) continue;
       model ||= new CountingModel({ metadata: this.project.metadata,
         measurements: this.project.measurements, pageCount: this.project.pageCount });
@@ -2503,6 +2523,7 @@ export class ToolController extends EventTarget {
     // Numbering is document-wide, not per sheet: a plan set numbers its
     // windows once across every drawing.
     let maxSeq = 0;
+    // JOB-WIDE: every takeoff's pins -- never a Main-only store (no two "Window 3").
     for (const [, m] of this.project.allItems()) {
       if (m.type === kind) maxSeq = Math.max(maxSeq, Number(m[pre + 'seq']) || 0);
     }
@@ -2585,10 +2606,45 @@ export class ToolController extends EventTarget {
     return created;
   }
 
-  /** Is this item on the drawing on screen? The renderer's own test. */
+  /** Is this item on the drawing on screen -- and in the takeoff he is in?
+   *  The renderer's own test (desktop version_items): what is painted is
+   *  what a tap can find, what Delete can remove and what a count joins,
+   *  and another takeoff's work is none of them. */
   _onScreen(m) {
     return onThisVersion(m, this.viewingVersion.revId, this.viewingVersion.revPage,
-      this.markOf);
+      this.markOf) && this.inActiveList(m);
+  }
+
+  // ── the takeoff he is in (desktop 3.08) ─────────────────────────────
+  //
+  // The ONLY takeoff API the app shell may use: every reader that shows or
+  // touches an item asks inActiveList. What decides a number -- a total, a
+  // booking, which drawing a sheet counts from -- never does.
+
+  /** THE VIEW TEST of a takeoff: is this item in the takeoff he is in? A
+   *  shared mark (a note, a callout, a ruler) is in every one. (desktop
+   *  GLPageWidget.in_active_list) */
+  inActiveList(m) {
+    return inTakeoffList(m, this.activeTakeoffList);
+  }
+
+  /** The name of the takeoff he is in: Main's, as the job calls it. */
+  takeoffLabel() {
+    return takeoffListLabel(this.project.metadata, this.activeTakeoffList);
+  }
+
+  /** How many items of the takeoffs he is NOT in are painted on the sheet's
+   *  own drawing, `items` being the sheet's: each item once (desktop
+   *  _other_takeoffs_here, for the sheet's own drawing). 0 in a job with
+   *  only Main. */
+  otherTakeoffsHere(items) {
+    const seen = new Set();
+    for (const m of items || []) {
+      if (takeoffListScoped(m) && !this.inActiveList(m) && !itemRevId(m)) {
+        seen.add(m.group_id || m);
+      }
+    }
+    return seen.size;
   }
 
   /**
@@ -2622,6 +2678,7 @@ export class ToolController extends EventTarget {
     let booking = null;
     this.project.transact(label, () => {
       if (onSheet) {
+        // JOB-WIDE: the book is the sheet's, for every takeoff -- never a Main-only store.
         const model = new CountingModel({ metadata: this.project.metadata,
           measurements: this.project.measurements, pageCount: this.project.pageCount });
         booking = model.firstTakeoffBooking(page, stamped);
@@ -2705,6 +2762,7 @@ function countAlong(pts, spacingPx) {
 
 function nextCountNumber(project) {
   let max = 0;
+  // JOB-WIDE: every takeoff's counts -- never a Main-only store.
   for (const [, m] of project.allItems()) {
     if (m.type === 'count') max = Math.max(max, Number(m.count_number) || 0);
   }

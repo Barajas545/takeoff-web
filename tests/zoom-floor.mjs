@@ -3435,6 +3435,53 @@ function holding(r, fn) {
   }
 }
 
+// ═══ 8b. back on the own drawing: the words, with other takeoffs ═══════
+//
+// showSheetVersion, lifted word for word, says how many items of the
+// takeoff he is in are on the sheet's own drawing -- and, with none of his
+// but some of another takeoff's (desktop 3.08 show_sheet_version), that it
+// is not a drawing nobody has taken off. It asks only the controller (a
+// real ToolController: inActiveList, otherTakeoffsHere, takeoffLabel).
+{
+  log('\n-- 8b. back on the own drawing, a job of several takeoffs --');
+  const DECK = 'tl-deck0001';
+  const said = async (items, md = {}) => {
+    const r = await opened([SHEET], { revs: { 0: [['r1', SHEET]] } });
+    r.env.app.project.measurements = { 0: structuredClone(items) };
+    Object.assign(r.c.project.metadata, md);
+    await r.env.showSheetVersion(0, 'r1', { announce: false, flip: false });
+    r.st.said.length = 0;
+    await r.env.showSheetVersion(0, '', { announce: true });
+    return r.st.said.slice();
+  };
+  const area = (name, extra = {}) => ({ type: 'area', name, points: [[0, 0], [9, 0], [9, 9]], ...extra });
+  const note = { type: 'textnote', text: 'shared', points: [[1, 1]] };
+  eq('no tags: nothing on it -- v31\'s words', await said([]),
+    ["Back on this sheet's own drawing — nothing taken off it yet"]);
+  eq('no tags: two items and a note -- v31\'s count, the note counted as v31 counts it',
+    await said([area('Slab'), area('Wall'), note]), ["Back on this sheet's own drawing — 3 items here"]);
+  eq('no tags, a run of an item on another sheet and an item of a revision: v31 leaves both out',
+    await said([area('Slab', { group_id: 'g1', group_child: true }), area('Rail', { rev_id: 'r1', rev_page: 0 })]),
+    ["Back on this sheet's own drawing — nothing taken off it yet"]);
+  eq('only another takeoff\'s items (one of them with a run here): nothing in Main, said as what it is',
+    await said([area('Deck boards', { takeoff_list: DECK, group_id: 'g2' }),
+      area('Deck boards', { takeoff_list: DECK, group_id: 'g2', group_child: true }),
+      area('Rail', { takeoff_list: ` ${DECK} ` })]),
+    ["Back on this sheet's own drawing — nothing in Main on it yet (2 items here are in other takeoffs)"]);
+  eq('...one of them, Main renamed House: "is", and the takeoff by its name',
+    await said([area('Deck boards', { takeoff_list: DECK })], { takeoff_main_label: 'House' }),
+    ["Back on this sheet's own drawing — nothing in House on it yet (1 item here is in other takeoffs)"]);
+  eq('...another takeoff\'s item on a revision of the sheet is not on the own drawing',
+    await said([area('Rail', { takeoff_list: DECK, rev_id: 'r1', rev_page: 0 })]),
+    ["Back on this sheet's own drawing — nothing taken off it yet"]);
+  eq('...with a shared note beside it: the note is everyone\'s, so it is in Main, and counted',
+    await said([area('Deck boards', { takeoff_list: DECK }), note]),
+    ["Back on this sheet's own drawing — 1 item here"]);
+  eq('...Main\'s and Deck\'s: only Main\'s counted, nothing said of Deck\'s',
+    await said([area('Slab'), area('Deck boards', { takeoff_list: DECK })]),
+    ["Back on this sheet's own drawing — 1 item here"]);
+}
+
 // ═══ 9. the live differential ═══════════════════════════════════════════
 let live = 'skipped: no PTT_DESKTOP_SRC';
 if (!(await haveDesktopSource())) {

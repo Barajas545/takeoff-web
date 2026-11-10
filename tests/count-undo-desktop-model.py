@@ -56,7 +56,9 @@ METHODS = ["arm_count", "forget_armed_count", "armed_count", "_armed_count_place
            "_count_place_now", "_rearm_count", "_count_found_again", "_add_count_point",
            "_pending_name", "_sync_tool_name", "item_rev_id", "on_this_version",
            "viewing_rev_id", "version_items", "_next_sort_order", "_dialog_extra_fields",
-           "_mark_drawing"]
+           "_mark_drawing",
+           # 3.08: version_items keeps only the takeoff he is in
+           "in_active_list", "active_takeoff_list"]
 ATTRS = ["_COUNT_LIKENESS", "_COUNT_UNDOLESS", "_COUNT_TEMPLATE", "CLASS_FIELDS"]
 
 text = open(SRC, encoding="utf-8").read()
@@ -91,6 +93,60 @@ for node in tree.body:
         KEPT = ast.literal_eval(node.value)
 if KEPT is None:
     raise SystemExit("no KEPT_MARK_TYPES in %s" % SRC)
+
+# 3.08: which takeoff an item is in (_count_found_again's stamp, the view
+# test, the stamp a new item gets), lifted WITH its module closure -- the
+# type constants included -- by a walk, never listed by hand.
+TOP = {}
+for node in tree.body:
+    if isinstance(node, ast.FunctionDef):
+        TOP.setdefault(node.name, node)
+    elif isinstance(node, ast.Assign):
+        for _t in node.targets:
+            if isinstance(_t, ast.Name):
+                TOP.setdefault(_t.id, node)
+
+
+def _free_of(node):
+    loc = set()
+    if isinstance(node, ast.FunctionDef):
+        loc = {a.arg for a in node.args.args + node.args.kwonlyargs}
+    for n in ast.walk(node):
+        if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store):
+            loc.add(n.id)
+        elif isinstance(n, ast.arg):
+            loc.add(n.arg)
+        elif isinstance(n, (ast.Import, ast.ImportFrom)):
+            loc.update((a.asname or a.name).split(".")[0] for a in n.names)
+    return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)
+            and isinstance(n.ctx, ast.Load)} - loc
+
+
+MODULE_SEED = ["in_takeoff_list", "takeoff_list_of", "_set_takeoff_list"]
+_queue, _nodes = list(MODULE_SEED), {}
+while _queue:
+    _nm = _queue.pop(0)
+    if _nm in _nodes or _nm not in TOP:
+        continue
+    _nodes[_nm] = TOP[_nm]
+    _queue += sorted(n for n in _free_of(TOP[_nm]) if n in TOP)
+_mod_missing = sorted(set(MODULE_SEED) - set(_nodes))
+if _mod_missing:
+    raise SystemExit("not found in %s: %s" % (SRC, ", ".join(_mod_missing)))
+_mod_problems = []
+for _nm, node in _nodes.items():
+    for f in sorted(_free_of(node) - set(_nodes)):
+        if not hasattr(builtins, f):
+            _mod_problems.append("%s reads %s, which is not lifted" % (_nm, f))
+if _mod_problems:
+    raise SystemExit("the module closure is not whole:\n  " + "\n  ".join(_mod_problems))
+MODULE_NS = {}
+exec(compile("\n".join("".join(lines[n.lineno - 1:n.end_lineno])
+                       for n in sorted(_nodes.values(), key=lambda n: n.lineno)),
+             "<module.lifted>", "exec"), MODULE_NS)
+MODULE_LIFTED = sorted(_nodes)
+_set_takeoff_list = MODULE_NS["_set_takeoff_list"]   # the stub _add_measurement's stamp
+takeoff_list_of = MODULE_NS["takeoff_list_of"]       # a row's takeoff, in snap()
 
 FORM = {"asked": 0, "answer": None}
 
@@ -134,6 +190,7 @@ class ItemPropertiesDialog:
 STAND_INS = {"ItemPropertiesDialog": ItemPropertiesDialog, "QDialog": QDialog,
              "KEPT_MARK_TYPES": KEPT, "_framing": None,
              "catalog_rate_for": lambda *a: (None, False), "REPORT_UNIT_BY_TYPE": {}}
+STAND_INS.update({k: v for k, v in MODULE_NS.items() if k in MODULE_LIFTED})
 
 
 class _Sig:
@@ -186,6 +243,9 @@ class Stubs:
         else:
             m.pop("rev_id", None)
             m.pop("rev_page", None)
+        # ...and the takeoff he is in, as the desktop's _add_measurement
+        # stamps it (the web: Main, so the key is popped)
+        _set_takeoff_list(m, self._takeoff_list_active)
         self._measurements.setdefault(self._current_page, []).append(m)
         return m
 
@@ -196,7 +256,9 @@ DATA = {"_measurements", "_current_page", "_preview_key", "_palette_index",
         "_pending_item_name", "_pending_catalog", "_pending_framing", "_count_target",
         "_count_spec", "_count_answers", "_count_category", "_count_named", "_count_left",
         "_undo", "_redo", "measurement_changed", "_last_dialog_purpose",
-        "_last_dialog_catalog", "_last_dialog_rate_unit"}
+        "_last_dialog_catalog", "_last_dialog_rate_unit",
+        # 3.08: the takeoff he is in ("" = Main: the web's, always)
+        "_takeoff_list_active"}
 
 # ── the closure check ─────────────────────────────────────────────────────
 allowed_self = (set(METHODS) | set(ATTRS) | DATA
@@ -247,6 +309,7 @@ class Canvas(Stubs, Lifted):
         self._measurements = {i: [] for i in range(sheets)}
         self._current_page = 0
         self._preview_key = None
+        self._takeoff_list_active = ""      # Main, as the web always is
         self._palette_index = 0
         self._pending_item_name = ""
         self._pending_catalog = None
@@ -323,8 +386,9 @@ def snap(c):
     for pg, lst in sorted(c._measurements.items()):
         for m in lst:
             if m.get("type") == "count":
+                # ...and its takeoff ("" = Main), as takeoff_list_of reads it
                 rows.append([pg, m.get("name"), m.get("floor_level"), str(m.get("rev_id") or ""),
-                             len(m.get("points") or [])])
+                             len(m.get("points") or []), takeoff_list_of(m)])
     t = c._count_target
     where = None
     if t is not None:
@@ -389,6 +453,6 @@ def run(ops, sheets, items=None):
 
 
 sessions = json.load(sys.stdin)
-json.dump({"lifted": METHODS + ATTRS,
+json.dump({"lifted": METHODS + ATTRS + MODULE_LIFTED,
            "steps": [run(s["ops"], s.get("sheets", 2), s.get("items")) for s in sessions]},
           sys.stdout)
