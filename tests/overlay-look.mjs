@@ -26,7 +26,8 @@
 //     record naming a revision that is gone is 'nothing' on both, and the
 //     old residual coming back is a FAIL. Its round 3 fixes also refuse a
 //     float or bool rev_page (nothing, no raise: a raise is a FAIL now) and
-//     take the strip down on an arrival with nothing up, as turn() does.
+//     take the strip down on an arrival with nothing up, as turn() does --
+//     held in each branch (no record, a sheet's, a revision's, a picture's).
 //  4. SIZES: a 5400x3600 sheet over a 2592x1728 sheet, a 3600x2400 revision
 //     page, a picture box -- page pixels, never stretched to the sheet.
 //  5. The small ones: _cad_image_rect, _pts_pair, overlay_picture (found by
@@ -267,8 +268,16 @@ function checkArrivals(T, tag) {
   // every new visit, nothing up included (section 7 holds it to that).
   const quiet = T.arrive.filter(a => a.before === null && !a.up && !a.raised);
   ok('an arrival with nothing up: the desktop takes the strip down (_overlay_strip_down), as the web\'s turn() does',
-    quiet.length >= 2 && quiet.every(a => a.log.length === 1 && a.log[0][0] === 'strip_down'),
+    quiet.length >= 4 && quiet.every(a => a.log.length === 1 && a.log[0][0] === 'strip_down'),
     quiet.map(a => [a.name, a.log]));
+  // ...in EVERY branch of _restore_overlay_for_page, each of which has its own
+  // copy of that rule: no record (or an empty one), a picture's, a
+  // revision's, a sheet's (the desktop's order of asking). With one branch
+  // missing here, a desktop that dropped that branch's half would still pass.
+  const branchOf = r => (!r || !Object.keys(r).length ? 'no record'
+    : r.image_id ? 'picture' : r.rev_id != null ? 'revision' : 'sheet');
+  eq('...and the fixture asks it in every branch: no record, a picture\'s, a revision\'s and a sheet\'s record',
+    [...new Set(quiet.map(a => branchOf(a.record)))].sort(), ['no record', 'picture', 'revision', 'sheet']);
 }
 
 function checkSizes(T, tag) {

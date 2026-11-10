@@ -43,8 +43,10 @@ images only, nothing from any real job):
            99, '3', a revision gone, a page outside it, a picture gone):
            what is up afterwards, where (overlay_rect), in what tint, fade
            and look, the texture it built, the label, and whether the LAST
-           sheet's overlay was taken down
-  sizes    overlay_rect for a 2592x1728 sheet under a 5400x3600 sheet, a
+           sheet's overlay was taken down -- or, with nothing up, whether
+           the strip came down (a sheet's, a revision's and a picture's
+           record, and no record at all)
+  sizes   overlay_rect for a 2592x1728 sheet under a 5400x3600 sheet, a
            3600x2400 revision page and a picture box: page pixels, never
            stretched to the sheet (a points / pixels bug fails here)
   small    _cad_image_rect, _pts_pair, overlay_picture, _overlay_entry_label,
@@ -613,6 +615,14 @@ ARRIVALS = [
     ("picture with no pixels", 1, R(image_id="emp00001"), 2),
     ("no record, overlay up before", 2, None, 1),
     ("no record, nothing up before", 2, None, None),
+    # ...and a record that names nothing on a sheet he arrived at with
+    # nothing up, once for each of _restore_overlay_for_page's branches (the
+    # revision's is 'revision gone, nothing up before' above): 3.08's round 3
+    # fixes (R3RF-3) take the strip down in every one of them, not only the
+    # revision's -- each is held, so dropping one branch's half shows.
+    ("sheet -1, nothing up before", 1, R(overlay_page=-1), None),
+    ("revision page True, nothing up before", 1, R(rev_id="rv-a", rev_page=True), None),
+    ("picture gone, nothing up before", 0, R(image_id="missing1"), None),
 ]
 
 
