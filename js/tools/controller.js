@@ -29,7 +29,7 @@ import { STANDALONE_PAGE } from '../core/takeoff-file.js';
 import { onThisVersion, itemRevId } from '../core/revisions.js';
 import { CountingModel, applyBooking } from '../core/counting.js';
 import {
-  WEB_TAKEOFF, inTakeoffList, takeoffListLabel, takeoffListScoped,
+  WEB_TAKEOFF, inTakeoffList, takeoffListLabel, takeoffListScoped, hasOtherTakeoffs,
 } from '../core/takeoff-lists.js';
 import {
   MARKUP_TOOLS, MARKUP_HINTS, MarkupState, beginStroke, extendStroke,
@@ -2631,6 +2631,14 @@ export class ToolController extends EventTarget {
   /** The name of the takeoff he is in: Main's, as the job calls it. */
   takeoffLabel() {
     return takeoffListLabel(this.project.metadata, this.activeTakeoffList);
+  }
+
+  /** Does the job have a takeoff besides Main -- a registry entry, or a tag
+   *  on any item (takeoff-lists.js hasOtherTakeoffs)? A sentence worded the
+   *  desktop's way in a job of several takeoffs asks it; with Main alone
+   *  every one stays v31's. One scan of the store: not for a frame. */
+  manyTakeoffs() {
+    return hasOtherTakeoffs(this.project.metadata, this.project.measurements);
   }
 
   /** How many items of the takeoffs he is NOT in are painted on the sheet's

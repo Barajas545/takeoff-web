@@ -701,9 +701,18 @@ export function hiddenTakeoffsWords(measurements, idx, naming) {
         ? `${n} item${n === 1 ? '' : 's'} of a takeoff this job has no record of`
         : `${n} items of ${ps.length} takeoffs this job has no record of`;
     }
-    return ps.length === 1
-      ? `${n} item${n === 1 ? '' : 's'} of the takeoff ${ps[0][0]}`
-      : `${n} items of other takeoffs (${ps.map(([nm, c]) => `${c} in ${nm}`).join(', ')})`;
+    if (ps.length === 1) return `${n} item${n === 1 ? '' : 's'} of the takeoff ${ps[0][0]}`;
+    // Beside a takeoff it knows, ONE takeoff of no record keeps the
+    // desktop's own "1 in another takeoff"; two or more are one part --
+    // "2 in 2 takeoffs this job has no record of" -- never two parts both
+    // called "another takeoff" for two takeoffs. (The unknown ids sort
+    // after the known ones, so the part is last, where the desktop puts them.)
+    const unknown = ps.filter(([, , k]) => !k);
+    const shown = unknown.length > 1
+      ? [...ps.filter(([, , k]) => k).map(([nm, c]) => `${c} in ${nm}`),
+        `${unknown.reduce((t, [, c]) => t + c, 0)} in ${unknown.length} takeoffs this job has no record of`]
+      : ps.map(([nm, c]) => `${c} in ${nm}`);
+    return `${n} items of other takeoffs (${shown.join(', ')})`;
   };
   const out = [];
   const pw = parts(whole);

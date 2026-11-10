@@ -1547,12 +1547,43 @@ function sayLeftOutAtOpen() {
   // A job of several takeoffs says, once, that only one of them is here --
   // after "Opened …" and the line above. Said, never written. Where the
   // status line is not drawn (a phone) it is a toast too, once that line
-  // has had it (sayPrice says on the next turn).
+  // has had it (sayPrice says on the next turn). Where it is drawn, the line
+  // holds it on its one line, the whole of it in the tooltip -- which a
+  // finger cannot hover to read (an iPad in landscape): there the whole
+  // sentence is the finger's toast as well.
   const also = takeoffsOpenWords(app.project.metadata, app.project.measurements);
   if (!also) return;
   sayPrice(also);
   if (!statusLineShown()) setTimeout(() => sayToFinger(also), 0);
-  else holdOnOneLine(also);
+  else {
+    holdOnOneLine(also);
+    if (cannotHover()) setTimeout(() => showFingerToast(also), 0);
+  }
+}
+
+/** Is a finger all there is to point with -- nothing that can hover, so
+ *  no tooltip can be read (an iPad, a phone)? */
+function cannotHover() {
+  try { return typeof matchMedia === 'function' && matchMedia('(hover: none)').matches; } catch { return false; }
+}
+
+/** sayToFinger's toast, raised whether or not the status line is drawn
+ *  (the same element and timer, so the next toast replaces it): for words
+ *  a finger must be able to read whole. Writes nothing else. */
+function showFingerToast(text) {
+  if (!text) return;
+  let t = $('fingerToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'fingerToast';
+    t.className = 'toast finger-toast';
+    t.setAttribute('role', 'status');
+    document.body.appendChild(t);
+  }
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(fingerToastTimer);
+  fingerToastTimer = setTimeout(() => { t.hidden = true; }, FINGER_TOAST_MS);
 }
 
 /**
@@ -1690,14 +1721,14 @@ async function showSheetVersion(page, revId, { announce = true, flip = true, set
       // (the desktop's show_sheet_version).
       const onPage = app.project.measurements[page] || [];
       const own = onPage.filter(m => !m.rev_id && controller.inActiveList(m));
-      let n = own.filter(m => !m.group_child).length;
+      // In a job of several takeoffs, every shape of the takeoff he is in on
+      // the own drawing, as the desktop counts version_items: a run of his
+      // item (its main shape on another sheet), painted and tappable here,
+      // is his work here too -- never "nothing in House" -- whether or not
+      // another takeoff has work on the sheet. With Main alone, v31's count,
+      // which leaves runs out, as it was.
+      const n = controller.manyTakeoffs() ? own.length : own.filter(m => !m.group_child).length;
       const k = n ? 0 : controller.otherTakeoffsHere(onPage);
-      // A run of his item (its main shape on another sheet) is his work
-      // here too, painted and tappable: beside another takeoff's, it is
-      // counted -- each item once -- as the desktop counts every shape of
-      // version_items, never "nothing in House". (With Main alone, v31's
-      // count, which leaves runs out, as it was.)
-      if (k) n = new Set(own.filter(m => m.group_child).map(m => m.group_id)).size;
       setStatus(n
         ? `Back on this sheet's own drawing — ${n} item${n === 1 ? '' : 's'} here`
         : k ? `Back on this sheet's own drawing — nothing in ${controller.takeoffLabel()} on it yet `

@@ -50,6 +50,7 @@
 
 import { isTakeoffType } from './revisions.js';
 import { classStrip, classClean, pyCasefold, cmpCodePoints } from './classify.js';
+import { pyStrFloat } from './pyformat.js';
 
 /** The item's key that names its takeoff (desktop TAKEOFF_LIST_KEY). */
 export const TAKEOFF_LIST_KEY = 'takeoff_list';
@@ -64,19 +65,77 @@ export const WEB_TAKEOFF = '';
 
 const isDict = v => !!v && typeof v === 'object' && !Array.isArray(v);
 
-/** A tag or a takeoff's id, read as the desktop reads every one of them:
- *  Python's `str(x or "").strip()`. That is classStrip, but for the values
- *  str() spells its own way and py-json reads out of a file: NaN is TRUE
- *  in Python ('nan' -- another takeoff, never Main), the infinities are
- *  'inf' / '-inf' and True is 'True'. (A float written 5.0 still reads
- *  '5': JSON.parse cannot tell it from 5.) */
-function idStr(v) {
-  if (typeof v === 'number' && !Number.isFinite(v)) {
-    if (Number.isNaN(v)) return 'nan';
-    return v > 0 ? 'inf' : '-inf';
+// Python's str.isprintable() is false for these (the ASCII space aside):
+// what repr() writes as an escape beyond ASCII.
+const PY_UNPRINTABLE = /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Zs}]/u;
+const hexOf = (n, w) => n.toString(16).padStart(w, '0');
+
+/** Python's str() / repr() of a number py-json read: NaN and the
+ *  infinities by Python's names, a fraction as Python writes a float. A
+ *  whole number reads as an int: a float written 5.0 reads '5' here,
+ *  '5.0' there -- JSON.parse cannot tell it from 5. */
+function pyNum(v) {
+  if (Number.isNaN(v)) return 'nan';
+  if (!Number.isFinite(v)) return v > 0 ? 'inf' : '-inf';
+  return Number.isInteger(v) ? String(v) : pyStrFloat(v);
+}
+
+/** Python's repr() of a str: quoted, ' unless the text holds a ' and no ",
+ *  and escaped as CPython escapes it. */
+function pyReprStr(s) {
+  const q = s.includes("'") && !s.includes('"') ? '"' : "'";
+  let out = q;
+  for (const ch of s) {
+    const cp = ch.codePointAt(0);
+    if (ch === q || ch === '\\') out += `\\${ch}`;
+    else if (ch === '\t') out += '\\t';
+    else if (ch === '\n') out += '\\n';
+    else if (ch === '\r') out += '\\r';
+    else if (cp < 0x20 || cp === 0x7f) out += `\\x${hexOf(cp, 2)}`;
+    else if (cp < 0x7f || !PY_UNPRINTABLE.test(ch)) out += ch;
+    else if (cp <= 0xff) out += `\\x${hexOf(cp, 2)}`;
+    else if (cp <= 0xffff) out += `\\u${hexOf(cp, 4)}`;
+    else out += `\\U${hexOf(cp, 8)}`;
   }
+  return out + q;
+}
+
+/** Python's repr() of a JSON value: what str() of a list or a dict spells
+ *  each item with. (A dict's keys in JavaScript's order: one whose keys
+ *  look like integers reads them first.) */
+function pyRepr(v) {
+  if (v === null || v === undefined) return 'None';
   if (v === true) return 'True';
-  return classStrip(v);
+  if (v === false) return 'False';
+  if (typeof v === 'number') return pyNum(v);
+  if (typeof v === 'string') return pyReprStr(v);
+  if (Array.isArray(v)) return `[${v.map(pyRepr).join(', ')}]`;
+  if (typeof v === 'object') {
+    return `{${Object.entries(v).map(([k, x]) => `${pyReprStr(k)}: ${pyRepr(x)}`).join(', ')}}`;
+  }
+  return String(v);
+}
+
+/** Python's `str(x or "")` of any value a file can hold, as the desktop
+ *  reads every tag, id and takeoff name: '' for what Python calls false
+ *  (None, False, 0, '', [], {}); NaN is TRUE there ('nan' -- another
+ *  takeoff, never Main), the infinities 'inf' / '-inf', True 'True', and a
+ *  list or a dict spelt as Python spells it ("['']", "{'a': 1}"), never
+ *  "[object Object]". */
+function pyStrOf(v) {
+  if (v === undefined || v === null || v === false || v === '' || v === 0) return '';
+  if (v === true) return 'True';
+  if (typeof v === 'number') return pyNum(v);
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) return v.length ? pyRepr(v) : '';
+  if (typeof v === 'object') return Object.keys(v).length ? pyRepr(v) : '';
+  return String(v);
+}
+
+/** A tag or a takeoff's id, read as the desktop reads every one of them:
+ *  Python's `str(x or "").strip()` (pyStrOf, then Python's strip). */
+function idStr(v) {
+  return classStrip(pyStrOf(v));
 }
 
 // Python's isalnum() for a name: a letter or a number somewhere in it.
@@ -123,10 +182,12 @@ export function setTakeoffList(d, listId) {
 }
 
 /** A takeoff's name as a file may hold it, made one he could have typed:
- *  its whitespace read as one space, cut to TAKEOFF_NAME_MAX characters, and
- *  '' when no letter or number is left. (desktop clean_takeoff_name) */
+ *  read as Python's str(name or "") reads it (pyStrOf: a NaN name is
+ *  'nan', True 'True'), its whitespace read as one space, cut to
+ *  TAKEOFF_NAME_MAX characters, and '' when no letter or number is left.
+ *  (desktop clean_takeoff_name) */
 export function cleanTakeoffName(s) {
-  const cut = Array.from(classClean(s)).slice(0, TAKEOFF_NAME_MAX).join('');
+  const cut = Array.from(classClean(pyStrOf(s))).slice(0, TAKEOFF_NAME_MAX).join('');
   const t = classStrip(cut);
   return HAS_ALNUM.test(t) ? t : '';
 }
@@ -137,7 +198,7 @@ export function cleanTakeoffName(s) {
  *  they are. (desktop free_takeoff_name) */
 export function freeTakeoffName(s, taken = []) {
   const name = cleanTakeoffName(s) || 'Takeoff';
-  const low = new Set([...(taken || [])].map(t => pyCasefold(classStrip(t))));
+  const low = new Set([...(taken || [])].map(t => pyCasefold(idStr(t))));
   if (!low.has(pyCasefold(name))) return name;
   const chars = Array.from(name);
   for (let n = 2; ; n += 1) {

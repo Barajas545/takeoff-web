@@ -948,6 +948,18 @@ log('\n-- U9: Delete sheet names what of other takeoffs goes with it --');
   const h = await run({ sheet: 0, edit: otherTag });
   ok('...one beside Deck: the desktop\'s own words, "(1 in Deck, 1 in another takeoff)"', hidden(h).startsWith('It also '
     + 'holds 2 items of other takeoffs (1 in Deck, 1 in another takeoff), hidden here — they go with it.'), JSON.stringify(h.asked));
+  // ...and TWO of them beside Deck (the desktop never words this: its heal
+  // registers both): one part for the takeoffs the job has no record of,
+  // never two parts both called "another takeoff" for two takeoffs.
+  const twoTags = o => {
+    const z = o.measurements[0];
+    z.find(m => m.name === 'Window 2')[TAG] = 'tl-nore0001';
+    z.find(m => m.name === 'Outlets')[TAG] = 'tl-nore0002';
+  };
+  const i2 = await run({ sheet: 0, edit: twoTags });
+  ok('...two beside Deck: "(1 in Deck, 2 in 2 takeoffs this job has no record of)"', hidden(i2).startsWith('It also '
+    + 'holds 3 items of other takeoffs (1 in Deck, 2 in 2 takeoffs this job has no record of), hidden here — they go '
+    + 'with it.') && !/another takeoff/.test(hidden(i2)), JSON.stringify(i2.asked));
 }
 
 // A job with only Main: the list, its notes, its title and its foot, page by
@@ -1124,15 +1136,53 @@ log('\n-- T13: the words a job of several takeoffs is said in --');
       && f3 === `House only, all sheets, filtered: ${g3.slice('Whole job, filtered: '.length)}`, JSON.stringify([f3, g3]));
     const [[f4], [g4]] = pair(null, false, 'material');
     ok('the full list filtered: still "House only: " (v31 has no lead there)', f4 === `House only: ${g4}`, JSON.stringify([f4, g4]));
-    // A filter that lists nothing (LAB: no labor here): no totals, and no
-    // tooltip over the totals that are not there -- in a job with Main alone
-    // too, where v31 left its NOT COUNTED words standing over an empty foot.
-    for (const [what, q, cq] of [['a job of several takeoffs', p0, c], ['a job with Main alone', pm, cm]]) {
-      const a = panelRig(q, cq);
+    // A filter that lists nothing (LAB: no labor here). In a job of several
+    // takeoffs: no totals, and no tooltip over the totals that are not there.
+    {
+      const a = panelRig(p0, c);
       const before = a.panel.footEl.title;
       a.panel.costFilter = 'labor'; a.panel.refresh();
-      eq(`${what}: LAB lists nothing -- the foot says nothing, and the tooltip it had goes with it`,
+      eq('a job of several takeoffs: LAB lists nothing -- the foot says nothing, and the tooltip it had goes with it',
         [!!before, a.rows().length, a.foot(), a.panel.footEl.title], [true, 0, '', '']);
+      a.restore();
+    }
+    // In a job with Main alone the foot is v31's to the letter (Main-only =
+    // v31), its tooltip included: v31's own panel leaves the NOT COUNTED
+    // words standing over an emptied foot, and so does this one.
+    if (v31) {
+      const seq = (q, cq, mods) => {
+        const a = panelRig(q, cq, { mods });
+        const out = [];
+        for (const cost of ['all', 'labor', 'all', 'material', 'labor']) {
+          a.panel.costFilter = cost; a.panel.refresh();
+          out.push([cost, a.rows().length, a.foot(), a.panel.footEl.title]);
+        }
+        a.restore();
+        return out;
+      };
+      const got = seq(pm, cm, M);
+      eq('a job with Main alone: the foot and its tooltip through ALL, LAB (nothing listed), ALL, MAT, LAB are v31\'s own',
+        got, seq(await fresh({ mods: v31, edit: noDeck }), null, v31));
+      ok('...LAB lists nothing there, and the tooltip v31 left over the empty foot is the NOT COUNTED words',
+        got[1][1] === 0 && got[1][2] === '' && got[1][3] === NOT_COUNTED, JSON.stringify(got[1]));
+    }
+    // A job of several takeoffs, then a job with Main alone and nothing in
+    // it opened into the same Project and the same panel (the app has one
+    // of each): the tooltip the first job's foot had ("Totals of the takeoff
+    // House only …") does not stay standing over the next job's empty foot.
+    {
+      const q = await fresh();
+      const a = panelRig(q, ctlRig(q, 0).c);
+      const before = a.panel.footEl.title;
+      const o = await M.openProject(new Blob([BYTES]));
+      noDeck(o);
+      for (const k of Object.keys(o.measurements)) o.measurements[k] = [];
+      q.loadFrom({ metadata: o.metadata, annotations: o.annotations, measurements: o.measurements,
+        pageCount: o.pageCount, revisionCounts: o.revisions.map(s => s.length) });
+      a.panel.refresh();
+      eq('a job of several takeoffs, then an empty one with Main alone in the same panel: no takeoff tooltip is left over it',
+        [before.startsWith('Totals of the takeoff House only'), a.panel.listEl.children.filter(e => e.classList.contains('row')).length,
+          a.foot(), a.panel.footEl.title], [true, 0, '', '']);
       a.restore();
     }
     // two other takeoffs
@@ -1183,6 +1233,20 @@ log('\n-- T13: the words a job of several takeoffs is said in --');
       + 'not shown or totalled here.');
     ok('...its items are still not listed', !rigNo.rows().some(isDeck));
     rigNo.restore();
+    // Names a file can hold that are not text: py-json reads a bare NaN or
+    // true. The desktop's clean_takeoff_name reads str(name or ""): Main
+    // named NaN is "nan", Deck named true is "True" (takeoff-lists-truth.json
+    // "special_names") -- never "Main" or "true".
+    const pOdd = await fresh({ edit: o => {
+      o.metadata.takeoff_main_label = NaN;
+      o.metadata.takeoff_lists = o.metadata.takeoff_lists.map(r => ({ ...r, label: true }));
+    } });
+    const rigOdd = panelRig(pOdd, ctlRig(pOdd, 0).c);
+    eq('Main named NaN and Deck named true in the file: "nan" and "True", as the desktop spells them',
+      [kids(rigOdd)[0][1], rigOdd.title()[1]],
+      ['Takeoff: nan. This job also has True (6 items), worked on in the desktop app — not shown or totalled here.',
+        'Takeoff: nan']);
+    rigOdd.restore();
   }
 
   // ── main.js: syncTitle (U6) ──
@@ -1237,10 +1301,11 @@ log('\n-- T13: the words a job of several takeoffs is said in --');
   }
 
   // ── main.js: the sentence on open (U7) ──
-  const openSaid = (src, p, statusShown, Model = M.CountingModel) => {
-    const st = { priced: [], finger: [], timers: [], held: [] };
+  const openSaid = (src, p, statusShown, Model = M.CountingModel, noHover = false) => {
+    const st = { priced: [], finger: [], timers: [], held: [], toast: [] };
     const fn = liftFn(src, 'sayLeftOutAtOpen', {
       holdOnOneLine: t => st.held.push(t),
+      cannotHover: () => noHover, showFingerToast: t => st.toast.push(t),
       countingModel: () => new Model({ metadata: p.metadata, measurements: p.measurements, pageCount: p.pageCount }),
       sayPrice: t => st.priced.push(typeof t === 'function' ? t() : t), app: { project: p },
       takeoffsOpenWords: TL.takeoffsOpenWords, statusLineShown: () => statusShown,
@@ -1259,10 +1324,17 @@ log('\n-- T13: the words a job of several takeoffs is said in --');
     const a = openSaid(MAIN, p, true);
     eq('on open: the sentence, said last, through sayPrice -- and the desktop left the job in Deck', a.priced.at(-1), OPEN + LEFT);
     eq('...no toast where the status line is drawn -- the line holds it on its one line instead (holdOnOneLine)',
-      [a.finger, a.held], [[], [OPEN + LEFT]]);
-    const b = openSaid(MAIN, p, false);
-    eq('...a phone (no status line): the same sentence as a toast too', [b.priced.at(-1), b.finger, b.held],
-      [OPEN + LEFT, [OPEN + LEFT], []]);
+      [a.finger, a.held, a.toast], [[], [OPEN + LEFT], []]);
+    const b = openSaid(MAIN, p, false, M.CountingModel, true);
+    eq('...a phone (no status line): the same sentence as a toast too', [b.priced.at(-1), b.finger, b.held, b.toast],
+      [OPEN + LEFT, [OPEN + LEFT], [], []]);
+    // An iPad in landscape: the status line is drawn and holds the sentence
+    // on its one line, but its tooltip -- the rest of it -- is out of a
+    // finger's reach: the whole sentence is the finger's toast as well, and
+    // the line keeps "Opened … — <sentence>" (no sayToFinger over it).
+    const t = openSaid(MAIN, p, true, M.CountingModel, true);
+    eq('...a tablet (status line drawn, nothing that can hover): held on its one line AND the whole of it a toast',
+      [t.priced.at(-1), t.held, t.toast, t.finger], [OPEN + LEFT, [OPEN + LEFT], [OPEN + LEFT], []]);
     eq('...and nothing written', [p.changeCount, p.dirty], cc0);
     const pNo = await fresh({ edit: o => { delete o.metadata.takeoff_lists; } });
     eq('a tag with no record: its own words, and no "left in" (the desktop opens a job left in no takeoff it knows in Main)',

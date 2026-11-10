@@ -462,6 +462,86 @@ for name, v in SPECIALS.items():
     })
 
 
+# ...and as NAMES (review2): clean_takeoff_name reads str(name or ""), so a
+# NaN / Infinity / true Main's name or label is 'nan', 'inf', 'True' there --
+# never 'Main' or 'Takeoff 2'.
+special_names = []
+for name, v in SPECIALS.items():
+    md = {"takeoff_lists": [{"list_id": DECK, "label": v},
+                            {"list_id": PATIO, "label": v}],
+          "takeoff_main_label": v}
+    w = window(md)
+    nm = w._takeoff_naming_now()
+    special_names.append({
+        "value": name,
+        "clean": NS["clean_takeoff_name"](v),
+        # free_takeoff_name(name, taken), the special as each
+        "free": [NS["free_takeoff_name"](v, []),
+                 NS["free_takeoff_name"](v, [v]),
+                 NS["free_takeoff_name"]("nan", [v]),
+                 NS["free_takeoff_name"]("True", [v]),
+                 NS["free_takeoff_name"]("inf", [v])],
+        "lists": w.takeoff_lists(),
+        "labels": [w.takeoff_list_label(i) for i in ["", DECK, PATIO]],
+        "naming": [nm[0], [[k, x] for k, x in nm[1].items()]],
+    })
+
+
+# Tags, ids and names that are not text at all -- a list or a dict, which a
+# hand or another build can leave and JSON carries as it is (review2). str()
+# spells them Python's way: "['']" is another takeoff, never Main; [] and {}
+# are Main; a promoted run is handed "{'a': 1}", never "[object Object]".
+# Recorded as values, with the items and ids each was asked against, so the
+# web side computes no Python of its own.
+STRUCTURED = [
+    [""], [" "], [], {}, {"a": 1}, [[]], [None], [DECK], [" %s " % DECK],
+    {"b": [1, 2.5, None, True, False]}, ["it's"], ['say "hi"'],
+    ["it's \"both\""], ["a\nb\tc\rd\\e"], ["\x00\x1f\x7f"],
+    ["\x85\xa0\xe9\u200b\u2028\ufeff\u0378"], ["\U0001f3e0", "\U000e0001"],
+    [0.1, 1e-07, 1.5e+300, -2.5, 0, -7], [{"k": [{}]}], {"x y": "z", "": None},
+    ["Deck"], {"Deck": "Deck"}, [False], [0], [""] * 3,
+]
+structured = []
+for v in STRUCTURED:
+    for t in ["area", "standalone", "group", "textnote", "page_ref"]:
+        m = {"type": t, "takeoff_list": copy.deepcopy(v)}
+        d = {"type": t, "name": "x", "takeoff_list": DECK}
+        NS["_set_takeoff_list"](d, copy.deepcopy(v))
+        asked = [{"type": t}, {"type": t, "takeoff_list": copy.deepcopy(v)},
+                 {"type": t, "takeoff_list": str(v)},
+                 {"type": t, "takeoff_list": DECK}]
+        structured.append({
+            "value": v, "type": t,
+            "of": NS["takeoff_list_of"](m),
+            "in": [NS["in_takeoff_list"](m, i) for i in IDS],
+            "view": [canvas(active=i).in_active_list(m) for i in IDS],
+            "asked_items": copy.deepcopy(asked),
+            "asked": [NS["in_takeoff_list"](x, v) for x in asked],
+            "set": d,
+        })
+    md = {"takeoff_lists": [{"list_id": copy.deepcopy(v),
+                             "label": copy.deepcopy(v)},
+                            {"list_id": DECK, "label": "Deck"}],
+          "takeoff_list_active": copy.deepcopy(v),
+          "takeoff_main_label": copy.deepcopy(v)}
+    before = copy.deepcopy(md)
+    w = window(md)
+    nm = w._takeoff_naming_now()
+    nin = window(md, active=copy.deepcopy(v))._takeoff_naming_now()
+    ids = [copy.deepcopy(v), str(v), DECK, ""]
+    structured.append({
+        "value": v, "type": "registry", "md": before,
+        "clean": NS["clean_takeoff_name"](v),
+        "free": NS["free_takeoff_name"](v, [str(v)]),
+        "lists": w.takeoff_lists(),
+        "label_ids": ids,
+        "labels": [w.takeoff_list_label(i) for i in ids],
+        "naming": [nm[0], [[k, x] for k, x in nm[1].items()]],
+        "naming_in": [nin[0], [[k, x] for k, x in nin[1].items()]],
+    })
+    assert md == before, md
+
+
 def _store():
     """A job of two takeoffs and a third the registry does not know,
     with every shape a count could stumble on."""
@@ -586,6 +666,8 @@ TRUTH = {
     "moved": moved,
     "moved_naming_raises": raising,
     "specials": specials,
+    "special_names": special_names,
+    "structured": structured,
 }
 text = json.dumps(TRUTH, indent=1, sort_keys=False) + "\n"
 if WRITE:

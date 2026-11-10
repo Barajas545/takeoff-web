@@ -2,13 +2,14 @@
 // made by the desktop 3.08's own tools (tests/data/two-takeoffs.takeoff:
 // Main renamed House, Deck, the job left in Deck), opened by a real tap on
 // "Open a .takeoff project" and the file chooser, at a desktop's width
-// (mouse, the standard layout) and a phone's (touch).
+// (mouse, the standard layout), a phone's and an iPad's in landscape (touch).
 //
 //   A. Opening it SAYS so, once, after "Opened …": in the status line where
 //      it is drawn -- on the bar's one line, inside the bar and the window,
 //      the scale readout beside it on its own one line, the whole line in
 //      its tooltip -- and as the finger's toast on a phone (no status line
-//      there). The project title and the tab name the takeoff: "Two
+//      there) and on an iPad in landscape (a finger cannot hover to read
+//      the tooltip). The project title and the tab name the takeoff: "Two
 //      Takeoffs — House", the title on screen where he can read it (on a
 //      phone, at the far end of the menubar a finger swipes along). Nothing
 //      is marked unsaved.
@@ -167,6 +168,9 @@ async function finish(code) {
 const LAYOUTS = [
   { name: 'desktop', w: 1280, h: 800, touch: false, mobile: false, standard: true, zoom: 1.5 },
   { name: 'phone upright', w: 390, h: 844, touch: true, mobile: true, zoom: 1.0 },
+  // An iPad in landscape: the status line is drawn, but a finger cannot
+  // hover to read its tooltip.
+  { name: 'iPad landscape', w: 1024, h: 768, touch: true, mobile: false, zoom: 1.5 },
 ];
 
 async function layout(L) {
@@ -369,7 +373,14 @@ async function layout(L) {
   } else {
     ok(`${L.name}: A. the status line says it once, after "Opened …"`, opened === 0 && words > opened
       && said.status.indexOf(OPEN_WORDS, words + 1) < 0, said.status);
-    ok(`${L.name}: A. the status line is drawn here, and no toast`, said.statusDrawn && said.toast === null, said);
+    if (L.touch) {
+      // ...held on its one line (below), and -- its tooltip out of a
+      // finger's reach -- the whole sentence the finger's toast as well.
+      ok(`${L.name}: A. the status line is drawn here, and the whole sentence is the finger's toast too, on screen`,
+        said.statusDrawn && said.toast === OPEN_WORDS, said);
+    } else {
+      ok(`${L.name}: A. the status line is drawn here, and no toast`, said.statusDrawn && said.toast === null, said);
+    }
   }
   if (!L.mobile) {
     // The bar is one line, 24 px: the sentence on it, not wrapped out of it
@@ -420,8 +431,21 @@ async function layout(L) {
   } else {
     await pullDown();
     await tapOn(`document.getElementById('modeBtn')`, 'Edit Mode');
-    // ...and the pointer away again, so the toolbars slide back up off the list
-    await mouse('mouseMoved', L.w / 2, L.h / 2, 'none');
+    if (L.touch) {
+      // ...and a finger puts the toolbars away as it does on a tablet: a tap
+      // on the sheet (no pointer leaves them), at a free point of it.
+      await sleep(300);
+      const free = await evaluate(`(() => { const c = document.getElementById('canvas'); const b = c.getBoundingClientRect();
+        for (const [fx, fy] of [[0.9, 0.9], [0.5, 0.9], [0.9, 0.6]]) {
+          const x = b.left + b.width * fx, y = b.top + b.height * fy;
+          if (document.elementFromPoint(x, y) === c) return [x, y];
+        }
+        return null; })()`);
+      if (ok(`${L.name}: a free point of the sheet, to tap the toolbars away`, !!free)) await tap(free[0], free[1]);
+    } else {
+      // ...and the pointer away again, so the toolbars slide back up off the list
+      await mouse('mouseMoved', L.w / 2, L.h / 2, 'none');
+    }
     for (let i = 0; i < 20; i++) {
       if (!(await evaluate(`document.getElementById('app').classList.contains('chrome-open')`))) break;
       await sleep(150);
@@ -555,6 +579,6 @@ try {
 
 log(fails
   ? `\n${fails} of ${checks} checks FAILED`
-  : `\nAll ${checks} checks pass -- by real taps on a desktop and a phone: a job of several takeoffs says so on open, `
+  : `\nAll ${checks} checks pass -- by real taps on a desktop, a phone and an iPad: a job of several takeoffs says so on open, `
     + 'in its title and its list, and Deck\'s pixels take no tap, hold or drag while House\'s do');
 await finish(fails ? 1 : 0);

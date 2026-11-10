@@ -349,6 +349,45 @@ log('\n-- T6: a registry the desktop would normalise comes back as the file had 
   }
 }
 
+// A tag a hand or another build left that is not text at all -- a list or
+// a dict, which JSON carries as it is. The desktop reads every tag as
+// Python's str(x or "").strip(): [''] is the takeoff "['']" (hidden here,
+// never Main), [] and {} are Main, and its promote hands the run what it
+// read ("{'a': 1}") -- never "[object Object]". The answers below are the
+// desktop's own (takeoff_list_of / in_takeoff_list / _promote_child lifted
+// from the 3.08 source and run on these tags; the same values are in
+// takeoff-lists-truth.json's "structured" family). Through the file, the
+// canvas's own test, a canvas Delete of the main shape (the promote), a
+// save and an open.
+log('\n-- T6: a tag that is a list or a dict, through the file, the canvas and a promote --');
+{
+  // [the tag, the item's takeoff, shown in Main, the promoted run's tag (null: none)]
+  const DESKTOP = {
+    'a list holding a blank': [[''], "['']", false, "['']"],
+    'a list holding a space': [[' '], "[' ']", false, "[' ']"],
+    'an empty list': [[], '', true, null],
+    'an empty dict': [{}, '', true, null],
+    'a dict': [{ a: 1 }, "{'a': 1}", false, "{'a': 1}"],
+    'a list holding an empty list': [[[]], '[[]]', false, '[[]]'],
+    'a list holding null': [[null], '[None]', false, '[None]'],
+  };
+  for (const [what, [tag, of, inMain, heirTag]] of Object.entries(DESKTOP)) {
+    let { p, store } = await fresh();
+    find(p, 'Wall M', 0)[TAG] = structuredClone(tag);
+    p.markDirty();
+    ({ p, store } = await fresh(M, await saveBytes(p, store)));
+    const master = find(p, 'Wall M', 0);
+    const { c } = controllerFor(p, 0);
+    const got = [TL.takeoffListOf(master), c.inActiveList(master)];
+    p.dropShapes([master._uid]);
+    const heir = find(p, 'Wall M', 1);
+    const re = await M.openProject(new Blob([await saveBytes(p, store)]));
+    const reHeir = (re.measurements[1] || []).find(x => x.name === 'Wall M' && !x.group_child);
+    eq(`a tag that is ${what}: its takeoff, whether Main shows it, and what the promoted run is handed and saved -- the desktop's`,
+      [...got, heir[TAG] ?? null, reHeir ? (reHeir[TAG] ?? null) : 'no heir'], [of, inMain, heirTag, heirTag]);
+  }
+}
+
 // ═══ T7: new work is Main ════════════════════════════════════════════════
 log('\n-- T7: new work is Main, in a job the desktop left in Deck --');
 {

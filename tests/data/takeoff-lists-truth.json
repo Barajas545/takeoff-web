@@ -37833,5 +37833,11166 @@
     ]
    ]
   }
+ ],
+ "special_names": [
+  {
+   "value": "nan",
+   "clean": "nan",
+   "free": [
+    "nan",
+    "nan (2)",
+    "nan (2)",
+    "True",
+    "inf"
+   ],
+   "lists": [
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "nan (2)"
+    },
+    {
+     "list_id": "tl-0000beef",
+     "label": "nan (3)"
+    }
+   ],
+   "labels": [
+    "nan",
+    "nan (2)",
+    "nan (3)"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "nan"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "nan (2)"
+     ],
+     [
+      "tl-0000beef",
+      "nan (3)"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": "inf",
+   "clean": "inf",
+   "free": [
+    "inf",
+    "inf (2)",
+    "nan",
+    "True",
+    "inf (2)"
+   ],
+   "lists": [
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "inf (2)"
+    },
+    {
+     "list_id": "tl-0000beef",
+     "label": "inf (3)"
+    }
+   ],
+   "labels": [
+    "inf",
+    "inf (2)",
+    "inf (3)"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "inf"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "inf (2)"
+     ],
+     [
+      "tl-0000beef",
+      "inf (3)"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": "-inf",
+   "clean": "-inf",
+   "free": [
+    "-inf",
+    "-inf (2)",
+    "nan",
+    "True",
+    "inf"
+   ],
+   "lists": [
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "-inf (2)"
+    },
+    {
+     "list_id": "tl-0000beef",
+     "label": "-inf (3)"
+    }
+   ],
+   "labels": [
+    "-inf",
+    "-inf (2)",
+    "-inf (3)"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "-inf"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "-inf (2)"
+     ],
+     [
+      "tl-0000beef",
+      "-inf (3)"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": "True",
+   "clean": "True",
+   "free": [
+    "True",
+    "True (2)",
+    "nan",
+    "True (2)",
+    "inf"
+   ],
+   "lists": [
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "True (2)"
+    },
+    {
+     "list_id": "tl-0000beef",
+     "label": "True (3)"
+    }
+   ],
+   "labels": [
+    "True",
+    "True (2)",
+    "True (3)"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "True"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "True (2)"
+     ],
+     [
+      "tl-0000beef",
+      "True (3)"
+     ]
+    ]
+   ]
+  }
+ ],
+ "structured": [
+  {
+   "value": [
+    ""
+   ],
+   "type": "area",
+   "of": "['']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      ""
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['']"
+   }
+  },
+  {
+   "value": [
+    ""
+   ],
+   "type": "standalone",
+   "of": "['']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      ""
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['']"
+   }
+  },
+  {
+   "value": [
+    ""
+   ],
+   "type": "group",
+   "of": "['']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      ""
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['']"
+   }
+  },
+  {
+   "value": [
+    ""
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      ""
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    ""
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      ""
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    ""
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       ""
+      ],
+      "label": [
+       ""
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     ""
+    ],
+    "takeoff_main_label": [
+     ""
+    ]
+   },
+   "clean": "",
+   "free": "Takeoff",
+   "lists": [
+    {
+     "list_id": "['']",
+     "label": "Takeoff 2"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     ""
+    ],
+    "['']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "Takeoff 2",
+    "Takeoff 2",
+    "Deck",
+    "Main"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "['']",
+      "Takeoff 2"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['']",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "['']",
+      "Takeoff 2"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    " "
+   ],
+   "type": "area",
+   "of": "[' ']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      " "
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[' ']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "[' ']"
+   }
+  },
+  {
+   "value": [
+    " "
+   ],
+   "type": "standalone",
+   "of": "[' ']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      " "
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[' ']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "[' ']"
+   }
+  },
+  {
+   "value": [
+    " "
+   ],
+   "type": "group",
+   "of": "[' ']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      " "
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[' ']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "[' ']"
+   }
+  },
+  {
+   "value": [
+    " "
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      " "
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[' ']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    " "
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      " "
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[' ']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    " "
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       " "
+      ],
+      "label": [
+       " "
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     " "
+    ],
+    "takeoff_main_label": [
+     " "
+    ]
+   },
+   "clean": "",
+   "free": "Takeoff",
+   "lists": [
+    {
+     "list_id": "[' ']",
+     "label": "Takeoff 2"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     " "
+    ],
+    "[' ']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "Takeoff 2",
+    "Takeoff 2",
+    "Deck",
+    "Main"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "[' ']",
+      "Takeoff 2"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "[' ']",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "[' ']",
+      "Takeoff 2"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [],
+   "type": "area",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": []
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[]"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    false,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x"
+   }
+  },
+  {
+   "value": [],
+   "type": "standalone",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": []
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[]"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    false,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x"
+   }
+  },
+  {
+   "value": [],
+   "type": "group",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": []
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[]"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    false,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x"
+   }
+  },
+  {
+   "value": [],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": []
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[]"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": []
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[]"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [],
+      "label": []
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [],
+    "takeoff_main_label": []
+   },
+   "clean": "",
+   "free": "Takeoff",
+   "lists": [
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [],
+    "[]",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "Main",
+    "",
+    "Deck",
+    "Main"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": {},
+   "type": "area",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": {}
+    },
+    {
+     "type": "area",
+     "takeoff_list": "{}"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    false,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x"
+   }
+  },
+  {
+   "value": {},
+   "type": "standalone",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": {}
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "{}"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    false,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x"
+   }
+  },
+  {
+   "value": {},
+   "type": "group",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": {}
+    },
+    {
+     "type": "group",
+     "takeoff_list": "{}"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    false,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x"
+   }
+  },
+  {
+   "value": {},
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": {}
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "{}"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": {},
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": {}
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "{}"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": {},
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": {},
+      "label": {}
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": {},
+    "takeoff_main_label": {}
+   },
+   "clean": "",
+   "free": "Takeoff",
+   "lists": [
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    {},
+    "{}",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "Main",
+    "",
+    "Deck",
+    "Main"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": {
+    "a": 1
+   },
+   "type": "area",
+   "of": "{'a': 1}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": {
+      "a": 1
+     }
+    },
+    {
+     "type": "area",
+     "takeoff_list": "{'a': 1}"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "{'a': 1}"
+   }
+  },
+  {
+   "value": {
+    "a": 1
+   },
+   "type": "standalone",
+   "of": "{'a': 1}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": {
+      "a": 1
+     }
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "{'a': 1}"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "{'a': 1}"
+   }
+  },
+  {
+   "value": {
+    "a": 1
+   },
+   "type": "group",
+   "of": "{'a': 1}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": {
+      "a": 1
+     }
+    },
+    {
+     "type": "group",
+     "takeoff_list": "{'a': 1}"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "{'a': 1}"
+   }
+  },
+  {
+   "value": {
+    "a": 1
+   },
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": {
+      "a": 1
+     }
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "{'a': 1}"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": {
+    "a": 1
+   },
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": {
+      "a": 1
+     }
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "{'a': 1}"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": {
+    "a": 1
+   },
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": {
+       "a": 1
+      },
+      "label": {
+       "a": 1
+      }
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": {
+     "a": 1
+    },
+    "takeoff_main_label": {
+     "a": 1
+    }
+   },
+   "clean": "{'a': 1}",
+   "free": "{'a': 1} (2)",
+   "lists": [
+    {
+     "list_id": "{'a': 1}",
+     "label": "{'a': 1} (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    {
+     "a": 1
+    },
+    "{'a': 1}",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "{'a': 1} (2)",
+    "{'a': 1} (2)",
+    "Deck",
+    "{'a': 1}"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "{'a': 1}"
+     ],
+     [
+      "{'a': 1}",
+      "{'a': 1} (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "{'a': 1}",
+    [
+     [
+      "",
+      "{'a': 1}"
+     ],
+     [
+      "{'a': 1}",
+      "{'a': 1} (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    []
+   ],
+   "type": "area",
+   "of": "[[]]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      []
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[[]]"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "[[]]"
+   }
+  },
+  {
+   "value": [
+    []
+   ],
+   "type": "standalone",
+   "of": "[[]]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      []
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[[]]"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "[[]]"
+   }
+  },
+  {
+   "value": [
+    []
+   ],
+   "type": "group",
+   "of": "[[]]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      []
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[[]]"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "[[]]"
+   }
+  },
+  {
+   "value": [
+    []
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      []
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[[]]"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    []
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      []
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[[]]"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    []
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       []
+      ],
+      "label": [
+       []
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     []
+    ],
+    "takeoff_main_label": [
+     []
+    ]
+   },
+   "clean": "",
+   "free": "Takeoff",
+   "lists": [
+    {
+     "list_id": "[[]]",
+     "label": "Takeoff 2"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     []
+    ],
+    "[[]]",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "Takeoff 2",
+    "Takeoff 2",
+    "Deck",
+    "Main"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "[[]]",
+      "Takeoff 2"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "[[]]",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "[[]]",
+      "Takeoff 2"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    null
+   ],
+   "type": "area",
+   "of": "[None]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      null
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[None]"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "[None]"
+   }
+  },
+  {
+   "value": [
+    null
+   ],
+   "type": "standalone",
+   "of": "[None]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      null
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[None]"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "[None]"
+   }
+  },
+  {
+   "value": [
+    null
+   ],
+   "type": "group",
+   "of": "[None]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      null
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[None]"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "[None]"
+   }
+  },
+  {
+   "value": [
+    null
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      null
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[None]"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    null
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      null
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[None]"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    null
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       null
+      ],
+      "label": [
+       null
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     null
+    ],
+    "takeoff_main_label": [
+     null
+    ]
+   },
+   "clean": "[None]",
+   "free": "[None] (2)",
+   "lists": [
+    {
+     "list_id": "[None]",
+     "label": "[None] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     null
+    ],
+    "[None]",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "[None] (2)",
+    "[None] (2)",
+    "Deck",
+    "[None]"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "[None]"
+     ],
+     [
+      "[None]",
+      "[None] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "[None]",
+    [
+     [
+      "",
+      "[None]"
+     ],
+     [
+      "[None]",
+      "[None] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "tl-1a2b3c4d"
+   ],
+   "type": "area",
+   "of": "['tl-1a2b3c4d']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "tl-1a2b3c4d"
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['tl-1a2b3c4d']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['tl-1a2b3c4d']"
+   }
+  },
+  {
+   "value": [
+    "tl-1a2b3c4d"
+   ],
+   "type": "standalone",
+   "of": "['tl-1a2b3c4d']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "tl-1a2b3c4d"
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['tl-1a2b3c4d']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['tl-1a2b3c4d']"
+   }
+  },
+  {
+   "value": [
+    "tl-1a2b3c4d"
+   ],
+   "type": "group",
+   "of": "['tl-1a2b3c4d']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "tl-1a2b3c4d"
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['tl-1a2b3c4d']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['tl-1a2b3c4d']"
+   }
+  },
+  {
+   "value": [
+    "tl-1a2b3c4d"
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "tl-1a2b3c4d"
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['tl-1a2b3c4d']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "tl-1a2b3c4d"
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "tl-1a2b3c4d"
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['tl-1a2b3c4d']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "tl-1a2b3c4d"
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "tl-1a2b3c4d"
+      ],
+      "label": [
+       "tl-1a2b3c4d"
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "tl-1a2b3c4d"
+    ],
+    "takeoff_main_label": [
+     "tl-1a2b3c4d"
+    ]
+   },
+   "clean": "['tl-1a2b3c4d']",
+   "free": "['tl-1a2b3c4d'] (2)",
+   "lists": [
+    {
+     "list_id": "['tl-1a2b3c4d']",
+     "label": "['tl-1a2b3c4d'] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "tl-1a2b3c4d"
+    ],
+    "['tl-1a2b3c4d']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "['tl-1a2b3c4d'] (2)",
+    "['tl-1a2b3c4d'] (2)",
+    "Deck",
+    "['tl-1a2b3c4d']"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "['tl-1a2b3c4d']"
+     ],
+     [
+      "['tl-1a2b3c4d']",
+      "['tl-1a2b3c4d'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['tl-1a2b3c4d']",
+    [
+     [
+      "",
+      "['tl-1a2b3c4d']"
+     ],
+     [
+      "['tl-1a2b3c4d']",
+      "['tl-1a2b3c4d'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    " tl-1a2b3c4d "
+   ],
+   "type": "area",
+   "of": "[' tl-1a2b3c4d ']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      " tl-1a2b3c4d "
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[' tl-1a2b3c4d ']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "[' tl-1a2b3c4d ']"
+   }
+  },
+  {
+   "value": [
+    " tl-1a2b3c4d "
+   ],
+   "type": "standalone",
+   "of": "[' tl-1a2b3c4d ']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      " tl-1a2b3c4d "
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[' tl-1a2b3c4d ']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "[' tl-1a2b3c4d ']"
+   }
+  },
+  {
+   "value": [
+    " tl-1a2b3c4d "
+   ],
+   "type": "group",
+   "of": "[' tl-1a2b3c4d ']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      " tl-1a2b3c4d "
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[' tl-1a2b3c4d ']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "[' tl-1a2b3c4d ']"
+   }
+  },
+  {
+   "value": [
+    " tl-1a2b3c4d "
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      " tl-1a2b3c4d "
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[' tl-1a2b3c4d ']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    " tl-1a2b3c4d "
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      " tl-1a2b3c4d "
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[' tl-1a2b3c4d ']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    " tl-1a2b3c4d "
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       " tl-1a2b3c4d "
+      ],
+      "label": [
+       " tl-1a2b3c4d "
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     " tl-1a2b3c4d "
+    ],
+    "takeoff_main_label": [
+     " tl-1a2b3c4d "
+    ]
+   },
+   "clean": "[' tl-1a2b3c4d ']",
+   "free": "[' tl-1a2b3c4d '] (2)",
+   "lists": [
+    {
+     "list_id": "[' tl-1a2b3c4d ']",
+     "label": "[' tl-1a2b3c4d '] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     " tl-1a2b3c4d "
+    ],
+    "[' tl-1a2b3c4d ']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "[' tl-1a2b3c4d '] (2)",
+    "[' tl-1a2b3c4d '] (2)",
+    "Deck",
+    "[' tl-1a2b3c4d ']"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "[' tl-1a2b3c4d ']"
+     ],
+     [
+      "[' tl-1a2b3c4d ']",
+      "[' tl-1a2b3c4d '] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "[' tl-1a2b3c4d ']",
+    [
+     [
+      "",
+      "[' tl-1a2b3c4d ']"
+     ],
+     [
+      "[' tl-1a2b3c4d ']",
+      "[' tl-1a2b3c4d '] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": {
+    "b": [
+     1,
+     2.5,
+     null,
+     true,
+     false
+    ]
+   },
+   "type": "area",
+   "of": "{'b': [1, 2.5, None, True, False]}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": {
+      "b": [
+       1,
+       2.5,
+       null,
+       true,
+       false
+      ]
+     }
+    },
+    {
+     "type": "area",
+     "takeoff_list": "{'b': [1, 2.5, None, True, False]}"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "{'b': [1, 2.5, None, True, False]}"
+   }
+  },
+  {
+   "value": {
+    "b": [
+     1,
+     2.5,
+     null,
+     true,
+     false
+    ]
+   },
+   "type": "standalone",
+   "of": "{'b': [1, 2.5, None, True, False]}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": {
+      "b": [
+       1,
+       2.5,
+       null,
+       true,
+       false
+      ]
+     }
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "{'b': [1, 2.5, None, True, False]}"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "{'b': [1, 2.5, None, True, False]}"
+   }
+  },
+  {
+   "value": {
+    "b": [
+     1,
+     2.5,
+     null,
+     true,
+     false
+    ]
+   },
+   "type": "group",
+   "of": "{'b': [1, 2.5, None, True, False]}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": {
+      "b": [
+       1,
+       2.5,
+       null,
+       true,
+       false
+      ]
+     }
+    },
+    {
+     "type": "group",
+     "takeoff_list": "{'b': [1, 2.5, None, True, False]}"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "{'b': [1, 2.5, None, True, False]}"
+   }
+  },
+  {
+   "value": {
+    "b": [
+     1,
+     2.5,
+     null,
+     true,
+     false
+    ]
+   },
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": {
+      "b": [
+       1,
+       2.5,
+       null,
+       true,
+       false
+      ]
+     }
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "{'b': [1, 2.5, None, True, False]}"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": {
+    "b": [
+     1,
+     2.5,
+     null,
+     true,
+     false
+    ]
+   },
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": {
+      "b": [
+       1,
+       2.5,
+       null,
+       true,
+       false
+      ]
+     }
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "{'b': [1, 2.5, None, True, False]}"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": {
+    "b": [
+     1,
+     2.5,
+     null,
+     true,
+     false
+    ]
+   },
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": {
+       "b": [
+        1,
+        2.5,
+        null,
+        true,
+        false
+       ]
+      },
+      "label": {
+       "b": [
+        1,
+        2.5,
+        null,
+        true,
+        false
+       ]
+      }
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": {
+     "b": [
+      1,
+      2.5,
+      null,
+      true,
+      false
+     ]
+    },
+    "takeoff_main_label": {
+     "b": [
+      1,
+      2.5,
+      null,
+      true,
+      false
+     ]
+    }
+   },
+   "clean": "{'b': [1, 2.5, None, True, False]}",
+   "free": "{'b': [1, 2.5, None, True, False]} (2)",
+   "lists": [
+    {
+     "list_id": "{'b': [1, 2.5, None, True, False]}",
+     "label": "{'b': [1, 2.5, None, True, False]} (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    {
+     "b": [
+      1,
+      2.5,
+      null,
+      true,
+      false
+     ]
+    },
+    "{'b': [1, 2.5, None, True, False]}",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "{'b': [1, 2.5, None, True, False]} (2)",
+    "{'b': [1, 2.5, None, True, False]} (2)",
+    "Deck",
+    "{'b': [1, 2.5, None, True, False]}"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "{'b': [1, 2.5, None, True, False]}"
+     ],
+     [
+      "{'b': [1, 2.5, None, True, False]}",
+      "{'b': [1, 2.5, None, True, False]} (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "{'b': [1, 2.5, None, True, False]}",
+    [
+     [
+      "",
+      "{'b': [1, 2.5, None, True, False]}"
+     ],
+     [
+      "{'b': [1, 2.5, None, True, False]}",
+      "{'b': [1, 2.5, None, True, False]} (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "it's"
+   ],
+   "type": "area",
+   "of": "[\"it's\"]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "it's"
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[\"it's\"]"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "[\"it's\"]"
+   }
+  },
+  {
+   "value": [
+    "it's"
+   ],
+   "type": "standalone",
+   "of": "[\"it's\"]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "it's"
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[\"it's\"]"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "[\"it's\"]"
+   }
+  },
+  {
+   "value": [
+    "it's"
+   ],
+   "type": "group",
+   "of": "[\"it's\"]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "it's"
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[\"it's\"]"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "[\"it's\"]"
+   }
+  },
+  {
+   "value": [
+    "it's"
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "it's"
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[\"it's\"]"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "it's"
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "it's"
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[\"it's\"]"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "it's"
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "it's"
+      ],
+      "label": [
+       "it's"
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "it's"
+    ],
+    "takeoff_main_label": [
+     "it's"
+    ]
+   },
+   "clean": "[\"it's\"]",
+   "free": "[\"it's\"] (2)",
+   "lists": [
+    {
+     "list_id": "[\"it's\"]",
+     "label": "[\"it's\"] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "it's"
+    ],
+    "[\"it's\"]",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "[\"it's\"] (2)",
+    "[\"it's\"] (2)",
+    "Deck",
+    "[\"it's\"]"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "[\"it's\"]"
+     ],
+     [
+      "[\"it's\"]",
+      "[\"it's\"] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "[\"it's\"]",
+    [
+     [
+      "",
+      "[\"it's\"]"
+     ],
+     [
+      "[\"it's\"]",
+      "[\"it's\"] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "say \"hi\""
+   ],
+   "type": "area",
+   "of": "['say \"hi\"']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "say \"hi\""
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['say \"hi\"']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['say \"hi\"']"
+   }
+  },
+  {
+   "value": [
+    "say \"hi\""
+   ],
+   "type": "standalone",
+   "of": "['say \"hi\"']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "say \"hi\""
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['say \"hi\"']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['say \"hi\"']"
+   }
+  },
+  {
+   "value": [
+    "say \"hi\""
+   ],
+   "type": "group",
+   "of": "['say \"hi\"']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "say \"hi\""
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['say \"hi\"']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['say \"hi\"']"
+   }
+  },
+  {
+   "value": [
+    "say \"hi\""
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "say \"hi\""
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['say \"hi\"']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "say \"hi\""
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "say \"hi\""
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['say \"hi\"']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "say \"hi\""
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "say \"hi\""
+      ],
+      "label": [
+       "say \"hi\""
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "say \"hi\""
+    ],
+    "takeoff_main_label": [
+     "say \"hi\""
+    ]
+   },
+   "clean": "['say \"hi\"']",
+   "free": "['say \"hi\"'] (2)",
+   "lists": [
+    {
+     "list_id": "['say \"hi\"']",
+     "label": "['say \"hi\"'] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "say \"hi\""
+    ],
+    "['say \"hi\"']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "['say \"hi\"'] (2)",
+    "['say \"hi\"'] (2)",
+    "Deck",
+    "['say \"hi\"']"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "['say \"hi\"']"
+     ],
+     [
+      "['say \"hi\"']",
+      "['say \"hi\"'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['say \"hi\"']",
+    [
+     [
+      "",
+      "['say \"hi\"']"
+     ],
+     [
+      "['say \"hi\"']",
+      "['say \"hi\"'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "it's \"both\""
+   ],
+   "type": "area",
+   "of": "['it\\'s \"both\"']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "it's \"both\""
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['it\\'s \"both\"']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['it\\'s \"both\"']"
+   }
+  },
+  {
+   "value": [
+    "it's \"both\""
+   ],
+   "type": "standalone",
+   "of": "['it\\'s \"both\"']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "it's \"both\""
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['it\\'s \"both\"']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['it\\'s \"both\"']"
+   }
+  },
+  {
+   "value": [
+    "it's \"both\""
+   ],
+   "type": "group",
+   "of": "['it\\'s \"both\"']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "it's \"both\""
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['it\\'s \"both\"']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['it\\'s \"both\"']"
+   }
+  },
+  {
+   "value": [
+    "it's \"both\""
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "it's \"both\""
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['it\\'s \"both\"']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "it's \"both\""
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "it's \"both\""
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['it\\'s \"both\"']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "it's \"both\""
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "it's \"both\""
+      ],
+      "label": [
+       "it's \"both\""
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "it's \"both\""
+    ],
+    "takeoff_main_label": [
+     "it's \"both\""
+    ]
+   },
+   "clean": "['it\\'s \"both\"']",
+   "free": "['it\\'s \"both\"'] (2)",
+   "lists": [
+    {
+     "list_id": "['it\\'s \"both\"']",
+     "label": "['it\\'s \"both\"'] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "it's \"both\""
+    ],
+    "['it\\'s \"both\"']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "['it\\'s \"both\"'] (2)",
+    "['it\\'s \"both\"'] (2)",
+    "Deck",
+    "['it\\'s \"both\"']"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "['it\\'s \"both\"']"
+     ],
+     [
+      "['it\\'s \"both\"']",
+      "['it\\'s \"both\"'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['it\\'s \"both\"']",
+    [
+     [
+      "",
+      "['it\\'s \"both\"']"
+     ],
+     [
+      "['it\\'s \"both\"']",
+      "['it\\'s \"both\"'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "a\nb\tc\rd\\e"
+   ],
+   "type": "area",
+   "of": "['a\\nb\\tc\\rd\\\\e']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "a\nb\tc\rd\\e"
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['a\\nb\\tc\\rd\\\\e']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['a\\nb\\tc\\rd\\\\e']"
+   }
+  },
+  {
+   "value": [
+    "a\nb\tc\rd\\e"
+   ],
+   "type": "standalone",
+   "of": "['a\\nb\\tc\\rd\\\\e']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "a\nb\tc\rd\\e"
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['a\\nb\\tc\\rd\\\\e']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['a\\nb\\tc\\rd\\\\e']"
+   }
+  },
+  {
+   "value": [
+    "a\nb\tc\rd\\e"
+   ],
+   "type": "group",
+   "of": "['a\\nb\\tc\\rd\\\\e']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "a\nb\tc\rd\\e"
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['a\\nb\\tc\\rd\\\\e']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['a\\nb\\tc\\rd\\\\e']"
+   }
+  },
+  {
+   "value": [
+    "a\nb\tc\rd\\e"
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "a\nb\tc\rd\\e"
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['a\\nb\\tc\\rd\\\\e']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "a\nb\tc\rd\\e"
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "a\nb\tc\rd\\e"
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['a\\nb\\tc\\rd\\\\e']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "a\nb\tc\rd\\e"
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "a\nb\tc\rd\\e"
+      ],
+      "label": [
+       "a\nb\tc\rd\\e"
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "a\nb\tc\rd\\e"
+    ],
+    "takeoff_main_label": [
+     "a\nb\tc\rd\\e"
+    ]
+   },
+   "clean": "['a\\nb\\tc\\rd\\\\e']",
+   "free": "['a\\nb\\tc\\rd\\\\e'] (2)",
+   "lists": [
+    {
+     "list_id": "['a\\nb\\tc\\rd\\\\e']",
+     "label": "['a\\nb\\tc\\rd\\\\e'] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "a\nb\tc\rd\\e"
+    ],
+    "['a\\nb\\tc\\rd\\\\e']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "['a\\nb\\tc\\rd\\\\e'] (2)",
+    "['a\\nb\\tc\\rd\\\\e'] (2)",
+    "Deck",
+    "['a\\nb\\tc\\rd\\\\e']"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "['a\\nb\\tc\\rd\\\\e']"
+     ],
+     [
+      "['a\\nb\\tc\\rd\\\\e']",
+      "['a\\nb\\tc\\rd\\\\e'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['a\\nb\\tc\\rd\\\\e']",
+    [
+     [
+      "",
+      "['a\\nb\\tc\\rd\\\\e']"
+     ],
+     [
+      "['a\\nb\\tc\\rd\\\\e']",
+      "['a\\nb\\tc\\rd\\\\e'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "\u0000\u001f\u007f"
+   ],
+   "type": "area",
+   "of": "['\\x00\\x1f\\x7f']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "\u0000\u001f\u007f"
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['\\x00\\x1f\\x7f']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['\\x00\\x1f\\x7f']"
+   }
+  },
+  {
+   "value": [
+    "\u0000\u001f\u007f"
+   ],
+   "type": "standalone",
+   "of": "['\\x00\\x1f\\x7f']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "\u0000\u001f\u007f"
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['\\x00\\x1f\\x7f']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['\\x00\\x1f\\x7f']"
+   }
+  },
+  {
+   "value": [
+    "\u0000\u001f\u007f"
+   ],
+   "type": "group",
+   "of": "['\\x00\\x1f\\x7f']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "\u0000\u001f\u007f"
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['\\x00\\x1f\\x7f']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['\\x00\\x1f\\x7f']"
+   }
+  },
+  {
+   "value": [
+    "\u0000\u001f\u007f"
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "\u0000\u001f\u007f"
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['\\x00\\x1f\\x7f']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "\u0000\u001f\u007f"
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "\u0000\u001f\u007f"
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['\\x00\\x1f\\x7f']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "\u0000\u001f\u007f"
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "\u0000\u001f\u007f"
+      ],
+      "label": [
+       "\u0000\u001f\u007f"
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "\u0000\u001f\u007f"
+    ],
+    "takeoff_main_label": [
+     "\u0000\u001f\u007f"
+    ]
+   },
+   "clean": "['\\x00\\x1f\\x7f']",
+   "free": "['\\x00\\x1f\\x7f'] (2)",
+   "lists": [
+    {
+     "list_id": "['\\x00\\x1f\\x7f']",
+     "label": "['\\x00\\x1f\\x7f'] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "\u0000\u001f\u007f"
+    ],
+    "['\\x00\\x1f\\x7f']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "['\\x00\\x1f\\x7f'] (2)",
+    "['\\x00\\x1f\\x7f'] (2)",
+    "Deck",
+    "['\\x00\\x1f\\x7f']"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "['\\x00\\x1f\\x7f']"
+     ],
+     [
+      "['\\x00\\x1f\\x7f']",
+      "['\\x00\\x1f\\x7f'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['\\x00\\x1f\\x7f']",
+    [
+     [
+      "",
+      "['\\x00\\x1f\\x7f']"
+     ],
+     [
+      "['\\x00\\x1f\\x7f']",
+      "['\\x00\\x1f\\x7f'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+   ],
+   "type": "area",
+   "of": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+   }
+  },
+  {
+   "value": [
+    "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+   ],
+   "type": "standalone",
+   "of": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+   }
+  },
+  {
+   "value": [
+    "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+   ],
+   "type": "group",
+   "of": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+   }
+  },
+  {
+   "value": [
+    "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+      ],
+      "label": [
+       "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+    ],
+    "takeoff_main_label": [
+     "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+    ]
+   },
+   "clean": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']",
+   "free": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378'] (2)",
+   "lists": [
+    {
+     "list_id": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']",
+     "label": "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378'] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "\u0085\u00a0\u00e9\u200b\u2028\ufeff\u0378"
+    ],
+    "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378'] (2)",
+    "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378'] (2)",
+    "Deck",
+    "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+     ],
+     [
+      "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']",
+      "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']",
+    [
+     [
+      "",
+      "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']"
+     ],
+     [
+      "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378']",
+      "['\\x85\\xa0\u00e9\\u200b\\u2028\\ufeff\\u0378'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "\ud83c\udfe0",
+    "\udb40\udc01"
+   ],
+   "type": "area",
+   "of": "['\ud83c\udfe0', '\\U000e0001']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "\ud83c\udfe0",
+      "\udb40\udc01"
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['\ud83c\udfe0', '\\U000e0001']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['\ud83c\udfe0', '\\U000e0001']"
+   }
+  },
+  {
+   "value": [
+    "\ud83c\udfe0",
+    "\udb40\udc01"
+   ],
+   "type": "standalone",
+   "of": "['\ud83c\udfe0', '\\U000e0001']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "\ud83c\udfe0",
+      "\udb40\udc01"
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['\ud83c\udfe0', '\\U000e0001']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['\ud83c\udfe0', '\\U000e0001']"
+   }
+  },
+  {
+   "value": [
+    "\ud83c\udfe0",
+    "\udb40\udc01"
+   ],
+   "type": "group",
+   "of": "['\ud83c\udfe0', '\\U000e0001']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "\ud83c\udfe0",
+      "\udb40\udc01"
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['\ud83c\udfe0', '\\U000e0001']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['\ud83c\udfe0', '\\U000e0001']"
+   }
+  },
+  {
+   "value": [
+    "\ud83c\udfe0",
+    "\udb40\udc01"
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "\ud83c\udfe0",
+      "\udb40\udc01"
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['\ud83c\udfe0', '\\U000e0001']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "\ud83c\udfe0",
+    "\udb40\udc01"
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "\ud83c\udfe0",
+      "\udb40\udc01"
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['\ud83c\udfe0', '\\U000e0001']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "\ud83c\udfe0",
+    "\udb40\udc01"
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "\ud83c\udfe0",
+       "\udb40\udc01"
+      ],
+      "label": [
+       "\ud83c\udfe0",
+       "\udb40\udc01"
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "\ud83c\udfe0",
+     "\udb40\udc01"
+    ],
+    "takeoff_main_label": [
+     "\ud83c\udfe0",
+     "\udb40\udc01"
+    ]
+   },
+   "clean": "['\ud83c\udfe0', '\\U000e0001']",
+   "free": "['\ud83c\udfe0', '\\U000e0001'] (2)",
+   "lists": [
+    {
+     "list_id": "['\ud83c\udfe0', '\\U000e0001']",
+     "label": "['\ud83c\udfe0', '\\U000e0001'] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "\ud83c\udfe0",
+     "\udb40\udc01"
+    ],
+    "['\ud83c\udfe0', '\\U000e0001']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "['\ud83c\udfe0', '\\U000e0001'] (2)",
+    "['\ud83c\udfe0', '\\U000e0001'] (2)",
+    "Deck",
+    "['\ud83c\udfe0', '\\U000e0001']"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "['\ud83c\udfe0', '\\U000e0001']"
+     ],
+     [
+      "['\ud83c\udfe0', '\\U000e0001']",
+      "['\ud83c\udfe0', '\\U000e0001'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['\ud83c\udfe0', '\\U000e0001']",
+    [
+     [
+      "",
+      "['\ud83c\udfe0', '\\U000e0001']"
+     ],
+     [
+      "['\ud83c\udfe0', '\\U000e0001']",
+      "['\ud83c\udfe0', '\\U000e0001'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    0.1,
+    1e-07,
+    1.5e+300,
+    -2.5,
+    0,
+    -7
+   ],
+   "type": "area",
+   "of": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      0.1,
+      1e-07,
+      1.5e+300,
+      -2.5,
+      0,
+      -7
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+   }
+  },
+  {
+   "value": [
+    0.1,
+    1e-07,
+    1.5e+300,
+    -2.5,
+    0,
+    -7
+   ],
+   "type": "standalone",
+   "of": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      0.1,
+      1e-07,
+      1.5e+300,
+      -2.5,
+      0,
+      -7
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+   }
+  },
+  {
+   "value": [
+    0.1,
+    1e-07,
+    1.5e+300,
+    -2.5,
+    0,
+    -7
+   ],
+   "type": "group",
+   "of": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      0.1,
+      1e-07,
+      1.5e+300,
+      -2.5,
+      0,
+      -7
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+   }
+  },
+  {
+   "value": [
+    0.1,
+    1e-07,
+    1.5e+300,
+    -2.5,
+    0,
+    -7
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      0.1,
+      1e-07,
+      1.5e+300,
+      -2.5,
+      0,
+      -7
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    0.1,
+    1e-07,
+    1.5e+300,
+    -2.5,
+    0,
+    -7
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      0.1,
+      1e-07,
+      1.5e+300,
+      -2.5,
+      0,
+      -7
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    0.1,
+    1e-07,
+    1.5e+300,
+    -2.5,
+    0,
+    -7
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       0.1,
+       1e-07,
+       1.5e+300,
+       -2.5,
+       0,
+       -7
+      ],
+      "label": [
+       0.1,
+       1e-07,
+       1.5e+300,
+       -2.5,
+       0,
+       -7
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     0.1,
+     1e-07,
+     1.5e+300,
+     -2.5,
+     0,
+     -7
+    ],
+    "takeoff_main_label": [
+     0.1,
+     1e-07,
+     1.5e+300,
+     -2.5,
+     0,
+     -7
+    ]
+   },
+   "clean": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]",
+   "free": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7] (2)",
+   "lists": [
+    {
+     "list_id": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]",
+     "label": "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     0.1,
+     1e-07,
+     1.5e+300,
+     -2.5,
+     0,
+     -7
+    ],
+    "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7] (2)",
+    "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7] (2)",
+    "Deck",
+    "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+     ],
+     [
+      "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]",
+      "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]",
+    [
+     [
+      "",
+      "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]"
+     ],
+     [
+      "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7]",
+      "[0.1, 1e-07, 1.5e+300, -2.5, 0, -7] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    {
+     "k": [
+      {}
+     ]
+    }
+   ],
+   "type": "area",
+   "of": "[{'k': [{}]}]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      {
+       "k": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[{'k': [{}]}]"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "[{'k': [{}]}]"
+   }
+  },
+  {
+   "value": [
+    {
+     "k": [
+      {}
+     ]
+    }
+   ],
+   "type": "standalone",
+   "of": "[{'k': [{}]}]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      {
+       "k": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[{'k': [{}]}]"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "[{'k': [{}]}]"
+   }
+  },
+  {
+   "value": [
+    {
+     "k": [
+      {}
+     ]
+    }
+   ],
+   "type": "group",
+   "of": "[{'k': [{}]}]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      {
+       "k": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[{'k': [{}]}]"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "[{'k': [{}]}]"
+   }
+  },
+  {
+   "value": [
+    {
+     "k": [
+      {}
+     ]
+    }
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      {
+       "k": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[{'k': [{}]}]"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    {
+     "k": [
+      {}
+     ]
+    }
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      {
+       "k": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[{'k': [{}]}]"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    {
+     "k": [
+      {}
+     ]
+    }
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       {
+        "k": [
+         {}
+        ]
+       }
+      ],
+      "label": [
+       {
+        "k": [
+         {}
+        ]
+       }
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     {
+      "k": [
+       {}
+      ]
+     }
+    ],
+    "takeoff_main_label": [
+     {
+      "k": [
+       {}
+      ]
+     }
+    ]
+   },
+   "clean": "[{'k': [{}]}]",
+   "free": "[{'k': [{}]}] (2)",
+   "lists": [
+    {
+     "list_id": "[{'k': [{}]}]",
+     "label": "[{'k': [{}]}] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     {
+      "k": [
+       {}
+      ]
+     }
+    ],
+    "[{'k': [{}]}]",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "[{'k': [{}]}] (2)",
+    "[{'k': [{}]}] (2)",
+    "Deck",
+    "[{'k': [{}]}]"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "[{'k': [{}]}]"
+     ],
+     [
+      "[{'k': [{}]}]",
+      "[{'k': [{}]}] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "[{'k': [{}]}]",
+    [
+     [
+      "",
+      "[{'k': [{}]}]"
+     ],
+     [
+      "[{'k': [{}]}]",
+      "[{'k': [{}]}] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": {
+    "x y": "z",
+    "": null
+   },
+   "type": "area",
+   "of": "{'x y': 'z', '': None}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": {
+      "x y": "z",
+      "": null
+     }
+    },
+    {
+     "type": "area",
+     "takeoff_list": "{'x y': 'z', '': None}"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "{'x y': 'z', '': None}"
+   }
+  },
+  {
+   "value": {
+    "x y": "z",
+    "": null
+   },
+   "type": "standalone",
+   "of": "{'x y': 'z', '': None}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": {
+      "x y": "z",
+      "": null
+     }
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "{'x y': 'z', '': None}"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "{'x y': 'z', '': None}"
+   }
+  },
+  {
+   "value": {
+    "x y": "z",
+    "": null
+   },
+   "type": "group",
+   "of": "{'x y': 'z', '': None}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": {
+      "x y": "z",
+      "": null
+     }
+    },
+    {
+     "type": "group",
+     "takeoff_list": "{'x y': 'z', '': None}"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "{'x y': 'z', '': None}"
+   }
+  },
+  {
+   "value": {
+    "x y": "z",
+    "": null
+   },
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": {
+      "x y": "z",
+      "": null
+     }
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "{'x y': 'z', '': None}"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": {
+    "x y": "z",
+    "": null
+   },
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": {
+      "x y": "z",
+      "": null
+     }
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "{'x y': 'z', '': None}"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": {
+    "x y": "z",
+    "": null
+   },
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": {
+       "x y": "z",
+       "": null
+      },
+      "label": {
+       "x y": "z",
+       "": null
+      }
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": {
+     "x y": "z",
+     "": null
+    },
+    "takeoff_main_label": {
+     "x y": "z",
+     "": null
+    }
+   },
+   "clean": "{'x y': 'z', '': None}",
+   "free": "{'x y': 'z', '': None} (2)",
+   "lists": [
+    {
+     "list_id": "{'x y': 'z', '': None}",
+     "label": "{'x y': 'z', '': None} (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    {
+     "x y": "z",
+     "": null
+    },
+    "{'x y': 'z', '': None}",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "{'x y': 'z', '': None} (2)",
+    "{'x y': 'z', '': None} (2)",
+    "Deck",
+    "{'x y': 'z', '': None}"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "{'x y': 'z', '': None}"
+     ],
+     [
+      "{'x y': 'z', '': None}",
+      "{'x y': 'z', '': None} (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "{'x y': 'z', '': None}",
+    [
+     [
+      "",
+      "{'x y': 'z', '': None}"
+     ],
+     [
+      "{'x y': 'z', '': None}",
+      "{'x y': 'z', '': None} (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "Deck"
+   ],
+   "type": "area",
+   "of": "['Deck']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "Deck"
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['Deck']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['Deck']"
+   }
+  },
+  {
+   "value": [
+    "Deck"
+   ],
+   "type": "standalone",
+   "of": "['Deck']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "Deck"
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['Deck']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['Deck']"
+   }
+  },
+  {
+   "value": [
+    "Deck"
+   ],
+   "type": "group",
+   "of": "['Deck']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "Deck"
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['Deck']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['Deck']"
+   }
+  },
+  {
+   "value": [
+    "Deck"
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "Deck"
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['Deck']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "Deck"
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "Deck"
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['Deck']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "Deck"
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "Deck"
+      ],
+      "label": [
+       "Deck"
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "Deck"
+    ],
+    "takeoff_main_label": [
+     "Deck"
+    ]
+   },
+   "clean": "['Deck']",
+   "free": "['Deck'] (2)",
+   "lists": [
+    {
+     "list_id": "['Deck']",
+     "label": "['Deck'] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "Deck"
+    ],
+    "['Deck']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "['Deck'] (2)",
+    "['Deck'] (2)",
+    "Deck",
+    "['Deck']"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "['Deck']"
+     ],
+     [
+      "['Deck']",
+      "['Deck'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['Deck']",
+    [
+     [
+      "",
+      "['Deck']"
+     ],
+     [
+      "['Deck']",
+      "['Deck'] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": {
+    "Deck": "Deck"
+   },
+   "type": "area",
+   "of": "{'Deck': 'Deck'}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": {
+      "Deck": "Deck"
+     }
+    },
+    {
+     "type": "area",
+     "takeoff_list": "{'Deck': 'Deck'}"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "{'Deck': 'Deck'}"
+   }
+  },
+  {
+   "value": {
+    "Deck": "Deck"
+   },
+   "type": "standalone",
+   "of": "{'Deck': 'Deck'}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": {
+      "Deck": "Deck"
+     }
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "{'Deck': 'Deck'}"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "{'Deck': 'Deck'}"
+   }
+  },
+  {
+   "value": {
+    "Deck": "Deck"
+   },
+   "type": "group",
+   "of": "{'Deck': 'Deck'}",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": {
+      "Deck": "Deck"
+     }
+    },
+    {
+     "type": "group",
+     "takeoff_list": "{'Deck': 'Deck'}"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "{'Deck': 'Deck'}"
+   }
+  },
+  {
+   "value": {
+    "Deck": "Deck"
+   },
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": {
+      "Deck": "Deck"
+     }
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "{'Deck': 'Deck'}"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": {
+    "Deck": "Deck"
+   },
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": {
+      "Deck": "Deck"
+     }
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "{'Deck': 'Deck'}"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": {
+    "Deck": "Deck"
+   },
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": {
+       "Deck": "Deck"
+      },
+      "label": {
+       "Deck": "Deck"
+      }
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": {
+     "Deck": "Deck"
+    },
+    "takeoff_main_label": {
+     "Deck": "Deck"
+    }
+   },
+   "clean": "{'Deck': 'Deck'}",
+   "free": "{'Deck': 'Deck'} (2)",
+   "lists": [
+    {
+     "list_id": "{'Deck': 'Deck'}",
+     "label": "{'Deck': 'Deck'} (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    {
+     "Deck": "Deck"
+    },
+    "{'Deck': 'Deck'}",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "{'Deck': 'Deck'} (2)",
+    "{'Deck': 'Deck'} (2)",
+    "Deck",
+    "{'Deck': 'Deck'}"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "{'Deck': 'Deck'}"
+     ],
+     [
+      "{'Deck': 'Deck'}",
+      "{'Deck': 'Deck'} (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "{'Deck': 'Deck'}",
+    [
+     [
+      "",
+      "{'Deck': 'Deck'}"
+     ],
+     [
+      "{'Deck': 'Deck'}",
+      "{'Deck': 'Deck'} (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    false
+   ],
+   "type": "area",
+   "of": "[False]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      false
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[False]"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "[False]"
+   }
+  },
+  {
+   "value": [
+    false
+   ],
+   "type": "standalone",
+   "of": "[False]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      false
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[False]"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "[False]"
+   }
+  },
+  {
+   "value": [
+    false
+   ],
+   "type": "group",
+   "of": "[False]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      false
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[False]"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "[False]"
+   }
+  },
+  {
+   "value": [
+    false
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      false
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[False]"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    false
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      false
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[False]"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    false
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       false
+      ],
+      "label": [
+       false
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     false
+    ],
+    "takeoff_main_label": [
+     false
+    ]
+   },
+   "clean": "[False]",
+   "free": "[False] (2)",
+   "lists": [
+    {
+     "list_id": "[False]",
+     "label": "[False] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     false
+    ],
+    "[False]",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "[False] (2)",
+    "[False] (2)",
+    "Deck",
+    "[False]"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "[False]"
+     ],
+     [
+      "[False]",
+      "[False] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "[False]",
+    [
+     [
+      "",
+      "[False]"
+     ],
+     [
+      "[False]",
+      "[False] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    0
+   ],
+   "type": "area",
+   "of": "[0]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      0
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "[0]"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "[0]"
+   }
+  },
+  {
+   "value": [
+    0
+   ],
+   "type": "standalone",
+   "of": "[0]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      0
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "[0]"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "[0]"
+   }
+  },
+  {
+   "value": [
+    0
+   ],
+   "type": "group",
+   "of": "[0]",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      0
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "[0]"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "[0]"
+   }
+  },
+  {
+   "value": [
+    0
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      0
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "[0]"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    0
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      0
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "[0]"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    0
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       0
+      ],
+      "label": [
+       0
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     0
+    ],
+    "takeoff_main_label": [
+     0
+    ]
+   },
+   "clean": "[0]",
+   "free": "[0] (2)",
+   "lists": [
+    {
+     "list_id": "[0]",
+     "label": "[0] (2)"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     0
+    ],
+    "[0]",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "[0] (2)",
+    "[0] (2)",
+    "Deck",
+    "[0]"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "[0]"
+     ],
+     [
+      "[0]",
+      "[0] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "[0]",
+    [
+     [
+      "",
+      "[0]"
+     ],
+     [
+      "[0]",
+      "[0] (2)"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  },
+  {
+   "value": [
+    "",
+    "",
+    ""
+   ],
+   "type": "area",
+   "of": "['', '', '']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "area"
+    },
+    {
+     "type": "area",
+     "takeoff_list": [
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "type": "area",
+     "takeoff_list": "['', '', '']"
+    },
+    {
+     "type": "area",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "area",
+    "name": "x",
+    "takeoff_list": "['', '', '']"
+   }
+  },
+  {
+   "value": [
+    "",
+    "",
+    ""
+   ],
+   "type": "standalone",
+   "of": "['', '', '']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "standalone"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": [
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "['', '', '']"
+    },
+    {
+     "type": "standalone",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "standalone",
+    "name": "x",
+    "takeoff_list": "['', '', '']"
+   }
+  },
+  {
+   "value": [
+    "",
+    "",
+    ""
+   ],
+   "type": "group",
+   "of": "['', '', '']",
+   "in": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "view": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "asked_items": [
+    {
+     "type": "group"
+    },
+    {
+     "type": "group",
+     "takeoff_list": [
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "type": "group",
+     "takeoff_list": "['', '', '']"
+    },
+    {
+     "type": "group",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    false,
+    true,
+    true,
+    false
+   ],
+   "set": {
+    "type": "group",
+    "name": "x",
+    "takeoff_list": "['', '', '']"
+   }
+  },
+  {
+   "value": [
+    "",
+    "",
+    ""
+   ],
+   "type": "textnote",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "textnote"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": [
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "['', '', '']"
+    },
+    {
+     "type": "textnote",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "textnote",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "",
+    "",
+    ""
+   ],
+   "type": "page_ref",
+   "of": "",
+   "in": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "view": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "asked_items": [
+    {
+     "type": "page_ref"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": [
+      "",
+      "",
+      ""
+     ]
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "['', '', '']"
+    },
+    {
+     "type": "page_ref",
+     "takeoff_list": "tl-1a2b3c4d"
+    }
+   ],
+   "asked": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "set": {
+    "type": "page_ref",
+    "name": "x"
+   }
+  },
+  {
+   "value": [
+    "",
+    "",
+    ""
+   ],
+   "type": "registry",
+   "md": {
+    "takeoff_lists": [
+     {
+      "list_id": [
+       "",
+       "",
+       ""
+      ],
+      "label": [
+       "",
+       "",
+       ""
+      ]
+     },
+     {
+      "list_id": "tl-1a2b3c4d",
+      "label": "Deck"
+     }
+    ],
+    "takeoff_list_active": [
+     "",
+     "",
+     ""
+    ],
+    "takeoff_main_label": [
+     "",
+     "",
+     ""
+    ]
+   },
+   "clean": "",
+   "free": "Takeoff",
+   "lists": [
+    {
+     "list_id": "['', '', '']",
+     "label": "Takeoff 2"
+    },
+    {
+     "list_id": "tl-1a2b3c4d",
+     "label": "Deck"
+    }
+   ],
+   "label_ids": [
+    [
+     "",
+     "",
+     ""
+    ],
+    "['', '', '']",
+    "tl-1a2b3c4d",
+    ""
+   ],
+   "labels": [
+    "Takeoff 2",
+    "Takeoff 2",
+    "Deck",
+    "Main"
+   ],
+   "naming": [
+    "",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "['', '', '']",
+      "Takeoff 2"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ],
+   "naming_in": [
+    "['', '', '']",
+    [
+     [
+      "",
+      "Main"
+     ],
+     [
+      "['', '', '']",
+      "Takeoff 2"
+     ],
+     [
+      "tl-1a2b3c4d",
+      "Deck"
+     ]
+    ]
+   ]
+  }
  ]
 }

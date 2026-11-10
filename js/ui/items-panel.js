@@ -1254,10 +1254,18 @@ export class ItemsPanel extends EventTarget {
 
   _updateFoot(pairs, wholeJob = false) {
     if (!this.footEl) return;
-    // Nothing listed, nothing totalled: no tooltip either -- the last one
-    // ("Totals of the takeoff House only …", "2 items are … NOT COUNTED")
-    // would stand over totals that are not there.
-    if (!pairs.length) { this.footEl.textContent = ''; this.footEl.title = ''; return; }
+    // Nothing listed, nothing totalled. In a job of several takeoffs no
+    // tooltip either: "Totals of the takeoff House only …" would stand over
+    // totals that are not there -- and so would one such a job left on the
+    // foot when the next job, with Main alone, lists nothing. A job with
+    // Main alone otherwise keeps v31's foot to the letter: the tooltip it
+    // had stays, as it did in v31 (Main-only = v31).
+    if (!pairs.length) {
+      this.footEl.textContent = '';
+      if (this._tl || this._footSaidTakeoffs) this.footEl.title = '';
+      this._footSaidTakeoffs = false;
+      return;
+    }
     // While the list shows one sheet the totals are still the whole job's
     // (the reports' and the exports'), and the line says so -- as filtered
     // when ALL / LAB / MAT, the floor or the group filter is narrowing them,
@@ -1304,6 +1312,7 @@ export class ItemsPanel extends EventTarget {
       ? `Totals of the takeoff ${tl.label} only — ${tl.words} ${one ? 'is' : 'are'} not in them; `
         + `the desktop app works on ${one ? 'it' : 'them'}.${why ? `\n${why}` : ''}`
       : why;
+    this._footSaidTakeoffs = !!tl;
   }
 }
 

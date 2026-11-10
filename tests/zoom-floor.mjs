@@ -3451,6 +3451,8 @@ function holding(r, fn) {
   const said = async (items, md = {}) => {
     const r = await opened([SHEET], { revs: { 0: [['r1', SHEET]] } });
     r.env.app.project.measurements = { 0: structuredClone(items) };
+    // In the app the controller's project IS app.project: one store.
+    r.c.project.measurements = r.env.app.project.measurements;
     Object.assign(r.c.project.metadata, md);
     await r.env.showSheetVersion(0, 'r1', { announce: false, flip: false });
     r.st.said.length = 0;
@@ -3483,17 +3485,27 @@ function holding(r, fn) {
   eq('...Main\'s and Deck\'s: only Main\'s counted, nothing said of Deck\'s',
     await said([area('Slab'), area('Deck boards', { takeoff_list: DECK })]),
     ["Back on this sheet's own drawing — 1 item here"]);
-  // A run of Main's item (its main shape on another sheet), painted and
-  // tappable here, beside Deck's: Main's work is on it -- the desktop counts
-  // every shape of version_items -- so never "nothing in Main"; two runs of
-  // one item are one item.
-  eq('...a run of Main\'s item beside Deck\'s: it is Main\'s work here, counted once per item',
-    await said([area('Wall M', { group_id: 'g1', group_child: true }), area('Wall M', { group_id: 'g1', group_child: true }),
-      area('Deck boards', { takeoff_list: DECK }), area('Rail', { takeoff_list: DECK })]),
-    ["Back on this sheet's own drawing — 1 item here"]);
+  // In a job of several takeoffs the count is the desktop's: every shape of
+  // the takeoff on screen on the own drawing (version_items) -- a run of an
+  // item whose main shape is on another sheet included, painted and
+  // tappable here -- whether or not another takeoff has work on the sheet.
+  // (With Main alone, v31's run-blind count, above.)
+  const run = (extra = {}) => area('Wall M', { group_id: 'g1', group_child: true, ...extra });
+  const DECK_REG = { takeoff_lists: [{ list_id: DECK, label: 'Deck' }] };
+  eq('...two runs of Main\'s item beside Deck\'s: Main\'s work here, each shape counted, as the desktop counts them',
+    await said([run(), run(), area('Deck boards', { takeoff_list: DECK }), area('Rail', { takeoff_list: DECK })]),
+    ["Back on this sheet's own drawing — 2 items here"]);
   eq('...a Deck-tagged run of Main\'s item is not Main\'s',
-    await said([area('Wall M', { group_id: 'g1', group_child: true, takeoff_list: DECK }), area('Deck boards', { takeoff_list: DECK })]),
+    await said([run({ takeoff_list: DECK }), area('Deck boards', { takeoff_list: DECK })]),
     ["Back on this sheet's own drawing — nothing in Main on it yet (2 items here are in other takeoffs)"]);
+  eq('a job with Deck, a sheet holding only a run of Main\'s item (nothing of Deck\'s on it): "1 item here", as the desktop',
+    await said([run()], DECK_REG), ["Back on this sheet's own drawing — 1 item here"]);
+  eq('...the same sheet with one Deck item beside the run: still "1 item here" -- the count does not hang on Deck\'s work',
+    await said([run(), area('Deck boards', { takeoff_list: DECK })], DECK_REG), ["Back on this sheet's own drawing — 1 item here"]);
+  eq('...a main shape of Main\'s and a run of another of its items: every shape, "2 items here", as the desktop',
+    await said([area('Slab'), run()], DECK_REG), ["Back on this sheet's own drawing — 2 items here"]);
+  eq('...the same sheet with Main alone: v31\'s count, the run left out',
+    await said([area('Slab'), run()]), ["Back on this sheet's own drawing — 1 item here"]);
 }
 
 // ═══ 9. the live differential ═══════════════════════════════════════════

@@ -219,6 +219,61 @@ function checkTruth(T, tag) {
   }
   ok(`${tag}: a tag or an id of NaN, Infinity, -Infinity or true reads as Python's str() reads it (${sp.length})`,
     sp.length >= 20 && !badSp.length, badSp.slice(0, 4).join('\n  ') || `${sp.length} recorded`);
+
+  // ...and as a NAME (Main's, a registry's label): 'nan', 'inf', 'True' --
+  // never 'Main', 'Takeoff 2', 'Infinity' or 'true'.
+  const sn = T.special_names || [];
+  const badSn = [];
+  for (const s of sn) {
+    const v = SPECIAL[s.value];
+    const md = { takeoff_lists: [{ list_id: 'tl-1a2b3c4d', label: v }, { list_id: 'tl-0000beef', label: v }],
+      takeoff_main_label: v };
+    const got = { clean: TL.cleanTakeoffName(v),
+      free: [TL.freeTakeoffName(v, []), TL.freeTakeoffName(v, [v]), TL.freeTakeoffName('nan', [v]),
+        TL.freeTakeoffName('True', [v]), TL.freeTakeoffName('inf', [v])],
+      lists: TL.takeoffLists(md), labels: ['', 'tl-1a2b3c4d', 'tl-0000beef'].map(i => TL.takeoffListLabel(md, i)),
+      naming: naming(TL.takeoffNamingOf(md, {}, '')) };
+    const want = { clean: s.clean, free: s.free, lists: s.lists, labels: s.labels, naming: s.naming };
+    if (canon(got) !== canon(want)) badSn.push(`${s.value}: ${short(got)}\n    desktop ${short(want)}`);
+  }
+  ok(`${tag}: a takeoff's name of NaN, Infinity, -Infinity or true -- Main's or a registry's -- is spelled as Python's `
+    + `str() spells it (${sn.length})`, sn.length >= 4 && !badSn.length, badSn.slice(0, 4).join('\n  ') || `${sn.length} recorded`);
+
+  // A tag, an id or a name that is a list or a dict (JSON carries it as it
+  // is): read as Python's str() of it -- "['']" another takeoff, [] and {}
+  // Main -- and a promoted run handed what the desktop hands it.
+  const stc = T.structured || [];
+  const badSt = { item: [], registry: [] };
+  for (const s of stc) {
+    const v = () => clone(s.value);
+    if (s.type === 'registry') {
+      const md = clone(s.md);
+      const before = canon(md);
+      const got = { clean: TL.cleanTakeoffName(v()), free: TL.freeTakeoffName(v(), [s.label_ids[1]]),
+        lists: TL.takeoffLists(md), labels: s.label_ids.map(i => TL.takeoffListLabel(md, clone(i))),
+        naming: naming(TL.takeoffNamingOf(md, {}, '')), naming_in: naming(TL.takeoffNamingOf(md, {}, v())) };
+      const want = { clean: s.clean, free: s.free, lists: s.lists, labels: s.labels, naming: s.naming, naming_in: s.naming_in };
+      if (canon(got) !== canon(want) || canon(md) !== before) {
+        badSt.registry.push(`${short(s.value)}: ${short(got)}\n    desktop ${short(want)}`);
+      }
+      continue;
+    }
+    const m = { type: s.type, takeoff_list: v() };
+    const d = { type: s.type, name: 'x', takeoff_list: 'tl-1a2b3c4d' };
+    TL.setTakeoffList(d, v());
+    const got = { of: TL.takeoffListOf(m), in: T.ids.map(i => TL.inTakeoffList(m, i)),
+      asked: s.asked_items.map(x => TL.inTakeoffList(clone(x), v())), set: d };
+    const want = { of: s.of, in: s.in, asked: s.asked, set: s.set };
+    if (JSON.stringify(got) !== JSON.stringify(want) || JSON.stringify(s.view) !== JSON.stringify(s.in)
+      || JSON.stringify(m.takeoff_list) !== JSON.stringify(s.value)) {
+      badSt.item.push(`${short(s.value)} ${s.type}: ${short(got)}\n    desktop ${short(want)}`);
+    }
+  }
+  ok(`${tag}: a tag that is a list or a dict reads, matches and is handed on as the desktop's str() of it `
+    + `(${stc.filter(s => s.type !== 'registry').length})`, stc.length >= 100 && !badSt.item.length,
+  badSt.item.slice(0, 4).join('\n  ') || `${stc.length} recorded`);
+  ok(`${tag}: ...and as a takeoff's id, the takeoff he is in, or a name (${stc.filter(s => s.type === 'registry').length})`,
+    stc.length >= 100 && !badSt.registry.length, badSt.registry.slice(0, 4).join('\n  '));
 }
 
 // ═══ 1. the committed snapshot ═══════════════════════════════════════════
