@@ -33,6 +33,8 @@ import {
   resolveLatestSheets, onThisVersion,
 } from './revisions.js';
 import { pyFixed, pyRound, pyG, pyIntStr } from './pyformat.js';
+import { takeoffListOf, takeoffListScoped } from './takeoff-lists.js';
+import { cmpCodePoints } from './classify.js';
 
 export { isTakeoffType as isTakeoffItem, KEPT_MARK_TYPES };
 export { pyFixed, pyRound, pyG };
@@ -175,6 +177,110 @@ function itemName(m) {
   return String((m || {}).name || (m || {}).label || '').trim() || 'an unnamed item';
 }
 
+// ── which takeoff an item is in, for the money sentences (desktop 3.08) ──
+//
+// Who answers "which takeoff is this item in, by its name" for every
+// sentence below: main.js installs it once (setTakeoffNaming), reading the
+// live project -- [the takeoff he is in, Map(id -> name), Main's '' first]
+// while the job open has more than one takeoff, null otherwise. Null
+// everywhere else too (a test's own counting, a model of a job with only
+// Main), so every sentence there is 3.07's, to the letter. One hook, not a
+// parameter at each place a sentence is worded: the wording functions are
+// the one place a money sentence is made. These sentences are the JOB's
+// pictures ("your totals"), keyed by takeoff: an item of another takeoff is
+// named "(in Deck)". (desktop _TAKEOFF_NAMING, set_takeoff_naming,
+// takeoff_naming)
+let takeoffNamingFn = null;
+
+/** Install `fn() -> [active, Map] | null` as the answer every money
+ *  sentence asks (takeoffNaming); null takes it away. */
+export function setTakeoffNaming(fn) {
+  takeoffNamingFn = typeof fn === 'function' ? fn : null;
+}
+
+/** [the takeoff he is in, Map(takeoff id -> its name)] while the job open
+ *  has more than one takeoff; null otherwise. Never throws: a sentence that
+ *  cannot ask is worded as 3.07 worded it. */
+export function takeoffNaming() {
+  if (!takeoffNamingFn) return null;
+  let got;
+  try {
+    got = takeoffNamingFn();
+  } catch {
+    return null;
+  }
+  // Python's `got if got else None`: an empty answer is no answer.
+  return got && !(Array.isArray(got) && !got.length) ? got : null;
+}
+
+/** Python's `active, names = naming`: a pair, or nothing to unpack. */
+function namingPair(naming) {
+  return Array.isArray(naming) && naming.length === 2 ? naming : null;
+}
+
+/** Python's `(names or {}).get(lid) or "another takeoff"`. */
+function takeoffNameIn(names, lid) {
+  const got = names instanceof Map ? names.get(lid) : undefined;
+  return got || 'another takeoff';
+}
+
+/** " (in Deck)": the takeoff of an item he is NOT in, for a sentence that
+ *  names the item. '' for an item of the takeoff he is in, for a shared
+ *  mark, and always without `naming` (a job with only Main). (desktop
+ *  takeoff_where_words) */
+export function takeoffWhereWords(m, naming) {
+  if (!naming || !takeoffListScoped(m)) return '';
+  const pair = namingPair(naming);
+  if (!pair) return '';
+  const [active, names] = pair;
+  const lid = takeoffListOf(m);
+  if (lid === (active ? String(active) : '')) return '';
+  return ` (in ${takeoffNameIn(names, lid)})`;
+}
+
+/** The takeoffs in the order the naming lists them, then the rest by id. */
+function takeoffOrder(names, ids) {
+  const order = names instanceof Map ? [...names.keys()] : [];
+  const rank = x => (order.includes(x) ? order.indexOf(x) : order.length);
+  return [...ids].sort((x, y) => (rank(x) - rank(y)) || cmpCodePoints(x, y));
+}
+
+/**
+ * The sentence a change of which drawing COUNTS owes when it moves the
+ * quantities of a takeoff he is not in (desktop decision 12): which drawing
+ * of a sheet counts is ONE choice for the whole job, so a Yes asked in Main
+ * can take Deck's takeoff out of Deck's totals. `before`/`after` are
+ * totals pictures (Map {key: [item, [qty, unit]]}). '' in a job with only
+ * Main, and whenever only the takeoff he is in moves.
+ * (desktop takeoff_others_moved_words)
+ */
+export function takeoffOthersMovedWords(before, after, future = false) {
+  const naming = takeoffNaming();
+  if (!naming) return '';
+  const pair = namingPair(naming);
+  if (!pair) return '';
+  const [active, names] = pair;
+  const b0 = before || new Map();
+  const a0 = after || new Map();
+  const hit = new Set();
+  for (const k of new Set([...b0.keys(), ...a0.keys()])) {
+    const b = b0.get(k);
+    const a = a0.get(k);
+    const m = (a || b)[0];
+    if (!takeoffListScoped(m)) continue;
+    const lid = takeoffListOf(m);
+    if (lid === (active ? String(active) : '')) continue;
+    if (b !== undefined && a !== undefined && b[1][1] === a[1][1]
+        && round6(b[1][0]) === round6(a[1][0])) continue;
+    hit.add(lid);
+  }
+  if (!hit.size) return '';
+  const got = takeoffOrder(names, hit).map(lid => takeoffNameIn(names, lid));
+  const who = got.length === 1 ? got[0] : `${got.slice(0, -1).join(', ')} and ${got[got.length - 1]}`;
+  return 'Which drawing a sheet counts from is one choice for every takeoff, so this '
+    + `${future ? 'will also move' : 'also moved'} what is taken off in ${who}.`;
+}
+
 /**
  * [qty, unit] of ONE SHAPE of takeoff — what is traced on the drawing it
  * sits on (desktop takeoff_shape_qty). A multi-sheet item keeps the whole
@@ -200,15 +306,19 @@ function moreWords(n, qtys, extra = '') {
  * HE SEES IT (desktop takeoff_quantity_entries): every shape of one name and
  * unit added up, by what is traced on its own drawing, first one first.
  * `run` when every shape in the entry is a run of an item that spans sheets.
+ * ...and of one TAKEOFF: a Deck "Joists" and a Main "Joists" are two
+ * entries, and another takeoff's is named with it ("Joists (in Deck)") --
+ * unless `named` is false. A job with only Main: 3.07's entries exactly.
  */
-export function takeoffQuantityEntries(items) {
+export function takeoffQuantityEntries(items, named = true) {
+  const naming = named ? takeoffNaming() : null;
   const ents = [];
   const at = new Map();
   for (const m of items || []) {
     if (!isTakeoffType(m)) continue;
     const [q, u] = takeoffShapeQty(m);
-    const nm = itemName(m);
-    const k = JSON.stringify([nm, u]);
+    const nm = itemName(m) + takeoffWhereWords(m, naming);
+    const k = JSON.stringify([nm, u, takeoffListOf(m)]);
     if (at.has(k)) {
       const e = ents[at.get(k)];
       ents[at.get(k)] = [nm, u, e[2] + q, e[3] && truthy(m.group_child)];
@@ -228,10 +338,10 @@ export function takeoffQuantityEntries(items) {
  * line: two shapes of one name are one entry, added up. '' when there is
  * no takeoff in it.
  */
-export function takeoffQuantityWords(items, limit = 4) {
+export function takeoffQuantityWords(items, limit = 4, named = true) {
   const rows = [];
   const qtys = [];
-  for (const [nm, u, q, run] of takeoffQuantityEntries(items)) {
+  for (const [nm, u, q, run] of takeoffQuantityEntries(items, named)) {
     if (run) rows.push(`${takeoffQtyText(q, u)} of ${nm}`);
     else rows.push(`${nm} ${takeoffQtyText(q, u)}`);
     qtys.push([q, u]);
@@ -256,8 +366,11 @@ export function takeoffSumText(qtys) {
 
 /**
  * What a piece of takeoff IS, whichever object holds it: its type, its name,
- * the drawing it was traced on and its geometry (desktop _takeoff_identity).
- * An undo restores copies, so a move is matched by this and not by object.
+ * the drawing it was traced on, the takeoff it is in and its geometry
+ * (desktop _takeoff_identity). An undo restores copies, so a move is matched
+ * by this and not by object. A Deck copy of a Main item -- same name,
+ * drawing and geometry -- is another item ('' for every item of a job with
+ * only Main).
  */
 function identityParts(m) {
   m = m || {};
@@ -274,7 +387,7 @@ function identityParts(m) {
   }
   return [pyStr(m.type || ''), String(m.name || ''), String(m.rev_id || ''),
     pyStr(m.rev_page), String(m.group_id || ''), truthy(m.group_child) ? '1' : '0',
-    pts];
+    takeoffListOf(m), pts];
 }
 
 export function takeoffIdentity(m) {
@@ -283,7 +396,8 @@ export function takeoffIdentity(m) {
 
 /**
  * What a piece of takeoff is apart from its geometry (desktop
- * _takeoff_lineage): the SAME item before and after an edit to its shape.
+ * _takeoff_lineage) -- its takeoff included: the SAME item before and after
+ * an edit to its shape.
  * Ctrl+Z of a count click put back a two-point Post, and matched by identity
  * alone it read "3 EA of Post leaves; 2 EA of Post comes in".
  */
@@ -369,7 +483,12 @@ function priceKey(m, u) {
  * never netted; a rest that moves both ways between differently priced
  * items (priceKey) is named in full.
  */
-export function takeoffMoveWords(before, after, future = false, limit = 4) {
+export function takeoffMoveWords(before, after, future = false, limit = 4, named = true) {
+  // In a job of several takeoffs the totals are still the JOB's, but one
+  // line is one item of ONE takeoff, and another takeoff's is named with it
+  // ("40 LF of Joists (in Deck) leaves"). A job with only Main: 3.07's words.
+  const naming = named ? takeoffNaming() : null;
+  const nm = m => itemName(m) + takeoffWhereWords(m, naming);
   const mats = (m, q) => takeoffMaterials(m, matParent(m, q));
   const sig = e => matMerge(mats(e[0], e[1][0]))
     .filter(([, x]) => round6(x))
@@ -380,14 +499,14 @@ export function takeoffMoveWords(before, after, future = false, limit = 4) {
     const at = new Map();
     for (const k of keys) {
       const [m, [q, u]] = src.get(k);
-      const key = JSON.stringify([itemName(m), u]);
+      const key = JSON.stringify([nm(m), u, takeoffListOf(m)]);
       if (at.has(key)) {
         const ln = out[at.get(key)];
         ln[2] = ln[2] + q;
         ln[3].push(...mats(m, q));
       } else {
         at.set(key, out.length);
-        out.push([itemName(m), u, q, [...mats(m, q)]]);
+        out.push([nm(m), u, q, [...mats(m, q)]]);
       }
     }
     return out;
@@ -467,7 +586,7 @@ export function takeoffMoveWords(before, after, future = false, limit = 4) {
         const d = round6(b - a);
         way = (d > 0 ? 1 : 0) - (d < 0 ? 1 : 0);
       }
-      const key = JSON.stringify([itemName(m1), u, u2, way]);
+      const key = JSON.stringify([nm(m1), u, u2, way, takeoffListOf(m1)]);
       const pk = [priceKey(m0, u), priceKey(m1, u2)];
       if (at.has(key)) {
         const ln = cls[at.get(key)];
@@ -478,7 +597,7 @@ export function takeoffMoveWords(before, after, future = false, limit = 4) {
         for (const p of pk) ln[7].add(p);
       } else {
         at.set(key, cls.length);
-        cls.push([itemName(m1), u, u2, a, b, [...mats(m0, a)], [...mats(m1, b)], new Set(pk)]);
+        cls.push([nm(m1), u, u2, a, b, [...mats(m0, a)], [...mats(m1, b)], new Set(pk)]);
       }
     }
     const one = ([n, u, u2, a, b, x0, x1]) => {
@@ -535,6 +654,58 @@ export function takeoffMoveWords(before, after, future = false, limit = 4) {
 // ── an item's associated materials go wherever the item goes ────────────
 
 /** Python's _ai_total: a material's quantity for its item's quantity. */
+/**
+ * What Delete sheet owes about the takeoffs he is NOT in (desktop
+ * _hidden_takeoffs_words): their items on sheet `idx`, on any drawing of it,
+ * are hidden here and are deleted with it -- "It also holds 3 items of
+ * other takeoffs (2 in Deck, 1 in Patio), hidden here — they go with it."
+ * Each item once. An item with shapes on other sheets too does not go:
+ * only its part on this sheet does, and that is said apart. '' without
+ * `naming` (a job with only Main), and when there are none.
+ */
+export function hiddenTakeoffsWords(measurements, idx, naming) {
+  const pair = naming ? namingPair(naming) : null;
+  if (!pair) return '';
+  const [active0, names] = pair;
+  const active = active0 ? String(active0) : '';
+  const store = measurements || {};
+  const elsewhere = new Set();
+  for (const key of Object.keys(store)) {
+    if (Number(key) === Number(idx)) continue;
+    for (const m of store[key] || []) {
+      if (m && typeof m === 'object' && truthy(m.group_id)) elsewhere.add(m.group_id);
+    }
+  }
+  const whole = new Map();
+  const part = new Map();
+  for (const m of store[idx] || store[String(idx)] || []) {
+    if (!isTakeoffType(m)) continue;
+    const lid = takeoffListOf(m);
+    if (lid === active) continue;
+    const gid = m.group_id;
+    const by = truthy(gid) && elsewhere.has(gid) ? part : whole;
+    if (!by.has(lid)) by.set(lid, new Set());
+    by.get(lid).add(truthy(gid) ? gid : m);
+  }
+  if (!whole.size && !part.size) return '';
+  const parts = by => takeoffOrder(names, by.keys()).map(lid => [takeoffNameIn(names, lid), by.get(lid).size]);
+  const of = (ps, n) => (ps.length === 1
+    ? `${n} item${n === 1 ? '' : 's'} of the takeoff ${ps[0][0]}`
+    : `${n} items of other takeoffs (${ps.map(([nm, c]) => `${c} in ${nm}`).join(', ')})`);
+  const out = [];
+  const pw = parts(whole);
+  const pp = parts(part);
+  const nw = pw.reduce((t, [, c]) => t + c, 0);
+  const np = pp.reduce((t, [, c]) => t + c, 0);
+  if (pw.length) out.push(`It also holds ${of(pw, nw)}, hidden here — ${nw === 1 ? 'it goes' : 'they go'} with it.`);
+  if (pp.length) {
+    out.push(`${pw.length ? 'And part' : 'It also holds part'} of ${of(pp, np)}, hidden here, which `
+      + `${np === 1 ? 'is' : 'are'} on other sheets too — ${np === 1 ? 'the part' : 'the parts'} on this sheet `
+      + `${np === 1 ? 'goes' : 'go'} with it.`);
+  }
+  return out.join(' ');
+}
+
 function aiTotal(ai, parentQty) {
   const qty = ('qty' in ai) ? ai.qty : (('qty_per' in ai) ? ai.qty_per : 0.0);
   const mode = ('qty_mode' in ai) ? ai.qty_mode : (('qty_per' in ai) ? 'per_unit' : 'total');
@@ -789,6 +960,7 @@ export class CountingModel {
    * that count, and dropping it whole would take the counted runs with it.
    */
   itemCountsTowards(page, m) {
+    // JOB-WIDE (every takeoff's items): never a Main-only store.
     if (!Number.isInteger(page) || page < 0) return true;
     const gid = m && m.group_id;
     if (truthy(gid) && !truthy(m.group_child)) {
@@ -824,6 +996,7 @@ export class CountingModel {
    * and sentence about money reads them.
    */
   countedQuantities() {
+    // JOB-WIDE (every takeoff's items): never a Main-only store.
     const out = new Map();
     for (const pg of this.pageKeys()) {
       for (const m of this.items(pg)) {
@@ -972,6 +1145,7 @@ export class CountingModel {
    * `.waiting` (why it counts nowhere, short) and `.book` ({page: revId}).
    */
   countedFilter() {
+    // JOB-WIDE (every takeoff's items): never a Main-only store.
     const keep = (pg, m) => this.itemCountsTowards(pg, m);
     const book = {};
     for (let p = 0; p < this.n; p++) {
@@ -1086,6 +1260,7 @@ export class CountingModel {
    * Asked BEFORE `m` is filed.
    */
   firstTakeoffBooking(page, m) {
+    // JOB-WIDE (every takeoff's items): never a Main-only store.
     if (!isTakeoffType(m)) return null;
     if (!(Number.isInteger(page) && page >= 0 && page < this.n)) return null;
     if (this.items(page).some(x => isTakeoffType(x))) return null;
@@ -1138,10 +1313,16 @@ export class CountingModel {
         + 'sheet’s, measured on the sheet’s own drawing. '
         + `${sheet} would contribute nothing, for good. Nothing was changed.` };
     }
-    const moved = this.totalsEffectWords({ book: { [page]: rid } });
+    // What this does to the totals, by quantity -- and, the book being the
+    // SHEET's for every takeoff (decision 12), what a Yes asked in Main does
+    // to another takeoff's.
+    const [tb, ta] = this.totalsEffect({ book: { [page]: rid } });
+    const moved = takeoffMoveWords(tb, ta, true);
+    const others = takeoffOthersMovedWords(tb, ta, true);
     let body = `${sheet} will count from ${toName} instead of ${fromName}.\n\n`
       + (moved ? `In your totals: ${moved}.`
         : 'Your totals do not change: nothing taken off either drawing counts differently.')
+      + (others ? ` ${others}` : '')
       + '\n\nNothing is deleted: the takeoff on every other version stays where it is, and is '
       + 'listed on the report as not counted. You can change this back the same way.';
     if (lead) body = `${lead}\n\n${body}`;
@@ -1169,8 +1350,10 @@ export class CountingModel {
   /** "<sheet> now counts from X instead of Y — in your totals: ...". */
   bookedSentence(page, rid, was, before, after) {
     const moved = takeoffMoveWords(before, after);
+    const others = takeoffOthersMovedWords(before, after);
     return `${this.pageLabel(page)} now counts from ${this.versionName(rid)} instead of `
-      + `${this.versionName(was)} — ${moved ? `in your totals: ${moved}` : 'your totals did not change'}.`;
+      + `${this.versionName(was)} — ${moved ? `in your totals: ${moved}` : 'your totals did not change'}.`
+      + (others ? ` ${others}` : '');
   }
 
   /** The No to that question, said (desktop wording). */
@@ -1191,6 +1374,7 @@ export class CountingModel {
    * _lone_uncounted_sheets).
    */
   loneUncountedSheets() {
+    // JOB-WIDE (every takeoff's items): never a Main-only store.
     const out = [];
     for (let page = 0; page < this.n; page++) {
       const raw = this.items(page).filter(m => isTakeoffType(m));
@@ -1320,6 +1504,7 @@ export class CountingModel {
    * from a drawing other than the one shown. All of it is LOOKING.
    */
   sheetTileStates() {
+    // JOB-WIDE (every takeoff's items): never a Main-only store.
     const out = {};
     if (!this.n) return out;
     const origin = this.originMap();
@@ -1417,6 +1602,12 @@ export class CountingModel {
         : 'To count the drawing shown instead, open the sheet and press Count this version on the version bar — you are shown the change before it is made.';
       lines.push(`⚠ What counts is not the drawing shown. Nothing in your totals has changed. ${how}`);
     }
+    // In a job of several takeoffs these counts are the JOB's, while the
+    // list and the drawing show one takeoff: said, so the two are not read
+    // as disagreeing.
+    if ((raw.size || nWait) && takeoffNaming()) {
+      lines.push("These counts are every takeoff's: which drawing a sheet counts from is one choice for the whole job.");
+    }
     return lines.join('\n');
   }
 
@@ -1429,6 +1620,7 @@ export class CountingModel {
    * lists this type at all (the ruler only with dimensions included).
    */
   countedBook(listsRow = () => true) {
+    // JOB-WIDE (every takeoff's items): never a Main-only store.
     const out = [];
     const keys = this.pageKeys().filter(k => k >= 0).sort((a, b) => a - b);
     for (const pg of keys) {

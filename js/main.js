@@ -40,7 +40,9 @@ import {
 } from './core/project.js';
 import {
   CountingModel, applyBooking, takeoffMoveWords, takeoffQuantityWords, isTakeoffItem,
+  setTakeoffNaming, takeoffNaming, hiddenTakeoffsWords,
 } from './core/counting.js';
+import { takeoffNamingOf, WEB_TAKEOFF } from './core/takeoff-lists.js';
 import { deleteItemQuestion } from './core/counting.js';
 import { importPdf, canvasToPng } from './core/pdf-import.js';
 import {
@@ -680,6 +682,9 @@ app.project.addEventListener('items-changed', () => {
 });
 // An undo or redo moved a booking a takeoff had made: said, by quantity.
 app.project.addEventListener('booking', ev => sayBookingUndo(ev.detail));
+// Every money sentence names another takeoff's item "(in Deck)" -- of the
+// project open now, read live (a job with only Main answers null: 3.07's words).
+setTakeoffNaming(() => takeoffNamingOf(app.project.metadata, app.project.measurements, WEB_TAKEOFF));
 app.project.addEventListener('visibility-changed', () => requestDraw());
 app.project.addEventListener('annotations-changed', () => requestDraw());
 app.project.addEventListener('history-changed', ev => {
@@ -1282,6 +1287,7 @@ function revSizeOf(rev, rp) {
 
 /** The counting rule, asked of the project as it stands now. */
 function countingModel() {
+  // JOB-WIDE (every takeoff's items): never a Main-only store.
   return new CountingModel({
     metadata: app.project.metadata, measurements: app.project.measurements,
     pageCount: app.pages.pageCount, order: latestOrder(),
@@ -6022,11 +6028,15 @@ async function deleteCurrentPage() {
   const words = takeoffQuantityWords(onIt, 6);
   const asked = app.currentPage;
   const askedSheet = pageFinalLabel(asked);
+  // A takeoff he is not in is hidden, and its items go with the sheet too
+  // (desktop _hidden_takeoffs_words). '' in a job with only Main.
+  const hid = hiddenTakeoffsWords(app.project.measurements, asked, takeoffNaming());
   const ok = await D.confirmDialog(
     'Delete sheet',
     `Delete ${askedSheet}?` +
     (words ? `\n\nIts takeoff goes with it: ${words}.`
-      : (n ? `\n\nIt carries ${n} mark${n === 1 ? '' : 's'}, which go with it.` : '')),
+      : (n ? `\n\nIt carries ${n} mark${n === 1 ? '' : 's'}, which go with it.` : ''))
+    + (hid ? ` ${hid}` : ''),
     { okLabel: 'Delete sheet', danger: true }
   );
   if (!ok) return;
@@ -6034,6 +6044,18 @@ async function deleteCurrentPage() {
   if (app.currentPage !== asked || pageFinalLabel(asked) !== askedSheet) {
     setStatus(`${askedSheet} was not deleted: the sheet on screen changed while the question was open.`);
     return;
+  }
+  // ...and, in a job of several takeoffs, the numbers he was shown must
+  // still be the numbers: another takeoff's work is hidden here, so a
+  // change to it while the question was open is one he could not see.
+  if (hid || takeoffNaming()) {
+    const onIt2 = (app.project.measurements[asked] || []).filter(isTakeoffItem);
+    if (takeoffQuantityWords(onIt2, 6) !== words
+      || hiddenTakeoffsWords(app.project.measurements, asked, takeoffNaming()) !== hid) {
+      setStatus(`${askedSheet} was not deleted: what is taken off it changed while the question was open. `
+        + 'Delete it again to see the numbers as they are now.');
+      return;
+    }
   }
   const idx = app.currentPage;
   // Asked as a page turn asks, before the sheet goes: the sheet after it

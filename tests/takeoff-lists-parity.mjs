@@ -31,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { DATA, DESKTOP_SRC, haveDesktopSource } from './config.mjs';
 import * as TL from '../js/core/takeoff-lists.js';
+import { setTakeoffNaming, takeoffWhereWords, takeoffOthersMovedWords } from '../js/core/counting.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const run = promisify(execFile);
@@ -156,6 +157,36 @@ function checkTruth(T, tag) {
     !badCount.length, badCount.slice(0, 4).join('\n  '));
   ok(`${tag}: the money words' truths are recorded for counting.js (${T.where.length} + ${T.moved.length})`,
     T.where.length > 100 && T.moved.length > 30 && typeof T.moved_naming_raises === 'string');
+
+  // counting.js's twins of the desktop's two money-word functions. A naming
+  // recorded as [active, [[id, name], ...]] is the desktop's (active, dict):
+  // here [active, Map]; anything else (null, a malformed value) is handed
+  // over as it is, as the harness handed it.
+  const asNaming = n => (Array.isArray(n) && n.length === 2 && Array.isArray(n[1])
+    ? [n[0], new Map(n[1])] : clone(n));
+  const badWhere = T.where.filter(w => takeoffWhereWords(clone(w.m), asNaming(w.naming)) !== w.out)
+    .map(w => `${short(w.m)} ${short(w.naming)}: ${JSON.stringify(takeoffWhereWords(clone(w.m), asNaming(w.naming)))}`
+      + ` (desktop ${JSON.stringify(w.out)})`);
+  ok(`${tag}: takeoffWhereWords == takeoff_where_words (${T.where.length})`, !badWhere.length,
+    badWhere.slice(0, 4).join('\n  '));
+  const picture = rows => new Map(rows.map(([k, m, q, u]) => [k, [clone(m), [q, u]]]));
+  const badMoved = [];
+  try {
+    for (const c of T.moved) {
+      setTakeoffNaming(c.naming === null ? null : () => asNaming(c.naming));
+      const got = takeoffOthersMovedWords(picture(c.before), picture(c.after), c.future);
+      if (got !== c.out) badMoved.push(`${short([c.before, c.after])} ${short(c.naming)} ${c.future}: `
+        + `${JSON.stringify(got)} (desktop ${JSON.stringify(c.out)})`);
+    }
+    setTakeoffNaming(() => { throw new Error('the naming hook raised'); });
+    const raising = takeoffOthersMovedWords(picture([['d', { type: 'area', name: 'Boards', takeoff_list: 'tl-1a2b3c4d' }, 1, 'SF']]),
+      picture([['d', { type: 'area', name: 'Boards', takeoff_list: 'tl-1a2b3c4d' }, 2, 'SF']]), false);
+    if (raising !== T.moved_naming_raises) badMoved.push(`a raising hook: ${JSON.stringify(raising)} (desktop ${JSON.stringify(T.moved_naming_raises)})`);
+  } finally {
+    setTakeoffNaming(null);
+  }
+  ok(`${tag}: takeoffOthersMovedWords == takeoff_others_moved_words, a raising hook included (${T.moved.length + 1})`,
+    !badMoved.length, badMoved.slice(0, 4).join('\n  '));
 }
 
 // ═══ 1. the committed snapshot ═══════════════════════════════════════════

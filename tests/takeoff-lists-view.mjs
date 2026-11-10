@@ -642,6 +642,57 @@ log('\n-- T5: the SHEET chip says what another takeoff leaves out --');
   rig.restore();
 }
 
+// ═══ U9: Delete sheet, through main.js's own deleteCurrentPage ══════════
+//
+// Lifted by text and run on the fixture with the real counting functions
+// and the naming main.js installs: the question names what of other
+// takeoffs goes with the sheet, and a change to it while the question is
+// open refuses the delete. A job with only Main keeps v31's question and
+// deletes as v31 did, a change during the question included.
+log('\n-- U9: Delete sheet names what of other takeoffs goes with it --');
+{
+  const DEL = (() => {
+    const a = MAIN.indexOf('async function deleteCurrentPage() {');
+    return a < 0 ? null : MAIN.slice(a, MAIN.indexOf('\n}\n', a) + 2);
+  })();
+  ok('main.js has deleteCurrentPage', !!DEL);
+  const CT = await import(pathToFileURL(path.join(ROOT, 'js/core/counting.js')).href);
+  const run = async ({ edit = null, during = null, sheet = 0 } = {}) => {
+    const p = await fresh({ edit });
+    const st = { asked: [], said: [], priced: [], removed: [] };
+    const env = {
+      app: { currentPage: sheet, project: p,
+        pages: { pageCount: p.pageCount, removePage: i => st.removed.push(i) } },
+      D: { alertDialog: async () => {}, confirmDialog: async (title, text) => { st.asked.push(text); if (during) during(p); return true; } },
+      isTakeoffItem: CT.isTakeoffItem, takeoffQuantityWords: CT.takeoffQuantityWords, takeoffMoveWords: CT.takeoffMoveWords,
+      hiddenTakeoffsWords: CT.hiddenTakeoffsWords, takeoffNaming: CT.takeoffNaming,
+      pageFinalLabel: i => p.pageLabel(i), setStatus: t => st.said.push(t), sayPrice: t => st.priced.push(t),
+      leftByChoice: () => false, calloutPreview: { clearCache() {} }, thumbs: { refresh() {} }, pageImage: null,
+      goToPage: async () => {},
+      countingModel: () => new M.CountingModel({ metadata: p.metadata, measurements: p.measurements, pageCount: p.pageCount }),
+    };
+    // eslint-disable-next-line no-new-func
+    const fn = new Function('env', `with (env) { return (${DEL}); }`)(env);
+    CT.setTakeoffNaming(() => TL.takeoffNamingOf(p.metadata, p.measurements, TL.WEB_TAKEOFF));
+    try { await fn(); } finally { CT.setTakeoffNaming(null); }
+    return st;
+  };
+  const a = await run({ sheet: 2 });
+  ok('X3.0, Deck\'s only: the question says what of Deck goes with it, in the desktop\'s words',
+    a.asked.length === 1 && a.asked[0].endsWith(' It also holds 1 item of the takeoff Deck, hidden here — it goes with '
+      + 'it. And part of 1 item of the takeoff Deck, hidden here, which is on other sheets too — the part on this sheet '
+      + 'goes with it.') && a.asked[0].includes('(in Deck)') && a.removed.length === 1, JSON.stringify(a.asked));
+  const b = await run({ sheet: 2, during: p => { p.measurements[2].push({ ...p.measurements[2][1], _uid: 'late', name: 'Late' }); } });
+  eq('...a Deck item added while the question was open: nothing deleted, and said why', [b.removed, b.said],
+    [[], ['X3.0 was not deleted: what is taken off it changed while the question was open. '
+      + 'Delete it again to see the numbers as they are now.']]);
+  const c = await run({ sheet: 2, edit: mainOnly });
+  ok('Main-only: no word of other takeoffs', c.asked.length === 1 && !/takeoff (Deck|of)|other takeoffs|\(in /.test(c.asked[0])
+    && c.removed.length === 1, JSON.stringify(c.asked));
+  const d = await run({ sheet: 2, edit: mainOnly, during: p => { p.measurements[2].push({ ...p.measurements[2][1], _uid: 'late', name: 'Late' }); } });
+  eq('Main-only, the same change during the question: deleted, as v31 deletes it', d.removed, [2]);
+}
+
 // A job with only Main: the list, its notes, its title and its foot, page by
 // page, chip on and off, as v31's own ItemsPanel builds them.
 let v31 = null;

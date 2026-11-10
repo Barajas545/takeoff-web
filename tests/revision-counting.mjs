@@ -72,7 +72,10 @@ import { ToolController } from '../js/tools/controller.js';
 import { choiceDialog } from '../js/ui/dialogs.js';
 import { collectItems, collectRows } from '../js/ui/reports.js';
 import { parsePyJson, stringifyPyJson } from '../js/core/py-json.js';
-import { inTakeoffList, WEB_TAKEOFF } from '../js/core/takeoff-lists.js';
+import { inTakeoffList, WEB_TAKEOFF, takeoffNamingOf } from '../js/core/takeoff-lists.js';
+import {
+  setTakeoffNaming, takeoffNaming, takeoffOthersMovedWords, hiddenTakeoffsWords, soloCount,
+} from '../js/core/counting.js';
 import {
   LIBRARY, DESKTOP_SRC, DATA, haveLibrary, haveDesktopSource, walkProjects,
 } from './config.mjs';
@@ -450,7 +453,22 @@ function checkJobSwitch(cases, label) {
   }
 }
 
-function checkScenario(input, truth, label, { words = true, reopen = null, sheet = 'full' } = {}) {
+/**
+ * One scenario, with the money sentences' naming installed as main.js
+ * installs it (desktop 3.08: set_takeoff_naming(_takeoff_naming_now)) -- of
+ * the scenario's own job, so a job with only Main answers null and every
+ * sentence is 3.07's -- and taken away after, whatever happens.
+ */
+function checkScenario(input, truth, label, opts = {}) {
+  setTakeoffNaming(() => takeoffNamingOf(input.metadata, input.measurements, WEB_TAKEOFF));
+  try {
+    checkScenarioNamed(input, truth, label, opts);
+  } finally {
+    setTakeoffNaming(null);
+  }
+}
+
+function checkScenarioNamed(input, truth, label, { words = true, reopen = null, sheet = 'full' } = {}) {
   const model = modelOf(input);
   const n = input.pageCount;
 
@@ -707,6 +725,25 @@ function checkScenario(input, truth, label, { words = true, reopen = null, sheet
     eq(`${label} · the truth says what each delete takes (regenerate it)`, false, true);
   } else {
     checkDeletes(input, truth.deletes, label, reopen);
+  }
+
+  // ── 3.08: the takeoff he is in (Main, the web's) and the others ──
+  // NOT ON A SHEET's count, what the own drawing holds of the others
+  // (ToolController.otherTakeoffsHere: "Back on this sheet's own drawing"),
+  // what Delete sheet says of them, and what the sentences call them.
+  if (!truth.takeoffs) {
+    eq(`${label} · the truth says what the other takeoffs are (regenerate it)`, false, true);
+  } else {
+    const p = projectOf(input);
+    const c = new ToolController({ canvas: { addEventListener() {}, style: {} }, viewport: {},
+      project: p, currentPage: () => 0, host: {} });
+    const nm = takeoffNaming();
+    eq(`${label} · the other takeoffs: NOT ON A SHEET's count, the own drawings, Delete sheet's words, the names`, {
+      solo: soloCount(model.meas, m => c.inActiveList(m)),
+      otherHere: Array.from({ length: n }, (_, pg) => c.otherTakeoffsHere(p.measurements[pg] || [])),
+      hidden: Array.from({ length: n }, (_, pg) => hiddenTakeoffsWords(model.meas, pg, nm)),
+      naming: nm ? [nm[0], [...nm[1].entries()]] : null,
+    }, truth.takeoffs);
   }
 
   // ── the SHEET chip: the list on one sheet, a row's words, its tap,
@@ -2312,6 +2349,48 @@ console.log('-- the SHEET chip in main.js: a row\'s tap, Properties…, Delete, 
   }
 }
 
+// ═══ 2a. the money words, named by takeoff (desktop 3.08) ══════════════
+//
+// The totals area's cases (counting-python-truth.py named_cases): what
+// takeoffMoveWords, takeoffQuantityWords and takeoffOthersMovedWords say of
+// two pictures of the totals -- named and named=false -- with the naming
+// installed in Main, in Deck, and not at all (a job with only Main), held to
+// the desktop's own takeoff_move_words, takeoff_quantity_words and
+// takeoff_others_moved_words. The naming is reset whatever happens.
+function checkNamed(named, label) {
+  if (!named || !Array.isArray(named.words)) {
+    eq(`${label} · the truth has the named words (regenerate it)`, false, true);
+    return;
+  }
+  const names = new Map(named.cases.names);
+  const pic = rows => new Map(rows.map(([k, m, q, u]) => [k, [structuredClone(m), [Number(q), u]]]));
+  const byId = new Map(named.cases.cases.map(c => [c.id, c]));
+  let bad = 0;
+  try {
+    for (const w of named.words) {
+      setTakeoffNaming(w.active === null ? null : () => [w.active, names]);
+      let got;
+      if (w.id.startsWith('list ')) {
+        const lst = named.cases.lists[Number(w.id.slice(5))].map(m => structuredClone(m));
+        got = { qty: takeoffQuantityWords(lst), qtyUnnamed: takeoffQuantityWords(lst, 4, false) };
+      } else {
+        const c = byId.get(w.id);
+        const b = pic(c.before), a = pic(c.after);
+        got = { move: takeoffMoveWords(b, a), moveFuture: takeoffMoveWords(b, a, true),
+          moveUnnamed: takeoffMoveWords(b, a, true, 4, false),
+          others: takeoffOthersMovedWords(b, a), othersFuture: takeoffOthersMovedWords(b, a, true) };
+      }
+      const { id, active, ...want } = w;
+      if (!eq(`${label} · ${id}, in ${active === null ? 'a job with only Main' : (active || 'Main')}`, got, want)) bad += 1;
+    }
+  } finally {
+    setTakeoffNaming(null);
+  }
+  ok(`${label} · every case asked (${named.words.length}), in Main, in Deck and with no naming`,
+    named.words.length >= 27 && named.words.some(w => w.active === null) && named.words.some(w => w.active));
+  return bad;
+}
+
 // ═══ 2. the committed snapshot ══════════════════════════════════════════
 {
   let snap = null;
@@ -2328,6 +2407,7 @@ console.log('-- the SHEET chip in main.js: a row\'s tap, Properties…, Delete, 
     checkJobSwitchOf(snap, 'job switch');
     if (!snap.sheetChip) eq('the truth says what the SHEET chip does (regenerate it)', false, true);
     else checkChip(snap.sheetChip, 'SHEET chip');
+    checkNamed(snap.named, 'named words');
   }
 }
 
@@ -2359,6 +2439,7 @@ if (!(await haveDesktopSource())) {
     checkJobSwitchOf(truth, 'live job switch');
     if (!truth.sheetChip) eq('live: the desktop says what the SHEET chip does', false, true);
     else checkChip(truth.sheetChip, 'live SHEET chip');
+    checkNamed(truth.named, 'live named words');
     live = 'scenarios';
   }
 

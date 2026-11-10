@@ -48,7 +48,15 @@ takeoff on each drawing books, what each Delete takes (one shape, the shapes
 on a sheet, a selection of shapes across several sheets, the whole item, and
 the Items list's question word for word) —
 over synthetic jobs built the way the estimator builds one; and what a job
-switch leaves of the count tool's state. **No real project is in it**: every
+switch leaves of the count tool's state. Since takeoff lists (desktop 3.08)
+it also holds, per scenario, `takeoffs` (NOT ON A SHEET's count of Main's
+items, how many items of other takeoffs each sheet's own drawing holds,
+what Delete Page says of them, and the naming the sentences ask), one job of
+several takeoffs (`"takeoffs": true`: Main renamed House, Deck and Patio,
+asked with the window's naming installed, so every sentence names another
+takeoff's item "(in Deck)"), and `named`: the money words of two totals
+pictures, named and not, in Main, in Deck and with no naming at all.
+**No real project is in it**: every
 scenario is written out in `tests/counting-python-truth.py`, so there is
 nothing to scrub.
 

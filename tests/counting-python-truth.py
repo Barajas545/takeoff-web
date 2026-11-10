@@ -96,6 +96,12 @@ WIN_METHODS = [
     # never a page turn; with it off, the item's shapes across sheets.
     "_on_item_activated", "_activate_on_this_sheet",
     "_on_item_properties", "_properties_on_this_sheet",
+    # 3.08: the job's takeoffs, what a money sentence calls them
+    # (_takeoff_naming_now, installed per scenario of several takeoffs as
+    # the window installs it), what "Back on this sheet's own drawing" counts
+    # of the others, and what Delete Page owes about them.
+    "takeoff_lists", "takeoff_list_label", "has_takeoff_lists",
+    "_takeoff_naming_now", "_other_takeoffs_here", "_hidden_takeoffs_words",
 ]
 # The stand-in window's DATA and the side effects that move no number.
 WIN_STUBS = {
@@ -256,6 +262,8 @@ PANEL_SLICES = {
 # reach is found by the closure walk below, not listed by hand.
 MODULE_SEED = ["is_takeoff_item", "takeoff_qty", "takeoff_quantity_words",
                "takeoff_move_words", "resolve_latest_sheets",
+               # 3.08: the naming hook every money sentence asks
+               "set_takeoff_naming", "takeoff_others_moved_words",
                "revision_short_name", "parse_revision_date", "revision_rank",
                "_ORIGINAL_RANK", "STANDALONE_PAGE", "KEPT_MARK_TYPES",
                "NON_TAKEOFF_TYPES", "READING_TYPES", "REF_DIST_TYPE",
@@ -989,6 +997,21 @@ def _said(lst):
 
 
 def truth(scn, sheet="full"):
+    """Every answer for one scenario. A scenario of several takeoffs
+    ("takeoffs": true) is asked with the window's naming installed, as the
+    desktop window installs it (set_takeoff_naming(_takeoff_naming_now)),
+    and taken away after: every money sentence then names another takeoff's
+    item "(in Deck)". The web is in Main, as the stand-in canvas is."""
+    if not scn.get("takeoffs"):
+        return _truth(scn, sheet)
+    NS["set_takeoff_naming"](Win(scn)._takeoff_naming_now)
+    try:
+        return _truth(scn, sheet)
+    finally:
+        NS["set_takeoff_naming"](None)
+
+
+def _truth(scn, sheet="full"):
     win = Win(scn)
     n = len(win.images)
     out = {"name": scn.get("name", "")}
@@ -1198,6 +1221,21 @@ def truth(scn, sheet="full"):
             "notes": notes}
     out["latest"] = latest
     out["deletes"] = deletes(scn)
+
+    # ── 3.08: the takeoff he is in (Main) and the others ──
+    # NOT ON A SHEET's count (the solo form opens on one more of HIS), what
+    # the own drawing holds of the others, and what Delete Page says of them.
+    w3 = Win(scn)
+    w3.items_panel._solo_count = None
+    w3.items_panel._open_solo_on_add()
+    out["takeoffs"] = {
+        "solo": w3.items_panel._solo_count,
+        "otherHere": [w3._other_takeoffs_here(p) for p in range(n)],
+        "hidden": [w3._hidden_takeoffs_words(p) for p in range(n)],
+        "naming": (lambda nm: None if nm is None
+                   else [nm[0], [[k, v] for k, v in nm[1].items()]])(
+                       w3._takeoff_naming_now()),
+    }
     if sheet:
         out["sheet"] = sheet_truth(scn, filters=(sheet == "full"))
         if sheet == "full":
@@ -2218,6 +2256,60 @@ def scenarios():
         },
     })
 
+    # 3.08: a job of several takeoffs (desktop round 3). Main renamed House,
+    #     Deck and Patio registered. On X1.0: Main's Joists and a Deck area
+    #     of the same name on the same drawing (two items, two takeoffs), a
+    #     Deck-only Boards, Patio's Rail (a multi-shape item, its run on
+    #     X2.0), a Deck Siding whose main shape is on X3.0 (its run here), a
+    #     tag of only a space (Main), a tag the job has no record of, and a
+    #     shared note. X2.0 is reissued as Rev B: Deck's Joists and Main's
+    #     Siding are traced on it, so Count this version moves both
+    #     takeoffs. X3.0 holds nothing of Main's. Nails (Main) and Screws
+    #     (Deck) on no sheet.
+    DECK, PATIO = "tl-deck0001", "tl-patio001"
+    S.append({
+        "name": "several takeoffs: Main renamed House, Deck and Patio",
+        "takeoffs": True, "pageCount": 3,
+        "metadata": {
+            "page_labels": ["X1.0", "X2.0", "X3.0"],
+            "takeoff_lists": [{"list_id": DECK, "label": "Deck"},
+                              {"list_id": PATIO, "label": "Patio"}],
+            "takeoff_main_label": "House",
+            "takeoff_list_active": DECK,
+            "revisions": [_rev("r-b", "03/01/2026", "Rev B", 2,
+                               match={"1": 0}, extra={"x-new": 1})],
+        },
+        "measurements": {
+            "0": [_area("Joists", 120.0, points=_sq(0)),
+                  _area("Joists", 80.0, takeoff_list=DECK, points=_sq(10)),
+                  _area("Boards", 40.0, takeoff_list=DECK, points=_sq(20)),
+                  _line("Rail", 50.0, own_value=30.0, group_id="g-rail",
+                        group_count=2, takeoff_list=PATIO),
+                  _area("Siding", 6.0, group_id="g-sid", group_child=True,
+                        takeoff_list=DECK, points=_sq(30)),
+                  _area("Pad", 3.0, takeoff_list=" ", points=_sq(40)),
+                  _area("Odd", 5.0, takeoff_list="tl-nobody9",
+                        points=_sq(50)),
+                  {"type": "textnote", "text": "shared", "visible": True,
+                   "points": [[1.0, 1.0], [5.0, 5.0]]}],
+            "1": [_line("Rail", 20.0, group_id="g-rail", group_child=True,
+                        takeoff_list=PATIO),
+                  _area("Slab", 90.0, points=_sq(60)),
+                  _area("Joists", 60.0, rev_id="r-b", rev_page=0,
+                        takeoff_list=DECK, points=_sq(70)),
+                  _area("Siding", 24.0, rev_id="r-b", rev_page=0,
+                        points=_sq(80))],
+            "2": [_area("Siding", 20.0, own_value=14.0, group_id="g-sid",
+                        group_count=2, takeoff_list=DECK, points=_sq(90)),
+                  _area("Boards", 10.0, takeoff_list=DECK, points=_sq(100))],
+            "-1000": [{"type": "standalone", "name": "Nails", "qty": 5,
+                       "unit": "box", "visible": True, "sort_order": 1},
+                      {"type": "standalone", "name": "Screws", "qty": 2,
+                       "unit": "box", "visible": True, "sort_order": 2,
+                       "takeoff_list": DECK}],
+        },
+    })
+
     # Every scenario in both orders: the order setting changes which drawing
     # is newest, never what counts.
     out = []
@@ -2228,6 +2320,110 @@ def scenarios():
             t["name"] = "%s (%s)" % (s["name"], order)
             out.append(t)
     return out
+
+
+# ── 3.08: the money words, named by takeoff (H7) ─────────────────────────
+#
+# The totals area's cases (WEBTL\\totals\\named_cases.json): two pictures of
+# the totals, and what takeoff_move_words, takeoff_quantity_words and
+# takeoff_others_moved_words say of them -- named and named=False, with the
+# naming installed (the web in Main) and without it (a job with only Main).
+
+NAMED_NAMES = [["", "House"], ["tl-0000beef", "Deck"], ["tl-0000cafe", "Patio"]]
+
+
+def _pl(name, value, **kw):
+    m = {"type": "polyline", "name": name, "points": [[0, 0], [10, 0]],
+         "value": value}
+    m.update(kw)
+    return m
+
+
+def _ar(name, value, **kw):
+    m = {"type": "area", "name": name, "points": [[0, 0], [1, 0], [1, 1]],
+         "value": value}
+    m.update(kw)
+    return m
+
+
+def _ct(**kw):
+    m = {"type": "count", "name": "Post", "points": [[1, 1], [2, 2]]}
+    m.update(kw)
+    return m
+
+
+def named_cases():
+    B, C = "tl-0000beef", "tl-0000cafe"
+    boards = {"type": "area", "name": "Boards", "points": [[0, 0], [9, 0], [9, 9]]}
+    return {
+        "names": NAMED_NAMES,
+        "cases": [
+            {"id": "deck joists leave, main stays",
+             "before": [["a", _pl("Joists", 40), 40, "LF"],
+                        ["b", _pl("Joists", 40, takeoff_list=B), 40, "LF"]],
+             "after": [["a", _pl("Joists", 40), 40, "LF"]]},
+            {"id": "both joists leave",
+             "before": [["a", _pl("Joists", 40), 40, "LF"],
+                        ["b", _pl("Joists", 40, takeoff_list=B), 40, "LF"]],
+             "after": []},
+            {"id": "both change the same way",
+             "before": [["a", dict(boards, value=40), 40, "sq ft"],
+                        ["b", dict(boards, value=40, takeoff_list=B), 40, "sq ft"]],
+             "after": [["a", dict(boards, value=30), 30, "sq ft"],
+                       ["b", dict(boards, value=30, takeoff_list=B), 30, "sq ft"]]},
+            {"id": "a deck copy of a main item comes in",
+             "before": [["a", _ct(), 2, "EA"]],
+             "after": [["a", _ct(), 2, "EA"], ["c", _ct(takeoff_list=B), 2, "EA"]]},
+            {"id": "a main item restored as a deck copy (identity carries the tag)",
+             "before": [["a", _ct(), 2, "EA"]],
+             "after": [["c", _ct(takeoff_list=B), 2, "EA"]]},
+            {"id": "unknown id",
+             "before": [["a", _ar("Slab", 12, takeoff_list=" tl-dead0000 "), 12, "sq ft"]],
+             "after": []},
+            {"id": "past the limit, three takeoffs",
+             "before": [["a1", _ar("A", 5), 5, "sq ft"],
+                        ["a2", _ar("B", 6, takeoff_list=B), 6, "sq ft"],
+                        ["a3", _ar("C", 7, takeoff_list=C), 7, "sq ft"],
+                        ["a4", _ar("A", 8, takeoff_list=C), 8, "sq ft"],
+                        ["a5", _ar("E", 9), 9, "sq ft"],
+                        ["a6", _ar("F", 10, takeoff_list=B), 10, "sq ft"]],
+             "after": []},
+            {"id": "a note is never named",
+             "before": [["n", {"type": "textnote", "name": "Note", "takeoff_list": B}, 0, ""]],
+             "after": []},
+        ],
+        "lists": [[_pl("Joists", 40), _pl("Joists", 40, takeoff_list=B),
+                   {"type": "count", "name": "Post", "points": [[1, 1]], "takeoff_list": B},
+                   {"type": "textnote", "name": "Note"}]],
+    }
+
+
+def named_truth():
+    data = named_cases()
+    names = dict((k, v) for k, v in data["names"])
+
+    def pic(rows):
+        return {k: (m, (float(q), u)) for k, m, q, u in rows}
+    out = []
+    for active in ("", "tl-0000beef", None):
+        NS["set_takeoff_naming"](None if active is None
+                                 else (lambda a=active: (a, names)))
+        try:
+            for c in data["cases"]:
+                b, a = pic(c["before"]), pic(c["after"])
+                out.append({"id": c["id"], "active": active,
+                            "move": NS["takeoff_move_words"](b, a),
+                            "moveFuture": NS["takeoff_move_words"](b, a, True),
+                            "moveUnnamed": NS["takeoff_move_words"](b, a, True, 4, False),
+                            "others": NS["takeoff_others_moved_words"](b, a),
+                            "othersFuture": NS["takeoff_others_moved_words"](b, a, True)})
+            for i, lst in enumerate(data["lists"]):
+                out.append({"id": "list %d" % i, "active": active,
+                            "qty": NS["takeoff_quantity_words"](lst),
+                            "qtyUnnamed": NS["takeoff_quantity_words"](lst, 4, False)})
+        finally:
+            NS["set_takeoff_naming"](None)
+    return {"cases": data, "words": out}
 
 
 # ── a real project, read without its pixels ──────────────────────────────
@@ -2324,7 +2520,8 @@ if __name__ == "__main__":
                           "scenarios": [{"input": s, "truth": truth(s)}
                                         for s in scns],
                           "jobSwitch": job_switch(),
-                          "sheetChip": chip_truth()}, indent=1))
+                          "sheetChip": chip_truth(),
+                          "named": named_truth()}, indent=1))
     else:
         res = []
         for i, p in enumerate(args):

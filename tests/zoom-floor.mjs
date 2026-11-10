@@ -147,6 +147,9 @@ const { Viewport, MAX_ZOOM } = await import('../js/render/viewport.js');
 const { ToolController } = await import('../js/tools/controller.js');
 const { Project } = await import('../js/core/project.js');
 const { boundingBox } = await import('../js/core/geom.js');
+// deleteCurrentPage's words of other takeoffs (desktop 3.08): the real ones,
+// with no naming installed -- a job with only Main, so '' and v31's question.
+const { hiddenTakeoffsWords, takeoffNaming } = await import('../js/core/counting.js');
 
 let fails = 0;
 let checks = 0;
@@ -2294,7 +2297,7 @@ log('\n-- 8. the app\'s wiring --');
       D: { alertDialog: async () => {}, confirmDialog: async () => true },
       isTakeoffItem: () => true, takeoffQuantityWords: () => '', pageFinalLabel: i => `X${i}`,
       countingModel: () => ({ countedQuantities: () => ({}) }), takeoffMoveWords: () => '',
-      sayPrice() {}, calloutPreview: { clearCache() {} },
+      sayPrice() {}, calloutPreview: { clearCache() {} }, hiddenTakeoffsWords, takeoffNaming,
     });
     r.env.thumbs.refresh = () => {};
     r.env.app.pages.removePage = i => { pages.splice(i, 1); };
@@ -2804,7 +2807,7 @@ function holding(r, fn) {
       D: { alertDialog: async () => {}, confirmDialog: async () => true },
       isTakeoffItem: () => true, takeoffQuantityWords: () => '',
       countingModel: () => ({ countedQuantities: () => ({}) }), takeoffMoveWords: () => '',
-      sayPrice() {}, calloutPreview: { clearCache() {} },
+      sayPrice() {}, calloutPreview: { clearCache() {} }, hiddenTakeoffsWords, takeoffNaming,
     });
     r.env.thumbs.refresh = () => {};
     r.env.app.pages.removePage = i => { pages.splice(i, 1); };
