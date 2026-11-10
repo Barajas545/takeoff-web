@@ -115,12 +115,15 @@ export class VersionBar {
       count.hidden = n <= 1 && already;
       count.disabled = already || !s.canCount;
       count.classList.toggle('on', !already);
-      count.title = already
+      count.title = (already
         ? `This sheet counts from ${viewing ? cur.label : 'its own drawing'} — the drawing on screen`
         : (s.canCount
           ? `This sheet counts from ${working ? (vers.find(v => v.revId === working) || {}).label || 'another drawing' : 'its own drawing'}. `
             + 'Count the drawing on screen instead — you are shown the change before it is made'
-          : 'Press Edit Mode to change which drawing this sheet counts from');
+          : 'Press Edit Mode to change which drawing this sheet counts from'))
+        // In a job of several takeoffs, the desktop bar's words: what the
+        // bar moves is the job's, not the takeoff's on screen.
+        + (s.manyTakeoffs ? '\nWhich drawing a sheet counts from is one choice for every takeoff.' : '');
     }
 
     this._drawPips(vers, viewing, s.workingRevId || '', newest);

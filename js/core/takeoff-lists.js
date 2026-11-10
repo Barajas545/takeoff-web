@@ -42,7 +42,8 @@
 // the registry alone, because its open-time heal registers every tag it does
 // not know; the web cannot heal -- that would be a write -- so a tag with no
 // record is still another takeoff, still hidden and still said, never folded
-// into Main), otherTakeoffsWords and leftInTakeoffLabel.
+// into Main), otherTakeoffsWords, leftInTakeoffLabel, and the words the
+// web says of the other takeoffs (takeoffsSaid, takeoffsOpenWords).
 //
 // Pure: no DOM, no Project. The metadata and the store are handed in.
 
@@ -279,4 +280,32 @@ export function leftInTakeoffLabel(md) {
   if (!lid) return '';
   for (const r of takeoffLists(md)) if (r.list_id === lid) return r.label;
   return '';
+}
+
+/**
+ * What the web says of a job's other takeoffs: null in a job with Main
+ * alone -- where nothing new is said anywhere -- else {label, others,
+ * words}: the name of the takeoff the web is in, every other takeoff
+ * (otherTakeoffs), and how they are said (otherTakeoffsWords). The Items
+ * list's note, empty state, foot and title, the sentence on open and the
+ * Report Center's note all read it. (The web's own: the desktop says which
+ * takeoff he is in with its TAKEOFF combo, which the web does not have.)
+ */
+export function takeoffsSaid(md, store, active = WEB_TAKEOFF) {
+  if (!hasOtherTakeoffs(md, store)) return null;
+  const others = otherTakeoffs(md, store, active);
+  return { label: takeoffListLabel(md, active), others, words: otherTakeoffsWords(others) };
+}
+
+/** The sentence said once as a job of several takeoffs opens, '' for a job
+ *  with Main alone: which takeoff is here, that the others are the desktop
+ *  app's, and -- when the desktop left the job in another one -- that the
+ *  desktop will open it there again. Says; writes nothing. */
+export function takeoffsOpenWords(md, store) {
+  const t = takeoffsSaid(md, store);
+  if (!t) return '';
+  const left = leftInTakeoffLabel(md);
+  return `This job also has ${t.words}, worked on in the desktop app. Here you see, total and report `
+    + `${t.label} only; what you add goes in ${t.label}.`
+    + (left ? ` It was left in ${left} on the desktop, which will open it there again.` : '');
 }

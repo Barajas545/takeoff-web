@@ -58,8 +58,9 @@ const PORTABLE = [
   'embedded',           // inside the portal: only in a frame of its own site, the portal's ways, a page with no inline script
   'takeoff-lists-parity', // which takeoff an item is in, and what a takeoff is called == the desktop 3.08's own functions
   'takeoff-lists-persist', // a web edit and save keeps every takeoff's tags and keys; new work is Main's; Main-only saves as v31
-  'takeoff-lists-view',  // what is painted is what is tapped, deleted, listed, badged and counted onto: Main's
+  'takeoff-lists-view',  // what is painted is what is tapped, deleted, listed, badged and counted onto: Main's; and said so
   'takeoff-lists-outputs', // every report, table and export is Main's and names it; Main-only reports and writes as v31
+  'takeoff-lists-browser', // by real taps: said on open, in the title and the list; Deck's pixels take nothing (skips without Chrome)
 ];
 
 // NEEDS THE LIBRARY: these read the estimator's real projects, which is the

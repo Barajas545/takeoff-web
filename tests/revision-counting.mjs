@@ -759,7 +759,7 @@ function checkScenarioNamed(input, truth, label, { words = true, reopen = null, 
   if (!Array.isArray(truth.sheet)) {
     eq(`${label} · the truth says what the SHEET chip lists (regenerate it)`, false, true);
   } else {
-    checkSheet(input, truth.sheet, label, { dom: sheet === 'full' });
+    checkSheet(input, truth.sheet, label, { dom: sheet === 'full', takeoffs: truth.takeoffs || null });
   }
   if (sheet === 'full') {
     if (!truth.sheetActs) eq(`${label} · the truth says what a row does on one sheet (regenerate it)`, false, true);
@@ -952,8 +952,16 @@ function sheetRig(input, { view = null, chip = false, settings = null, touch = f
 const viewOfRec = r => ({ page: r.page, revId: r.rev || '', revPage: r.rev ? r.revPage : null, coming: false });
 
 /** Every sheet x drawing x filter: the pure ports, then the real panel. */
-function checkSheet(input, recs, label, { dom = true } = {}) {
+function checkSheet(input, recs, label, { dom = true, takeoffs = null } = {}) {
   let bad = 0;
+  // 3.08: a job of several takeoffs -- the desktop's own naming says so (its
+  // _takeoff_naming_now; null with Main alone) -- and Main's name in it. The
+  // panel's title tooltip then leads with the takeoff, as the desktop's
+  // refresh writes it ("Takeoff: %s" + " — " + the sheet's tip), and the
+  // web's footer (the desktop has none: spec section 4's words) names it.
+  const named = takeoffs && Array.isArray(takeoffs.naming) ? takeoffs.naming : null;
+  const mainName = named ? ((named[1] || []).find(([id]) => id === '') || [null, ''])[1] : null;
+  const tipOf = r => (mainName ? `Takeoff: ${mainName}${r.tip ? ` — ${r.tip}` : ''}` : r.tip);
   const once = (tag, got, want) => {
     if (JSON.stringify(got) === JSON.stringify(want)) { checks += 1; return; }
     bad += 1;
@@ -1038,7 +1046,7 @@ function checkSheet(input, recs, label, { dom = true } = {}) {
       panel.groupFilter = r.group;
       panel.collapsed.clear();
       panel.refresh();
-      once(`${tag} · the panel's title`, [panel.titleEl.textContent, panel.titleEl.title], [r.title, r.tip]);
+      once(`${tag} · the panel's title`, [panel.titleEl.textContent, panel.titleEl.title], [r.title, tipOf(r)]);
       const rows = rig.rows();
       const at = rows.map(e => rig.posOf.get(e.dataset.id));
       once(`${tag} · the panel lists the rows and the items on no sheet`,
@@ -1060,7 +1068,15 @@ function checkSheet(input, recs, label, { dom = true } = {}) {
       const soloAt = kids.findIndex(e => e.classList.contains('grp')
         && e.querySelector('.grp-label')?.textContent.includes(SOLO_LABEL.toUpperCase()));
       const want = [];
-      if (r.top.length) want.push([r.top[0][0], 0, true]);
+      // (in a job of several takeoffs the list's first line is the web's own,
+      // which takeoff it is of -- spec U1 -- and the desktop's line is next)
+      const first = mainName ? 1 : 0;
+      if (mainName) {
+        once(`${tag} · the list's first line names the takeoff it is of`,
+          [kids[0]?.className, (kids[0]?.textContent || '').startsWith(`Takeoff: ${mainName}. This job also has `)],
+          ['takeoff-note', true]);
+      }
+      if (r.top.length) want.push([r.top[0][0], first, true]);
       if (r.footer) want.push([r.footer, r.solo.length ? soloAt - 1 : kids.length - 1, false]);
       once(`${tag} · the panel says what is left out, where the desktop does`,
         notesNow.map(e => [e.textContent, kids.indexOf(e), e.classList.contains('empty')]), want);
@@ -1073,11 +1089,17 @@ function checkSheet(input, recs, label, { dom = true } = {}) {
           [soloAt > lastHere, kids[soloAt]?.style.borderLeftColor], [true, mix(SOLO_HUE, 0.9)]);
       }
       // the whole job's totals, as the chip-off footer has them under the
-      // same filters -- 'Whole job:', or 'Whole job, filtered:' when one narrows them
+      // same filters -- 'Whole job:', or 'Whole job, filtered:' when one narrows them;
+      // in a job of several takeoffs the takeoff's ('House only: ' chip off,
+      // 'House only, all sheets[, filtered]: ' on)
       const off = footOff(r.cost, r.floor, r.group);
       const narrowed = r.cost !== 'all' || r.floor !== null || r.group !== null;
+      const lead0 = mainName ? `${mainName} only: ` : '';
+      const body = off && off.startsWith(lead0) ? off.slice(lead0.length) : `(the chip-off footer lacks '${lead0}': ${off})`;
+      const lead = mainName ? `${mainName} only, all sheets${narrowed ? ', filtered' : ''}: `
+        : narrowed ? 'Whole job, filtered: ' : 'Whole job: ';
       once(`${tag} · the footer is the whole job's (as filtered), and says so`, panel.footEl.textContent || '',
-        off ? `${narrowed ? 'Whole job, filtered: ' : 'Whole job: '}${off}` : '');
+        off ? `${lead}${body}` : '');
     } finally { rig.restore(); }
   }
   if (bad > 8) console.log(`   (${bad - 8} more SHEET differences in ${label})`);

@@ -29,7 +29,7 @@ import {
 } from '../core/classify.js';
 import { holdGesture } from './hold.js';
 import {
-  inTakeoffList, WEB_TAKEOFF, hasOtherTakeoffs, takeoffListLabel,
+  inTakeoffList, WEB_TAKEOFF, hasOtherTakeoffs, takeoffListLabel, takeoffsSaid,
 } from '../core/takeoff-lists.js';
 import { pyFixed } from '../core/pyformat.js';
 import { itemCost } from '../core/measure.js';
@@ -242,13 +242,25 @@ export class ItemsPanel extends EventTarget {
     const t = this.titleEl;
     if (!t) return;
     t.textContent = sheetTitle(label);
-    t.title = sheetTip(label);
+    t.title = this._titleTip(label, this._tl || null);
     t.classList.toggle('sheet', !!label);
+  }
+
+  /** The title's tooltip: the sheet's sentence, and in a job of several
+   *  takeoffs, first, the takeoff the list is of (desktop refresh: "Takeoff:
+   *  Deck — Only the items drawn on ..."). The title's TEXT never changes:
+   *  it is the desktop's _title_for. */
+  _titleTip(label, tl) {
+    const tip = sheetTip(label);
+    return tl ? `Takeoff: ${tl.label}${tip ? ` — ${tip}` : ''}` : tip;
   }
 
   _sayTitle() {
     const label = this.sheetOnly() ? this._sheetLabel(this._view()) : '';
-    if (label) this.host.say?.(sheetTip(label));
+    // ...the same words a tap says, asked of the job as it is now: in a job
+    // of several takeoffs there is always something to say.
+    const said = this._titleTip(label, takeoffsSaid(this.project.metadata, this.project.measurements));
+    if (said) this.host.say?.(said);
   }
 
   /** A line of text in the list: what the SHEET chip leaves out. */
@@ -256,6 +268,17 @@ export class ItemsPanel extends EventTarget {
     const el = document.createElement('div');
     el.className = `sheet-note${empty ? ' empty' : ''}`;
     el.textContent = text;
+    return el;
+  }
+
+  /** The list's top line in a job of several takeoffs: which one it is of,
+   *  and that the others are the desktop app's (a class of its own: the
+   *  SHEET chip's lines are counted as .sheet-note). */
+  _takeoffNote(tl) {
+    const el = document.createElement('div');
+    el.className = 'takeoff-note';
+    el.textContent = `Takeoff: ${tl.label}. This job also has ${tl.words}, worked on in the desktop app — `
+      + 'not shown or totalled here.';
     return el;
   }
 
@@ -423,6 +446,10 @@ export class ItemsPanel extends EventTarget {
       metadata: p.metadata, measurements: p.measurements, pageCount: p.pageCount });
     this._counts = new Map();
     const inList = this._inList();
+    // A job of several takeoffs: what the list says of them, asked once
+    // per rebuild -- its top line, its empty state, its foot and its title
+    // (null with Main alone, where every word is as before).
+    this._tl = takeoffsSaid(p.metadata, p.measurements);
 
     for (const key of Object.keys(p.measurements)) {
       for (const m of p.measurements[key]) {
@@ -511,6 +538,7 @@ export class ItemsPanel extends EventTarget {
       // rows of the one he was looking at until it lands.
       const built = !view.coming ? view : (was && was.page === view.page ? was : null);
       if (!built) {
+        if (this._tl) this.listEl.appendChild(this._takeoffNote(this._tl));
         this.listEl.appendChild(this._sheetNote(`Opening ${label}…`, true)).classList.add('opening');
         this._opening = true;
         this._updateFoot(whole, true);
@@ -565,6 +593,8 @@ export class ItemsPanel extends EventTarget {
     // What the SHEET chip leaves out is said, never just missing: on top
     // when nothing is drawn here, under this sheet's rows otherwise.
     let footer = notes ? notes.footer : null;
+    // ...and, first, which takeoff this is of in a job of several.
+    if (this._tl) frag.appendChild(this._takeoffNote(this._tl));
     if (notes && notes.top) frag.appendChild(this._sheetNote(notes.top, true));
 
     floors.forEach((fl, fi) => {
@@ -958,6 +988,14 @@ export class ItemsPanel extends EventTarget {
       el.textContent = 'No labor items.\n\nSet an item’s Type\nto Labor in its\nproperties dialog.';
     } else if (this.costFilter === 'material') {
       el.textContent = 'No material items.';
+    } else if (this._tl) {
+      // An empty takeoff must not read as a lost job: which one it is, and
+      // where the rest is (the desktop's words, but its 'right-click an
+      // item there to move or copy it here': the web has no Move or Copy).
+      const tl = this._tl;
+      el.classList.add('takeoffs');
+      el.textContent = `Nothing in ${tl.label} yet.\n\nWhat you draw now is filed in ${tl.label}. `
+        + `This job also has ${tl.words}, worked on in the desktop app — not shown or totalled here.`;
     } else {
       el.textContent = 'No items yet.\n\nDraw with Area,\nPolyline or Count —\nor use the + button\nfor something that\nisn’t on a sheet.';
     }
@@ -1222,7 +1260,13 @@ export class ItemsPanel extends EventTarget {
     // when ALL / LAB / MAT, the floor or the group filter is narrowing them,
     // exactly as with the chip off: 'Whole job:' over a filtered total
     // would claim the job is that much.
-    const lead = !wholeJob ? '' : this._filtering() ? 'Whole job, filtered: ' : 'Whole job: ';
+    // In a job of several takeoffs the totals are the one the list is of,
+    // always, and the line says which (this._tl, the rebuild's; none with
+    // Main alone, where the words are as they were).
+    const tl = this._tl || null;
+    const lead = tl
+      ? `${tl.label} only${!wholeJob ? '' : this._filtering() ? ', all sheets, filtered' : ', all sheets'}: `
+      : !wholeJob ? '' : this._filtering() ? 'Whole job, filtered: ' : 'Whole job: ';
     // Only what COUNTS is totalled: an item on a drawing its sheet is not
     // counted from is in no total, here or in any report. How many were left
     // out is said beside the total, so the two can be checked.
@@ -1249,9 +1293,14 @@ export class ItemsPanel extends EventTarget {
     this.footEl.textContent = lead + (cost > 0
       ? `${items.length} items   ·   ${totals}   ·   ${money(cost)}${nc}`
       : `${items.length} items   ·   ${totals}${nc}`);
-    this.footEl.title = left
+    const why = left
       ? `${left} item${left === 1 ? ' is' : 's are'} taken off on a drawing ${left === 1 ? 'its sheet does' : 'their sheets do'} not count from — marked NOT COUNTED above, and in no total.`
       : '';
+    const one = !!tl && tl.others.length === 1;
+    this.footEl.title = tl
+      ? `Totals of the takeoff ${tl.label} only — ${tl.words} ${one ? 'is' : 'are'} not in them; `
+        + `the desktop app works on ${one ? 'it' : 'them'}.${why ? `\n${why}` : ''}`
+      : why;
   }
 }
 

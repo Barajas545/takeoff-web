@@ -42,7 +42,7 @@ import {
   CountingModel, applyBooking, takeoffMoveWords, takeoffQuantityWords, isTakeoffItem,
   setTakeoffNaming, takeoffNaming, hiddenTakeoffsWords,
 } from './core/counting.js';
-import { takeoffNamingOf, WEB_TAKEOFF } from './core/takeoff-lists.js';
+import { takeoffNamingOf, WEB_TAKEOFF, hasOtherTakeoffs, takeoffsOpenWords } from './core/takeoff-lists.js';
 import { deleteItemQuestion } from './core/counting.js';
 import { importPdf, canvasToPng } from './core/pdf-import.js';
 import {
@@ -355,6 +355,9 @@ const versionBar = new VersionBar({
     origins: sheetOrigin(),
     // Count this version moves a total, so it is live only in Edit Mode.
     canCount: app.editing,
+    // ...and which drawing a sheet counts from is the whole job's, every
+    // takeoff's (its tooltip says so in a job of several).
+    manyTakeoffs: hasOtherTakeoffs(app.project.metadata, app.project.measurements),
   }),
   onPick: revId => showSheetVersion(app.currentPage, revId),
 });
@@ -1541,6 +1544,14 @@ function sayLeftOutAtOpen() {
   const model = countingModel();
   const lone = model.loneUncountedSheets();
   if (lone.length) sayPrice(model.leftOutSentence(lone, 'Not in your totals'));
+  // A job of several takeoffs says, once, that only one of them is here --
+  // after "Opened …" and the line above. Said, never written. Where the
+  // status line is not drawn (a phone) it is a toast too, once that line
+  // has had it (sayPrice says on the next turn).
+  const also = takeoffsOpenWords(app.project.metadata, app.project.measurements);
+  if (!also) return;
+  sayPrice(also);
+  if (!statusLineShown()) setTimeout(() => sayToFinger(also), 0);
 }
 
 /** Whether a version of the sheet, rather than the sheet itself, is on screen. */
@@ -3245,11 +3256,16 @@ async function setSheetScale(ppf) {
     .filter(m => m.type !== 'pitch' && !KEEPS_OWN_SCALE.has(m.type)
       && (m.points || []).length);
   if (existing.length) {
+    // The scale is the sheet's, every takeoff's: the re-value reaches the
+    // other takeoffs' work too, and the question says how much of it is
+    // theirs -- it is not on screen to be counted.
+    const hidden = existing.filter(m => !controller.inActiveList(m)).length;
     const answer = await D.showDialog(close => {
       const body = D.el('div');
       body.style.cssText = 'font-size:12.5px;line-height:1.65';
       body.textContent =
-        `This sheet already carries ${existing.length} measurement${existing.length === 1 ? '' : 's'}, ` +
+        `This sheet already carries ${existing.length} measurement${existing.length === 1 ? '' : 's'}` +
+        (hidden ? ` (${hidden} of them ${hidden === 1 ? 'is' : 'are'} in other takeoffs, not shown here)` : '') + ', ' +
         `each recorded at the scale it was drawn at.\n\n` +
         `Keep them as they are, and draw everything from now on at the new scale? ` +
         `Or re-value every one of them to the new scale?`;
@@ -6559,9 +6575,14 @@ function pressedByFinger() {
 function syncTitle() {
   const name = (app.project.metadata.project_name || '').trim()
     || app.fileName || 'Untitled';
-  $('projTitle').textContent = name;
+  // ...and, in a job of several takeoffs, the one he is in (the desktop's
+  // _update_window_title): a report printed from it must not be mistaken
+  // for another takeoff's. A job with Main alone: as before.
+  const tl = hasOtherTakeoffs(app.project.metadata, app.project.measurements)
+    ? ` — ${controller.takeoffLabel()}` : '';
+  $('projTitle').textContent = name + tl;
   $('dirtyDot').hidden = !app.project.dirty;
-  document.title = `${app.project.dirty ? '• ' : ''}${name} — Professional Takeoff Tools`;
+  document.title = `${app.project.dirty ? '• ' : ''}${name}${tl} — Professional Takeoff Tools`;
 }
 
 function syncHistoryButtons() {

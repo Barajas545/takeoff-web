@@ -42,6 +42,12 @@
 //       heading menu and main.js's own router (the count guards are T3's,
 //       and the Delete sheet words U9's). A Main-only job renames and sets
 //       the whole job, in v31's words.
+//   T13 the words: the list's top line, empty state, foot and title (its
+//       tooltip and a tap), main.js's syncTitle, setSheetScale's question
+//       and the sentence on open (lifted by text and run), the tile tip and
+//       the Count button's tooltip (the real VersionBar) -- House wherever
+//       Main would be, a tag with no record in its own words, and with no
+//       tag and no registry every one of them v31's.
 //
 // Run: node tests/takeoff-lists-view.mjs
 import { execFileSync } from 'node:child_process';
@@ -910,9 +916,351 @@ if (v31) {
   eq('Main-only: soloCount is v31\'s', M.soloCount(p.measurements, panelTest(c)), v31.soloCount(pOld.measurements));
   log(`   (${same} of 15 Main-only builds equal v31's)`);
 }
+// ═══ T13: the words, each through its producer ══════════════════════════
+//
+// What a job of several takeoffs is SAID in: the Items list's top line, its
+// empty state, its foot and its title (tooltip and tap) through the real
+// ItemsPanel; main.js's syncTitle, setSheetScale's question and the
+// sentence on open (sayLeftOutAtOpen), each lifted by text and run; the
+// tile tip through the real CountingModel; the version bar's Count tooltip
+// through the real VersionBar with main.js's own state line. House (Main's
+// name on the desktop) wherever Main would be; a tag the job has no record
+// of in its own words; and with no tag and no registry every string is
+// v31's, v31's own modules and main.js read out of this repository's
+// history. (showSheetVersion's sentence is zoom-floor.mjs's 8b, the Delete
+// sheet words U9's above, the sentence on open in a browser
+// takeoff-lists-browser.mjs's.)
+log('\n-- T13: the words a job of several takeoffs is said in --');
+{
+  const fnText = (src, name) => {
+    const at = [`\nasync function ${name}(`, `\nfunction ${name}(`].map(h => src.indexOf(h)).find(i => i >= 0);
+    return at === undefined ? null : src.slice(at + 1, src.indexOf('\n}\n', at) + 2);
+  };
+  // eslint-disable-next-line no-new-func
+  const liftFn = (src, name, env) => new Function('env', `with (env) { return (${fnText(src, name)}); }`)(env);
+  ok('main.js has syncTitle, setSheetScale and sayLeftOutAtOpen',
+    ['syncTitle', 'setSheetScale', 'sayLeftOutAtOpen'].every(n => !!fnText(MAIN, n)));
+  const V31_MAIN = v31Dir && v31 ? await readFile(path.join(v31Dir, 'js/main.js'), 'utf-8') : null;
+  const CT = await import(pathToFileURL(path.join(ROOT, 'js/core/counting.js')).href);
+  const VB = await import(pathToFileURL(path.join(ROOT, 'js/ui/version-bar.js')).href);
+  const VB31 = v31 ? await import(pathToFileURL(path.join(v31Dir, 'js/ui/version-bar.js')).href) : null;
+  const withNaming = async (p, fn) => {
+    CT.setTakeoffNaming(() => TL.takeoffNamingOf(p.metadata, p.measurements, TL.WEB_TAKEOFF));
+    try { return await fn(); } finally { CT.setTakeoffNaming(null); }
+  };
+  const isTakeoffItem = m => !['distance', 'textnote', 'page_ref', 'pitch', 'ref_distance', 'group'].includes(m.type);
+  const deckItems = p => [...p.allItems()].filter(([, m]) => isDeck(m) && !m.group_child && isTakeoffItem(m)).length;
+  /** House's takeoff items taken out: what is left is Deck's and the shared marks. */
+  const noHouse = o => {
+    for (const k of Object.keys(o.measurements)) {
+      o.measurements[k] = o.measurements[k].filter(m => isDeck(m) || !isTakeoffItem(m) || m.type === 'group');
+    }
+  };
+  /** Deck's items taken out, and the keys: House's items alone, a job with only Main. */
+  const noDeck = o => {
+    for (const k of Object.keys(o.measurements)) o.measurements[k] = o.measurements[k].filter(m => !isDeck(m));
+    for (const k of KEYS) delete o.metadata[k];
+  };
+  const kids = rig => rig.panel.listEl.children.map(e => [e.className, e.textContent]);
+  const p0 = await fresh();
+  eq('the fixture: Deck has 6 items (by the test\'s own reading of the tag)', deckItems(p0), 6);
+  const NOTE = 'Takeoff: House. This job also has Deck (6 items), worked on in the desktop app — not shown or totalled here.';
+
+  // ── the list's top line (U1) ──
+  {
+    const { c } = ctlRig(p0, 0);
+    const full = panelRig(p0, c);
+    eq('the full list: its first line says which takeoff it is of, and that Deck is the desktop app\'s',
+      kids(full)[0], ['takeoff-note', NOTE]);
+    eq('...one such line, and no .sheet-note of the SHEET chip\'s', [kids(full).filter(([k]) => k === 'takeoff-note').length,
+      full.notes().length], [1, 0]);
+    full.restore();
+    const on0 = panelRig(p0, c, { view: own(0), chip: true });
+    eq('one sheet (X1.0): the same line first, above the sheet\'s rows', kids(on0)[0], ['takeoff-note', NOTE]);
+    on0.restore();
+    const on2 = panelRig(p0, c, { view: own(2), chip: true });
+    eq('X3.0, nothing of House\'s on it: the takeoff line, then the chip\'s line on top',
+      kids(on2).slice(0, 2).map(([k, t]) => [k, t]),
+      [['takeoff-note', NOTE], ['sheet-note empty', 'Nothing on X3.0 (this drawing) — 7 on other sheets, 2 in other takeoffs']]);
+    on2.restore();
+    const opening = panelRig(p0, c, { view: { page: 1, revId: '', revPage: null, coming: true }, chip: true });
+    eq('"Opening X2.0…": the takeoff line above it', kids(opening),
+      [['takeoff-note', NOTE], ['sheet-note empty opening', 'Opening X2.0…']]);
+    opening.restore();
+  }
+
+  // ── the empty state (U2) ──
+  {
+    const p = await fresh({ edit: noHouse });
+    const { c } = ctlRig(p, 0);
+    const rig = panelRig(p, c);
+    eq('House with nothing in it: the empty state says which takeoff, and where the rest is', kids(rig),
+      [['empty-list takeoffs', 'Nothing in House yet.\n\nWhat you draw now is filed in House. This job also has '
+        + 'Deck (6 items), worked on in the desktop app — not shown or totalled here.']]);
+    rig.panel.costFilter = 'labor';
+    rig.panel.refresh();
+    eq('...a cost filter on: the filter\'s words come first, as on the desktop', kids(rig).map(([k]) => k), ['empty-list']);
+    rig.restore();
+    const pm = await fresh({ edit: o => { noHouse(o); noDeck(o); } });
+    const rigM = panelRig(pm, ctlRig(pm, 0).c);
+    eq('Main alone, nothing in it: v31\'s "No items yet."', kids(rigM).map(([k, t]) => [k, t.split('\n')[0]]),
+      [['empty-list', 'No items yet.']]);
+    rigM.restore();
+  }
+
+  // ── the foot (U3): its lead and its tooltip ──
+  {
+    const { c } = ctlRig(p0, 0);
+    const pm = await fresh({ edit: noDeck });
+    const { c: cm } = ctlRig(pm, 0);
+    const pair = (view, chip, cost) => {
+      const a = panelRig(p0, c, { view, chip });
+      a.panel.costFilter = cost; a.panel.refresh();
+      const b = panelRig(pm, cm, { view, chip });
+      b.panel.costFilter = cost; b.panel.refresh();
+      const out = [[a.foot(), a.panel.footEl.title], [b.foot(), b.panel.footEl.title]];
+      a.restore(); b.restore();
+      return out;
+    };
+    const NOT_COUNTED = '1 item is taken off on a drawing its sheet does not count from — marked NOT COUNTED above, and in no total.';
+    const TIP = 'Totals of the takeoff House only — Deck (6 items) is not in them; the desktop app works on it.';
+    const [[f1, t1], [g1, u1]] = pair(null, false, 'all');
+    ok('the full list: "House only: " leads the same totals House\'s items alone add up to',
+      f1 === `House only: ${g1}` && !!g1, JSON.stringify([f1, g1]));
+    eq('...its tooltip: whose totals they are, then the NOT COUNTED words (Siding, on Rev B)', [t1, u1],
+      [`${TIP}\n${NOT_COUNTED}`, NOT_COUNTED]);
+    const [[f2], [g2]] = pair(own(0), true, 'all');
+    ok('one sheet: "House only, all sheets: " where a job with Main alone says "Whole job: "',
+      g2.startsWith('Whole job: ') && f2 === `House only, all sheets: ${g2.slice('Whole job: '.length)}`, JSON.stringify([f2, g2]));
+    const [[f3], [g3]] = pair(own(0), true, 'material');
+    ok('...filtered: "House only, all sheets, filtered: " for "Whole job, filtered: "',
+      g3.startsWith('Whole job, filtered: ')
+      && f3 === `House only, all sheets, filtered: ${g3.slice('Whole job, filtered: '.length)}`, JSON.stringify([f3, g3]));
+    const [[f4], [g4]] = pair(null, false, 'material');
+    ok('the full list filtered: still "House only: " (v31 has no lead there)', f4 === `House only: ${g4}`, JSON.stringify([f4, g4]));
+    // two other takeoffs
+    const p2 = await fresh({ edit: o => {
+      o.metadata.takeoff_lists = [...o.metadata.takeoff_lists, { list_id: 'tl-patio001', label: 'Patio' }];
+      for (const m of Object.values(o.measurements).flat()) if (m.name === 'Screws') m[TAG] = 'tl-patio001';
+    } });
+    const r2 = panelRig(p2, ctlRig(p2, 0).c);
+    eq('Deck and Patio: "are not in them; ... works on them"', r2.panel.footEl.title.split('\n')[0],
+      'Totals of the takeoff House only — Deck (5 items) and Patio (1 item) are not in them; the desktop app works on them.');
+    eq('...and the top line names both', kids(r2)[0][1],
+      'Takeoff: House. This job also has Deck (5 items) and Patio (1 item), worked on in the desktop app — not shown or totalled here.');
+    r2.restore();
+  }
+
+  // ── the title: its tooltip and a finger's tap on it (U4) ──
+  {
+    const { c } = ctlRig(p0, 0);
+    const tap = rig => {
+      const said = [];
+      rig.panel.host.say = t => said.push(t);
+      for (const l of rig.panel.titleEl._l.filter(x => x.t === 'click')) l.fn({});
+      return said;
+    };
+    const full = panelRig(p0, c);
+    eq('the full list: the title is v31\'s, its tooltip says the takeoff', full.title(), ['PROJECT ITEMS', 'Takeoff: House']);
+    eq('...and a tap on it says so (v31 said nothing there)', tap(full), ['Takeoff: House']);
+    full.restore();
+    const on0 = panelRig(p0, c, { view: own(0), chip: true });
+    const SHEET = 'Only the items drawn on X1.0 — the SHEET chip shows them all again';
+    eq('one sheet: "Takeoff: House — " before the sheet\'s words', on0.title(), ['ITEMS ON X1.0', `Takeoff: House — ${SHEET}`]);
+    eq('...the tap says the same', tap(on0), [`Takeoff: House — ${SHEET}`]);
+    on0.restore();
+  }
+
+  // ── Main's own name, and a tag with no record ──
+  {
+    const pMain = await fresh({ edit: o => { delete o.metadata.takeoff_main_label; } });
+    const rig = panelRig(pMain, ctlRig(pMain, 0).c);
+    eq('Main not renamed: "Main" where "House" was', [kids(rig)[0][1], rig.title()[1]],
+      ['Takeoff: Main. This job also has Deck (6 items), worked on in the desktop app — not shown or totalled here.',
+        'Takeoff: Main']);
+    rig.restore();
+    const pNo = await fresh({ edit: o => { delete o.metadata.takeoff_lists; } });
+    const rigNo = panelRig(pNo, ctlRig(pNo, 0).c);
+    eq('a tag the job has no record of: its own words, never Main', kids(rigNo)[0][1],
+      'Takeoff: House. This job also has a takeoff this job has no record of (6 items), worked on in the desktop app — '
+      + 'not shown or totalled here.');
+    ok('...its items are still not listed', !rigNo.rows().some(isDeck));
+    rigNo.restore();
+  }
+
+  // ── main.js: syncTitle (U6) ──
+  const titleRun = (src, p, c) => {
+    const els = { projTitle: { textContent: '' }, dirtyDot: { hidden: true } };
+    const doc = { title: '' };
+    const fn = liftFn(src, 'syncTitle', { app: { project: p, fileName: 'f.takeoff' }, $: id => els[id], document: doc,
+      hasOtherTakeoffs: TL.hasOtherTakeoffs, controller: c });
+    fn();
+    const clean = [els.projTitle.textContent, doc.title];
+    p.markDirty();
+    fn();
+    return [clean, [els.projTitle.textContent, doc.title, els.dirtyDot.hidden]];
+  };
+  {
+    const p = await fresh();
+    eq('syncTitle: the takeoff after the job\'s name, in the bar and the tab, clean and unsaved', titleRun(MAIN, p, ctlRig(p, 0).c),
+      [['Two Takeoffs — House', 'Two Takeoffs — House — Professional Takeoff Tools'],
+        ['Two Takeoffs — House', '• Two Takeoffs — House — Professional Takeoff Tools', false]]);
+  }
+
+  // ── main.js: setSheetScale's question (U10) ──
+  const scaleAsk = async (src, p, c, page) => {
+    const bodies = [];
+    const D = {
+      showDialog: async build => { const d = build(() => {}); bodies.push(d.body.textContent); return null; },
+      el: () => ({ style: {}, textContent: '' }), dlg: o => o, button: () => ({}),
+    };
+    const fn = liftFn(src, 'setSheetScale', { app: { project: p, currentPage: page }, D,
+      KEEPS_OWN_SCALE: M.KEEPS_OWN_SCALE, controller: c, syncScaleSelect() {}, setStatus() {} });
+    await fn(25);
+    return bodies;
+  };
+  {
+    const p = await fresh();
+    const c = ctlRig(p, 0).c;
+    const mine = pg => (p.measurements[pg] || []).filter(m => m.type !== 'pitch' && m.type !== 'ref_distance'
+      && (m.points || []).length);
+    eq('the fixture: X1.0 holds 10 measurements, 3 of them Deck\'s; X2.0 6, 2; X3.0 2, 2',
+      [0, 1, 2].map(pg => [mine(pg).length, mine(pg).filter(isDeck).length]), [[10, 3], [6, 2], [2, 2]]);
+    const cc0 = [p.changeCount, p.dirty];
+    const ask = await scaleAsk(MAIN, p, c, 0);
+    eq('the scale question on X1.0 says how much of the sheet\'s work is in other takeoffs (the re-value reaches it too)',
+      (ask[0] || '').split('\n')[0],
+      'This sheet already carries 10 measurements (3 of them are in other takeoffs, not shown here), each recorded at '
+      + 'the scale it was drawn at.');
+    const p1 = await fresh({ edit: o => { o.measurements[2] = o.measurements[2].filter(m => m.name !== 'Ledger'); } });
+    eq('...one of one: "1 of them is"', ((await scaleAsk(MAIN, p1, ctlRig(p1, 2).c, 2))[0] || '').split('\n')[0],
+      'This sheet already carries 1 measurement (1 of them is in other takeoffs, not shown here), each recorded at '
+      + 'the scale it was drawn at.');
+    eq('...and nothing was changed by asking (Cancel)', [p.changeCount, p.dirty], cc0);
+  }
+
+  // ── main.js: the sentence on open (U7) ──
+  const openSaid = (src, p, statusShown, Model = M.CountingModel) => {
+    const st = { priced: [], finger: [], timers: [] };
+    const fn = liftFn(src, 'sayLeftOutAtOpen', {
+      countingModel: () => new Model({ metadata: p.metadata, measurements: p.measurements, pageCount: p.pageCount }),
+      sayPrice: t => st.priced.push(typeof t === 'function' ? t() : t), app: { project: p },
+      takeoffsOpenWords: TL.takeoffsOpenWords, statusLineShown: () => statusShown,
+      setTimeout: f => { st.timers.push(f); return st.timers.length; }, sayToFinger: t => st.finger.push(t),
+    });
+    fn();
+    for (const f of st.timers.splice(0)) f();
+    return st;
+  };
+  const OPEN = 'This job also has Deck (6 items), worked on in the desktop app. Here you see, total and report House '
+    + 'only; what you add goes in House.';
+  const LEFT = ' It was left in Deck on the desktop, which will open it there again.';
+  {
+    const p = await fresh();
+    const cc0 = [p.changeCount, p.dirty];
+    const a = openSaid(MAIN, p, true);
+    eq('on open: the sentence, said last, through sayPrice -- and the desktop left the job in Deck', a.priced.at(-1), OPEN + LEFT);
+    eq('...no toast where the status line is drawn', a.finger, []);
+    const b = openSaid(MAIN, p, false);
+    eq('...a phone (no status line): the same sentence as a toast too', [b.priced.at(-1), b.finger], [OPEN + LEFT, [OPEN + LEFT]]);
+    eq('...and nothing written', [p.changeCount, p.dirty], cc0);
+    const pNo = await fresh({ edit: o => { delete o.metadata.takeoff_lists; } });
+    eq('a tag with no record: its own words, and no "left in" (the desktop opens a job left in no takeoff it knows in Main)',
+      openSaid(MAIN, pNo, true).priced.at(-1), 'This job also has a takeoff this job has no record of (6 items), worked '
+      + 'on in the desktop app. Here you see, total and report House only; what you add goes in House.');
+    const pIn = await fresh({ edit: o => { delete o.metadata.takeoff_list_active; } });
+    eq('a job the desktop left in House: no "left in"', openSaid(MAIN, pIn, true).priced.at(-1), OPEN);
+  }
+
+  // ── the tile tip (U11) and the Count tooltip (U12) ──
+  const tips = p => withNaming(p, () => Object.fromEntries(Object.entries(new M.CountingModel({ metadata: p.metadata,
+    measurements: p.measurements, pageCount: p.pageCount }).sheetTileStates()).map(([k, s]) => [k, s.tip])));
+  const MANY = (() => {
+    const a = MAIN.indexOf('new VersionBar({');
+    const hit = a < 0 ? null : /\n {4}manyTakeoffs: ([^\n]+),\n/.exec(MAIN.slice(a, MAIN.indexOf('\n});', a)));
+    return hit ? hit[1] : null;
+  })();
+  ok('main.js hands the version bar whether the job has other takeoffs', !!MANY, String(MANY));
+  const countTitles = (Bar, p) => {
+    const els = { '#vbSheet': { textContent: '' }, '#vbShowing': { textContent: '', classList: { add() {}, remove() {} } },
+      '#vbNewestBtn': { disabled: false }, '#vbCountBtn': { hidden: false, disabled: false, title: '', classList: { toggle() {} } } };
+    const ctx = new Proxy({}, { get: () => () => {} });
+    const pips = { addEventListener() {}, getContext: () => ctx, style: {}, width: 1, height: 1, title: '' };
+    const hadCs = globalThis.getComputedStyle;
+    globalThis.getComputedStyle = () => ({ getPropertyValue: () => '' });
+    const out = [];
+    // eslint-disable-next-line no-new-func
+    const many = MANY ? new Function('app', 'hasOtherTakeoffs', `return (${MANY});`)({ project: p }, TL.hasOtherTakeoffs) : false;
+    for (const [viewing, working, canCount] of [['r2', '', true], ['r2', '', false], ['', '', true]]) {
+      const bar = new Bar({ root: { hidden: false, querySelector: s => els[s] }, pips, onPick() {},
+        state: () => ({ revs: p.metadata.revisions, page: 1, sheetLabel: 'X2.0', viewingRevId: viewing,
+          workingRevId: working, order: 'date', origins: p.metadata.sheet_origin || {}, canCount, manyTakeoffs: many }) });
+      bar.refresh();
+      out.push(els['#vbCountBtn'].title);
+    }
+    globalThis.getComputedStyle = hadCs;
+    return out;
+  };
+  {
+    const p = await fresh();
+    const t = await tips(p);
+    ok('the tile tip of X2.0 (takeoff on Rev B, not counted) says the counts are every takeoff\'s',
+      (t['1'] || '').endsWith('\nThese counts are every takeoff\'s: which drawing a sheet counts from is one choice for the whole job.'),
+      t['1']);
+    const titles = countTitles(VB.VersionBar, p);
+    ok('the Count button\'s tooltip, Count live, View Only and counted already: the desktop bar\'s line last',
+      titles.length === 3 && titles.every(x => x.endsWith('\nWhich drawing a sheet counts from is one choice for every takeoff.')
+        && x.split('\n').length === 2), JSON.stringify(titles));
+  }
+
+  // ── with no tag and no registry: every string is v31's ──
+  if (!v31 || !V31_MAIN) {
+    ok('the Main-only words are compared with v31\'s own (git history)', false, 'v31 could not be read (see above)');
+  } else {
+    const pm = await fresh({ edit: mainOnly });
+    const pOld = await fresh({ mods: v31, edit: mainOnly });
+    const c = ctlRig(pm, 0).c;
+    const cOld = new v31.ToolController({ canvas: { addEventListener() {}, style: {} }, viewport: { zoom: 1 },
+      project: pOld, currentPage: () => 0, host: {} });
+    for (const v of [null, own(0), own(2), { page: 1, revId: '', revPage: null, coming: true }]) {
+      const a = panelRig(pm, c, { view: v, chip: !!v });
+      const b = panelRig(pOld, null, { view: v, chip: !!v, mods: v31 });
+      const said = rig => { const s = []; rig.panel.host.say = t => s.push(t);
+        for (const l of rig.panel.titleEl._l.filter(x => x.t === 'click')) l.fn({}); return s; };
+      const look = rig => ({ kids: kids(rig).filter(([k]) => !k.split(' ').includes('row') && !k.startsWith('grp')),
+        title: rig.title(), foot: [rig.foot(), rig.panel.footEl.title], tap: said(rig) });
+      eq(`Main-only ${v ? `X${v.page + 1}.0${v.coming ? ' (opening)' : ''}` : 'full list'}: notes, empty state, title, `
+        + 'tooltip, tap and foot are v31\'s', look(a), look(b));
+      a.restore(); b.restore();
+    }
+    {
+      const e = await fresh({ edit: o => { noHouse(o); noDeck(o); } });
+      const eOld = await fresh({ mods: v31, edit: o => { noHouse(o); noDeck(o); } });
+      const a = panelRig(e, ctlRig(e, 0).c);
+      const b = panelRig(eOld, null, { mods: v31 });
+      eq('Main-only, empty: v31\'s empty state', kids(a), kids(b));
+      a.restore(); b.restore();
+    }
+    eq('Main-only: syncTitle\'s bar and tab are v31\'s', titleRun(MAIN, pm, c),
+      titleRun(V31_MAIN, pOld, cOld).map(x => x));
+    for (const pg of [0, 1, 2]) {
+      const pa = await fresh({ edit: mainOnly });
+      const pb = await fresh({ mods: v31, edit: mainOnly });
+      eq(`Main-only X${pg + 1}.0: the scale question is v31's`, await scaleAsk(MAIN, pa, ctlRig(pa, pg).c, pg),
+        await scaleAsk(V31_MAIN, pb, null, pg));
+    }
+    eq('Main-only: on open, what is said is v31\'s, and no toast', [openSaid(MAIN, pm, false).priced, openSaid(MAIN, pm, false).finger],
+      [openSaid(V31_MAIN, pOld, false, v31.CountingModel).priced, []]);
+    eq('Main-only: the tile tips are v31\'s', await tips(pm), Object.fromEntries(Object.entries(new v31.CountingModel({
+      metadata: pOld.metadata, measurements: pOld.measurements, pageCount: pOld.pageCount }).sheetTileStates())
+      .map(([k, s]) => [k, s.tip])));
+    eq('Main-only: the Count button\'s tooltips are v31\'s', countTitles(VB.VersionBar, pm), countTitles(VB31.VersionBar, pOld));
+  }
+}
+
 if (v31Dir) await rm(v31Dir, { recursive: true, force: true });
 
 log(fails ? `\n${fails} of ${checks} checks FAILED`
   : `\nAll ${checks} checks pass -- what is painted is what is tapped, deleted, listed and badged: Main's, `
-    + 'and a job with only Main reads as v31');
+    + 'the job says so, and a job with only Main reads as v31');
 process.exit(fails ? 1 : 0);
