@@ -25,12 +25,16 @@
 //   T8  a job with only Main: a save gains none of the keys and no tag, and
 //       its items equal v31's save of the same edits (v31's own modules,
 //       read out of this repository's history at df6739d); a new job saves
-//       none of them. ONE difference from v31 is expected, and checked as
-//       the only one: a Group-filed multi-sheet item whose main shape goes
-//       (its run added by Add Shape, so carrying no in_group) hands its
-//       Group on to the promoted run -- in_group is in PROMOTE_KEYS since
-//       3.08, as in the desktop's _PROMOTE_KEYS (spec 10, R3-12a). v31's
-//       heir lost the Group.
+//       none of them. ONE difference from v31 is expected, in two halves,
+//       each checked as the only one: a Group-filed multi-sheet item whose
+//       main shape goes (its run added by Add Shape, so carrying no
+//       in_group) hands its Group on to the promoted run -- in_group is in
+//       PROMOTE_KEYS since 3.08, as in the desktop's _PROMOTE_KEYS (spec
+//       10, R3-12a); v31's heir lost the Group. And an item in NO Group
+//       whose run is still filed in one (3.07's put-back) hands on "no
+//       Group": the heir's stale in_group is popped, as the desktop's
+//       _promote_child pops it since its round 3 fixes (R3RF-2); v31's
+//       heir kept it.
 //   T11 the source: nothing outside takeoff-lists.js assigns, deletes or
 //       defaults the three keys; the one writer of the tag is
 //       setTakeoffList, called by promoteChild and addItem alone;
@@ -547,6 +551,29 @@ for (const [name, edit] of MAIN_EDITS) {
     eq('Main only · ...where v31\'s heir lost it', heir(was) ? heir(was).in_group ?? null : 'no heir', null);
     if (heir(now)) delete heir(now).in_group;
     eq('Main only · ...and that one key is the only difference from v31\'s save, metadata and items', canon(now), canon(was));
+  }
+  // ...and its other half (desktop 3.08's round 3 fixes, R3RF-2): the item
+  // in NO Group, its X2.0 run still filed in Stairs (as 3.07's put-back of a
+  // sheet kept aside leaves a run he took out of the Group), the main shape
+  // deleted on the canvas: the heir takes the item's filing, none, and pops
+  // the stale one -- v31's heir kept it, and the item was back in Stairs.
+  const editStale = ({ p }) => {
+    ok('Main only · the item is in no Group; its run is still filed in Stairs (a stale put-back)',
+      !('in_group' in find(p, 'Wall M', 0)));
+    find(p, 'Wall M', 1, true).in_group = GI;
+    p.dropShapes([find(p, 'Wall M', 0)._uid]);
+  };
+  const nowS = await savedAfter(M, editStale);
+  ok('Main only · a stale run\'s main shape dropped: none of the three keys, no tag',
+    KEYS.every(k => !(k in nowS.meta)) && tagsIn(nowS.measurements) === 0);
+  eq('Main only · ...the promoted run takes the item\'s filing, in no Group, as desktop 3.08\'s _promote_child does '
+    + '(set-or-pop)', heir(nowS) ? heir(nowS).in_group ?? null : 'no heir', null);
+  if (v31) {
+    const wasS = await savedAfter(v31, editStale);
+    eq('Main only · ...where v31\'s heir kept the stale Group', heir(wasS) ? heir(wasS).in_group ?? null : 'no heir', GI);
+    if (heir(wasS)) delete heir(wasS).in_group;
+    eq('Main only · ...and that one key is the only difference from v31\'s save, metadata and items',
+      canon(nowS), canon(wasS));
   }
 }
 {

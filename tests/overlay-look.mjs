@@ -24,7 +24,9 @@
 //     revision branch left the LAST sheet's overlay up ('return # revision
 //     gone'); 3.08 takes it down (R3-12 c), as the web always has -- so a
 //     record naming a revision that is gone is 'nothing' on both, and the
-//     old residual coming back is a FAIL.
+//     old residual coming back is a FAIL. Its round 3 fixes also refuse a
+//     float or bool rev_page (nothing, no raise: a raise is a FAIL now) and
+//     take the strip down on an arrival with nothing up, as turn() does.
 //  4. SIZES: a 5400x3600 sheet over a 2592x1728 sheet, a 3600x2400 revision
 //     page, a picture box -- page pixels, never stretched to the sheet.
 //  5. The small ones: _cad_image_rect, _pts_pair, overlay_picture (found by
@@ -164,14 +166,17 @@ function outcome(a) {
   if (!a.up) return 'nothing';
   return 'other';
 }
-// Declared divergences: records no build of 3.06 writes, where the web does
-// better or cannot tell. Each is asserted for what the desktop does, so a
-// desktop change shows.
+// Declared divergences: records no build of 3.06 writes, where the web
+// cannot tell. Each is asserted for what the desktop does, so a desktop
+// change shows. Since desktop 3.08 (round 3 fixes, R3RF-5) a rev_page that is
+// not a real int -- a float, a bool -- names nothing there, as an
+// overlay_page that is not one always did: 'revision page True' is no longer
+// a divergence (nothing on both: it is held to that below, with every other
+// record that names nothing), and the float no longer raises.
 const DECLARED = {
-  'revision page True': 'the desktop takes True as page 1 (Python indexes with a bool); a bool names no page on the web',
   'sheet 2.0': 'the desktop refuses a float overlay_page; JSON hands JavaScript 2.0 as 2, so the web shows sheet 2',
-  'revision page 1.0': 'the desktop raises on a float rev_page (leaving the last sheet\'s up); JSON hands JavaScript 1.0 as 1, '
-    + 'so the web shows that page',
+  'revision page 1.0': 'the desktop refuses a float rev_page (3.08: it names nothing, and the last sheet\'s comes down); '
+    + 'JSON hands JavaScript 1.0 as 1, so the web shows that page',
 };
 // What a browser can decode, as far as node can tell: the fixture's
 // pictures are PNGs, and createImageBitmap refuses what is not an image.
@@ -195,12 +200,11 @@ function checkArrivals(T, tag) {
     const what = outcome(a);
     counts[what] = (counts[what] || 0) + 1;
     if (DECLARED[a.name]) {
-      if (a.name === 'revision page True') {
-        ok(`DECLARED ${a.name}: the desktop shows ${JSON.stringify(a.up && a.up.source)}; the web shows nothing`,
-          what === 'shown' && a.up.source.rev_page === true && src === null);
-      } else if (a.name === 'revision page 1.0') {
-        ok(`DECLARED ${a.name}: the desktop raises ${a.raised} with the last sheet's overlay still up; the web shows page 1`,
-          what === 'raised' && a.up && a.up.page === a.before && src && src.kind === 'revision' && src.revPage === 1);
+      if (a.name === 'revision page 1.0') {
+        ok(`DECLARED ${a.name}: the desktop takes the last sheet's down and shows nothing (a float names no page); `
+          + 'the web shows page 1',
+        what === 'nothing' && a.log.length === 1 && a.log[0][0] === 'hide'
+          && src && src.kind === 'revision' && src.revPage === 1, { what, log: a.log, raised: a.raised });
       } else {
         ok(`DECLARED ${a.name}: the desktop takes the last sheet's down and shows nothing; the web shows sheet 2`,
           what === 'nothing' && a.log.length === 1 && src && src.kind === 'sheet' && src.page === 2);
@@ -249,8 +253,22 @@ function checkArrivals(T, tag) {
       `cutoff ${out.cutoff}; ${firstDiff(out.data, bytes(a.texture))}`);
   }
   log(`   (desktop outcomes: ${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ')})`);
-  ok('the fixture reaches every outcome: shown, nothing and a raise; the desktop no longer leaves the last sheet\'s '
-    + 'overlay up', counts.shown >= 9 && counts.nothing >= 20 && !counts.residual && counts.raised >= 1, counts);
+  // Since desktop 3.08's round 3 fixes no record makes it raise (R3RF-5: a
+  // float rev_page, which raised on imgs[rp] with the turn half done, names
+  // nothing now) -- a raise coming back fails here, as a residual does.
+  ok('the fixture reaches both outcomes, shown and nothing; the desktop no longer leaves the last sheet\'s '
+    + 'overlay up, and no record makes it raise', counts.shown >= 9 && counts.nothing >= 20 && !counts.residual
+    && !counts.raised, counts);
+  // ...and an ARRIVAL with nothing up takes the strip down too (R3RF-3: the
+  // revision branch and its sibling only reset the look there, which left
+  // the last sheet's lit button over an empty strip, and its Flash running;
+  // only the Overlay button's own press keeps the strip it has just opened,
+  // and the web has no such press). The web's turn() takes its strip down on
+  // every new visit, nothing up included (section 7 holds it to that).
+  const quiet = T.arrive.filter(a => a.before === null && !a.up && !a.raised);
+  ok('an arrival with nothing up: the desktop takes the strip down (_overlay_strip_down), as the web\'s turn() does',
+    quiet.length >= 2 && quiet.every(a => a.log.length === 1 && a.log[0][0] === 'strip_down'),
+    quiet.map(a => [a.name, a.log]));
 }
 
 function checkSizes(T, tag) {
@@ -656,9 +674,15 @@ for (const mode of ['Edit Mode', 'View Only']) {
   await settled();
   ok(`${mode}: X1.2's record names nothing (overlay_page -1): NOTHING is up, nothing asked for`,
     so.frame() === null && so.up === null && st.asked.length === 1 && lastStrip(st) === null);
-  // c. a sheet with no record, between two that have one
+  // c. a sheet with no record, between two that have one -- turned to with
+  // NOTHING up: the strip is taken down all the same (the desktop's arrival
+  // takes it down with nothing up since 3.08, R3RF-3: no lit button over an
+  // empty strip, no Flash left running)
+  const stripsC = st.strips.length;
   await arrive(3);
   ok(`${mode}: X1.3 has no record: nothing up`, so.frame() === null && st.asked.length === 1);
+  ok(`${mode}: ...and the turn onto it, with nothing up, took the strip down all the same`,
+    st.strips.length === stripsC + 1 && lastStrip(st) === null && !so.flashing(), st.strips.slice(stripsC));
   // d. back on X1.1: its own comes up again, built again
   await arrive(1);
   ok(`${mode}: back on X1.1 its overlay comes up again`, !!so.frame() && st.asked.length === 2);

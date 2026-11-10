@@ -1261,9 +1261,11 @@ function sortedObj(o) {
 
 // The desktop's _PROMOTE_KEYS since 3.08, in_group included (the Group
 // container the item is filed under: a run added with Add Shape is born
-// without it, so a main shape's heir fell out of its Group). The two
-// programs write the same store, and tests/revision-counting.mjs compares
-// the heirs: change it in both or in neither.
+// without it, so a main shape's heir fell out of its Group) -- and, as
+// there, an in_group the doomed main shape does NOT have is popped off the
+// heir (promoteChild, set-or-pop). The two programs write the same store,
+// and tests/revision-counting.mjs compares the heirs: change it in both or
+// in neither.
 const PROMOTE_KEYS = ['name', 'label', 'notes', 'floor_level', 'category', 'layer',
   'sub_category', 'cost_type', 'sort_order', 'associated_items', 'color', 'visible',
   'pitch', 'purpose', 'catalog_code', 'catalog_unit', 'framing', 'framing_suppressed',
@@ -1279,6 +1281,12 @@ function promoteChild(doomed, heir) {
   // shape its first) hands on nothing: the shape keeps its own tag.
   if (doomed && typeof doomed === 'object' && Object.keys(doomed).length) {
     setTakeoffList(heir, takeoffListOf(doomed));
+    // ...and so does its Group, "in no Group" included, for the same reason
+    // (desktop 3.08's round 3 fixes, R3RF-2): the loop hands a Group on but
+    // never its absence, so a run a 3.07 (or kept-aside) put-back left filed
+    // in a Group he had taken the item out of put the item back in it --
+    // one of ANOTHER takeoff, if the item had moved since.
+    if (!('in_group' in doomed)) delete heir.in_group;
   }
   delete heir.group_child;
   // new_master.get("value", 0): a value that is there is taken as it is

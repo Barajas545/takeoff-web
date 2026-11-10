@@ -38,10 +38,16 @@
 //      Takeoff, left in Deck); THIS APP edits House through every door it
 //      has that writes the job (21, each through its own producer) and saves
 //      it twice -- the same bytes; the DESKTOP reopens it with the same
-//      registry, takeoff and Main name, every item in its takeoff (the
-//      promoted heirs in their masters'), every stored total its own, Deck's
-//      included, and an open that put nothing right and said nothing (a
-//      hand-split copy shows the heal is heard when it speaks).
+//      registry, takeoff and Main name, every item in its takeoff and Group
+//      (the promoted heirs in their masters'), every stored total its own,
+//      Deck's included, and an open that put nothing right and said nothing
+//      (a hand-split copy shows the heal is heard when it speaks).
+//  7b. ...and with a run left filed in a Group its item is not in (3.07's
+//      put-back): BOTH programs delete the sheets of those items' main
+//      shapes, each by its own Delete Page / Delete Sheet, and leave the
+//      same items, tags, Groups (the heirs in none: desktop 3.08's
+//      set-or-pop) and totals; this app's save of it, twice the same bytes,
+//      reopens on the desktop as made, in silence.
 //
 // Needs the desktop source and its Python (PyQt5, PIL); SKIPS otherwise.
 // Nothing it writes is kept: a temp folder, removed at the end.
@@ -523,24 +529,27 @@ try {
   const texts = MAIN_FNS.map(mainText);
   ok(`main.js has ${MAIN_FNS.join(', ')}`, texts.every(Boolean));
   const said = [];
-  const mainRun = async (fnName, page, revId, ...args) => {
+  // (on `pt` and `st`, or -- 7b -- on another job's project and page store)
+  const mainRunOn = async (proj, store, fnName, page, revId, ...args) => {
     const env = {
-      app: { project: pt, currentPage: page, editing: true, pages: st },
+      app: { project: proj, currentPage: page, editing: true, pages: store },
       versionView: { revId },
-      countingModel: () => new CountingModel({ metadata: pt.metadata, measurements: pt.measurements, pageCount: pt.pageCount }),
+      countingModel: () => new CountingModel({ metadata: proj.metadata, measurements: proj.measurements,
+        pageCount: proj.pageCount }),
       D: { confirmDialog: async (t, m) => { said.push(['asked', m]); return true; }, alertDialog: async (t, m) => said.push(['alert', m]) },
       countAsked: new Set(), setStatus: t => said.push(['status', t]),
       sayPrice: t => said.push(['price', typeof t === 'function' ? t() : t]), afterBookChange() {},
       applyBooking, resyncGroups, itemRevId, takeoffFingerprint, isTakeoffItem, takeoffQuantityWords, takeoffMoveWords,
-      hiddenTakeoffsWords, takeoffNaming, pageFinalLabel: i => pt.pageLabel(i), leftByChoice: () => false,
+      hiddenTakeoffsWords, takeoffNaming, pageFinalLabel: i => proj.pageLabel(i), leftByChoice: () => false,
       calloutPreview: { clearCache() {} }, thumbs: { refresh() {} }, pageImage: null, goToPage: async () => {},
     };
     const body = MAIN_FNS.map((n, i) => `const ${n} = (${texts[i]});`).join('\n');
     // eslint-disable-next-line no-new-func
     const f = new Function('env', `with (env) { ${body}\nreturn ${fnName}; }`)(env);
-    setTakeoffNaming(() => takeoffNamingOf(pt.metadata, pt.measurements, WEB_TAKEOFF));
+    setTakeoffNaming(() => takeoffNamingOf(proj.metadata, proj.measurements, WEB_TAKEOFF));
     try { return await f(...args); } finally { setTakeoffNaming(null); }
   };
+  const mainRun = (...a) => mainRunOn(pt, st, ...a);
   const doors = [];
   const door = (name, cond, detail = '') => { doors.push(name); ok(`door: ${name}`, cond, detail); };
   const tagOf = m => (m && TAGK in m ? m[TAGK] : null);
@@ -705,18 +714,24 @@ try {
   const rawItems = structuredClone(fs2.measurements);
   ps2.loadFrom({ metadata: fs2.metadata, annotations: fs2.annotations, measurements: fs2.measurements,
     pageCount: fs2.pageCount, revisionCounts: fs2.revisions.map(s => s.length) });
-  const labOf = k => (Number(k) === STANDALONE_PAGE ? 'standalone' : ps2.pageLabel(Number(k)));
-  const webItems = Object.keys(rawItems).sort((a, b) => Number(a) - Number(b)).flatMap(k => (rawItems[k] || []).map(m =>
-    [labOf(k), m.type, m.name || m.text || m.label || '', TAGK in m ? m[TAGK] : null, !!m.group_child,
-      m.in_group !== undefined && m.in_group !== null && m.in_group !== '']));
+  // [sheet, type, name, tag, child, the Group it is filed in] -- the tag and
+  // the Group as the store holds them (null when the key is absent), the
+  // desktop driver's item_rows()
+  const rowsOf = (proj, store) => {
+    const labOf = k => (Number(k) === STANDALONE_PAGE ? 'standalone' : proj.pageLabel(Number(k)));
+    return Object.keys(store).sort((a, b) => Number(a) - Number(b)).flatMap(k => (store[k] || []).map(m =>
+      [labOf(k), m.type, m.name || m.text || m.label || '', TAGK in m ? m[TAGK] : null, !!m.group_child,
+        m.in_group === undefined ? null : m.in_group]));
+  };
+  const webItems = rowsOf(ps2, rawItems);
   const w7 = webSummary(ps2);
   const d7 = await desktop('check-two', savedTwo);
   const two = d7.two || {};
   eq('the desktop reads the takeoffs as the desktop wrote them: the registry, the takeoff it was left in, Main\'s name',
     [two.lists, two.active, two.main], [t1.lists, t1.active, t1.main]);
   eq('...and opens it in Deck, Main called House', [two.registry, two.in, two.mainName], [t1.lists, deck, 'House']);
-  eq('every item in the takeoff this app saved it in, the promoted heirs in their masters\' (the desktop\'s reading)',
-    two.items, webItems);
+  eq('every item in the takeoff and the Group this app saved it in, the promoted heirs in their masters\' '
+    + '(the desktop\'s reading)', two.items, webItems);
   ok('opening it put NOTHING right: not marked unsaved, each open-time check said nothing',
     two.unsaved === false && Array.isArray(two.heard) && two.heard.some(([n]) => n === '_heal_takeoff_lists')
     && two.heard.some(([n]) => n === '_heal_item_groups') && two.heard.every(([, t]) => t === ''), JSON.stringify(two.heard));
@@ -744,6 +759,86 @@ try {
   ok('a hand-split item: the desktop\'s heal is heard (marked unsaved, its words said) -- the check above can hear one',
     dx.two && dx.two.unsaved === true && dx.two.heard.some(([n, t]) => n === '_heal_item_groups' && t),
     JSON.stringify(dx.two && dx.two.heard));
+
+  // ── 7b. a run filed in a Group its item is not in: the heir takes the item's filing, none included ──
+  // 3.07's put-back of a sheet kept aside (and 3.08's own, before its round 3
+  // fixes) brought a run back filed in a Group he had taken the item out of;
+  // deleting the item's main shape then handed the item that Group -- for a
+  // House item, a Group of ANOTHER takeoff. Desktop 3.08 pops the heir's
+  // in_group when the doomed main shape has none (_promote_child, R3RF-2),
+  // and so does this app (project.js promoteChild). The answer is the
+  // DESKTOP's own Delete Page of the same sheets of the same job: item for
+  // item, tag and Group, and every total; then this app's save of it
+  // reopens on the desktop as it was made, saying nothing.
+  console.log('\n-- 7b. a run filed in a Group its item is not in: both programs delete its main shape\'s sheet --');
+  const idxOf = (proj, l) => Array.from({ length: proj.pageCount }, (_, i) => proj.pageLabel(i)).indexOf(l);
+  const loadT = f => {
+    const p = new Project();
+    p.loadFrom({ metadata: f.metadata, annotations: f.annotations, measurements: f.measurements,
+      pageCount: f.pageCount, revisionCounts: f.revisions.map(s => s.length) });
+    const s = new PageStore();
+    s.setFromProject(f);
+    return [p, s];
+  };
+  const saveOf = async (p, s) => new Uint8Array(await (await writeProject({ metadata: p.buildSaveMetadata(),
+    pageSources: s.saveSources(), revisionSources: s.saveRevisionSources() })).arrayBuffer());
+  const [p0, s0] = loadT(await openProject(new Blob([await readFile(madeTwo)])));
+  const shape0 = (name, l, child) => (p0.measurements[idxOf(p0, l)] || []).find(m => m.name === name
+    && !!m.group_child === child);
+  const stairs0 = [...p0.allItems()].map(([, m]) => m).find(m => m.type === 'group' && m.name === 'Stairs');
+  const staleRuns = [shape0('Fence', 'X3.0', true), shape0('Beam', 'X3.0', true)];
+  const staleMains = [shape0('Fence', 'X2.0', false), shape0('Beam', 'X4.0', false)];
+  ok('the job: Deck\'s Group Stairs; House\'s Fence (X2.0 + X3.0) and Deck\'s Beam (X4.0 + X3.0), in no Group',
+    !!stairs0 && takeoffListOf(stairs0) === deck && staleRuns.every(Boolean)
+    && staleMains.every(m => m && !('in_group' in m)) && takeoffListOf(staleMains[0]) === ''
+    && takeoffListOf(staleMains[1]) === deck,
+    JSON.stringify([stairs0, ...staleRuns, ...staleMains].map(m => m && [m.name, takeoffListOf(m), m.in_group])));
+  // ...their X3.0 runs left filed in Stairs, as that put-back leaves them
+  for (const r of staleRuns) if (r) r.in_group = stairs0.group_item_id;
+  const stalePath = path.join(dir, 'two-stale.takeoff');
+  await writeFile(stalePath, await saveOf(p0, s0));
+  const dd = await desktop('delete-pages', stalePath, 'X2.0', 'X4.0');
+  ok('the desktop opened it asking nothing, and asked its Delete Page question for each sheet',
+    dd.openAsked.length === 0 && dd.asked.filter(([t]) => t === 'Delete Page').length === 2, JSON.stringify(dd.asked));
+  // this app: the same sheets, by its own Delete Sheet (main.js deleteCurrentPage)
+  const [p7, s7] = loadT(await openProject(new Blob([await readFile(stalePath)])));
+  said.length = 0;
+  for (const l of ['X2.0', 'X4.0']) await mainRunOn(p7, s7, 'deleteCurrentPage', idxOf(p7, l), '');
+  ok('this app deleted X2.0 and X4.0 (each asked, as the desktop asks)',
+    p7.pageCount === 2 && idxOf(p7, 'X2.0') < 0 && idxOf(p7, 'X4.0') < 0
+    && said.filter(([k]) => k === 'asked').length === 2, JSON.stringify([p7.pageCount, said]));
+  const heirs7 = ['Fence', 'Beam'].map(n => (p7.measurements[idxOf(p7, 'X3.0')] || []).find(m => m.name === n));
+  eq('the two heirs on X3.0: main shapes now, in their item\'s takeoff, in NO Group (the stale filing popped)',
+    heirs7.map(m => m && [!!m.group_child, takeoffListOf(m), m.in_group === undefined ? null : m.in_group]),
+    [[false, '', null], [false, deck, null]]);
+  eq('...item for item what the DESKTOP\'s own Delete Page leaves: every sheet, tag and Group',
+    rowsOf(p7, p7.measurements), dd.items);
+  const w7b = webSummary(p7);
+  for (const k of ['labels', 'counted', 'sums', 'groups']) eq(`...and its ${k}`, w7b[k], dd[k]);
+  // ...saved twice (the same bytes), and the desktop reopens it as it was made, in silence
+  let sc = null;
+  let sd = null;
+  for (let tries = 0; tries < 3; tries += 1) {
+    const m0 = new Date().getMinutes();
+    sc = await saveOf(p7, s7);
+    sd = await saveOf(p7, s7);
+    if (new Date().getMinutes() === m0) break;
+  }
+  ok('saving it twice gives the same bytes', sc.length === sd.length && sc.every((x, i) => x === sd[i]),
+    `${sc.length} vs ${sd.length} bytes`);
+  const saved7b = path.join(dir, 'two-stale-web.takeoff');
+  await writeFile(saved7b, sc);
+  const f7b = await openProject(new Blob([sc]));
+  const [p7b] = loadT(await openProject(new Blob([sc])));
+  const d7b = await desktop('check-two', saved7b);
+  const two7b = d7b.two || {};
+  eq('the desktop reopens it: the registry, the takeoff it was left in, Main\'s name as made',
+    [two7b.lists, two7b.active, two7b.main, two7b.in, two7b.mainName], [t1.lists, t1.active, t1.main, deck, 'House']);
+  eq('...every item in the takeoff and Group this app saved', two7b.items, rowsOf(p7b, structuredClone(f7b.measurements)));
+  ok('...and put nothing right and said nothing', two7b.unsaved === false && Array.isArray(two7b.heard)
+    && two7b.heard.every(([, t]) => t === '') && JSON.stringify([two7b.healWords, two7b.healAgain, d7b.asked])
+    === JSON.stringify([[], '', []]), JSON.stringify([two7b.heard, two7b.healWords, d7b.asked]));
+  for (const k of ['labels', 'counted', 'sums', 'groups']) eq(`...reopened: ${k}`, d7b[k], webSummary(p7b)[k]);
 } finally {
   await rm(dir, { recursive: true, force: true });
 }

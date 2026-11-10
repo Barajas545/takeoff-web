@@ -2554,8 +2554,10 @@ if (!(await haveDesktopSource())) {
     // The limit, said every run rather than hidden: a total the DESKTOP
     // added up from 180.0 as a float, which this app saved untouched, is
     // re-added from 180 as an int on the next open and can move by a bit.
-    // Nothing a save may do about it; the desktop must compare past the
-    // last bit.
+    // Nothing a save may do about it. Since 3.08 the desktop compares past
+    // the last bits before it says anything (_announce_resync: math.isclose,
+    // rel 1e-12 / abs 1e-9; round 3 fixes R3RF-4), so it re-adds these in
+    // silence: the count below is of totals re-added, not of sentences.
     const floatLed = v => {               // Python's sum() when every number is a float
       let hi = 0, lo = 0;
       for (const x of v) {
@@ -2635,7 +2637,7 @@ if (!(await haveDesktopSource())) {
         k < deskTag.length ? deskTag[k] : 'no answer');
     });
     {
-      const lone = { ...structuredClone(heir), takeoff_list: DECK };
+      const lone = { ...structuredClone(heir), takeoff_list: DECK, in_group: 'grpB' };
       const q = new Project();
       q.loadFrom({ metadata: {}, annotations: {}, pageCount: 2,
         measurements: { 0: [structuredClone(lone)], 1: [{ ...structuredClone(heir), name: 'R2' }] } });
@@ -2644,6 +2646,51 @@ if (!(await haveDesktopSource())) {
       eq('a group with no main shape: its first run, promoted with nothing to take, keeps its own takeoff',
         [q.measurements[0][0].group_child ?? null, q.measurements[0][0].takeoff_list ?? null],
         [deskLone ? deskLone.group_child ?? null : 'no answer', deskLone ? deskLone.takeoff_list ?? null : 'no answer']);
+      // ...and its own Group: an empty doomed pops nothing (the desktop's
+      // one_main_shape -> _promote_child({}, keep) hands on nothing)
+      eq('a group with no main shape: its first run, promoted with nothing to take, keeps its own Group',
+        q.measurements[0][0].in_group ?? null, deskLone ? deskLone.in_group ?? null : 'no answer');
+    }
+    // ...and the item's GROUP goes with it the same way, "in no Group"
+    // included (desktop 3.08's round 3 fixes, R3RF-2: _promote_child POPS
+    // the heir's in_group when a non-empty doomed has none -- the key loop
+    // above hands a Group on, never its absence, so a run that a 3.07 or
+    // kept-aside put-back left filed in a Group he had taken the item out
+    // of put the item back in it, and in a Group of ANOTHER takeoff if the
+    // item had moved since). Through both web doors that promote a doomed
+    // main shape -- the canvas Delete (dropShapes -> dropShape) and Delete
+    // sheet (notePageRemoved -> promoteMastersLeaving) -- each compared with
+    // the desktop's own _promote_child of the same pair.
+    {
+      const noGroup = (({ in_group: _g, ...rest }) => rest)(structuredClone(doomed));
+      const filed = { ...structuredClone(heir), in_group: 'grpB' };
+      const groupCases = [
+        ['a main shape in no Group: its heir, filed in a Group, leaves it', noGroup, filed],
+        ['a main shape in its Group: its heir, filed in another, takes the item\'s', structuredClone(doomed), filed],
+        ['a main shape in no Group: its heir in none stays in none', noGroup, structuredClone(heir)],
+        ['a Deck main shape in no Group: its heir leaves the Group and goes to Deck',
+          { ...noGroup, takeoff_list: DECK }, filed],
+      ];
+      const deskGrp = desktopReopens([], [], groupCases.map(([, d, h]) => [structuredClone(d), structuredClone(h)]))
+        .heirs.map(h => (h ? [h.in_group ?? null, h.takeoff_list ?? null, h.group_child ?? null] : 'no answer'));
+      groupCases.forEach(([label, d, h], k) => {
+        const want = k < deskGrp.length ? deskGrp[k] : 'no answer';
+        for (const door of ['the canvas Delete', 'Delete sheet']) {
+          const q = new Project();
+          q.loadFrom({ metadata: {}, annotations: {}, pageCount: 2,
+            measurements: { 0: [structuredClone(d)], 1: [structuredClone(h)] } });
+          let got;
+          if (door === 'the canvas Delete') {
+            q.dropShapes([q.measurements[0][0]._uid]);
+            got = q.measurements[1][0];
+          } else {
+            q.notePageRemoved(0);                 // the heir's sheet is the first now
+            got = (q.measurements[0] || [])[0];
+          }
+          eq(`${label} (${door}), as the desktop's heir is`,
+            got ? [got.in_group ?? null, got.takeoff_list ?? null, got.group_child ?? null] : 'no heir', want);
+        }
+      });
     }
   }
 }

@@ -602,11 +602,10 @@ HEAL_WORDS = ("Recovered takeoff", "no record of", "apart from the rest",
               "more than one main shape", "which was deleted")
 
 
-def check_two():
-    """What opening a job of two takeoffs did (read FIRST, before any other
-    reader), and what the desktop finds in it."""
-    unsaved = bool(win._unsaved)
-    status = win.status_label.text()
+def item_rows():
+    """Every item as [sheet, type, name, tag, child, the Group it is filed
+    in] -- the tag and the Group exactly as the store holds them (None when
+    the key is absent)."""
     labs = labels()
     meas = gl._measurements or {}
 
@@ -620,7 +619,33 @@ def check_two():
             items.append([lab(pg), m.get("type"),
                           m.get("name") or m.get("text") or m.get("label") or "",
                           m.get("takeoff_list"), bool(m.get("group_child")),
-                          m.get("in_group") is not None and m.get("in_group") != ""])
+                          m.get("in_group")])
+    return items
+
+
+def delete_pages(path, labs):
+    """The desktop's OWN Delete Page (_on_page_delete: the question answered
+    Yes, its promotion, its re-add) of each sheet in turn, on the job at
+    `path` -- what the web's Delete Sheet must leave."""
+    ANSWER["default"] = V.QMessageBox.No          # opening must ask nothing
+    load(path)
+    opened = list(ASKED)
+    ANSWER["default"] = V.QMessageBox.Yes
+    for lb in labs:
+        win._on_page_delete(at(lb))
+        settle()
+    out = summary()
+    out["items"] = item_rows()
+    out["openAsked"] = opened
+    return out
+
+
+def check_two():
+    """What opening a job of two takeoffs did (read FIRST, before any other
+    reader), and what the desktop finds in it."""
+    unsaved = bool(win._unsaved)
+    status = win.status_label.text()
+    items = item_rows()
     md = win.metadata
     heard = list(HEARD)
     two = {"unsaved": unsaved, "status": status, "heard": heard,
@@ -663,6 +688,8 @@ def main():
         listen_for_heals()
         load(path)
         out = check_two()
+    elif cmd == "delete-pages":
+        out = delete_pages(path, sys.argv[3:])
     elif cmd == "classes":
         ANSWER["default"] = V.QMessageBox.No      # opening must ask nothing
         load(path)

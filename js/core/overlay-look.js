@@ -374,17 +374,17 @@ export function tintCss(color) {
  *
  * DECLARED, a record no build of the desktop writes: an overlay_page or a
  * rev_page saved as a JSON float (3.0, by hand or another program). Python's
- * json keeps it a float, and the desktop shows nothing for it (a float
- * rev_page raises there); JSON.parse hands JavaScript 3, which cannot be
- * told from 3 -- so the web shows sheet 3 (tests/overlay-look.mjs pins both
- * answers, 'sheet 2.0' and 'revision page 1.0'). A true or '3' names
- * nothing on both.
+ * json keeps it a float, and the desktop shows nothing for it (since 3.08 a
+ * float or bool rev_page names nothing there too, where it used to raise);
+ * JSON.parse hands JavaScript 3, which cannot be told from 3 -- so the web
+ * shows sheet 3 (tests/overlay-look.mjs pins both answers, 'sheet 2.0' and
+ * 'revision page 1.0'). A true or '3' names nothing on both.
  *
  * A record that names nothing stays in the file untouched: the web reads,
- * it never prunes what the desktop wrote. Unlike the desktop's revision
- * branch ('return # revision gone', which leaves the LAST sheet's overlay
- * up -- reported for 3.08), the caller has taken the last sheet's down
- * before it asks.
+ * it never prunes what the desktop wrote. The caller has taken the last
+ * sheet's overlay down before it asks (saved-overlay.js turn()), as the
+ * desktop does on arrival since 3.08 (before it, its revision branch
+ * returned with the last sheet's overlay still up).
  */
 export function overlaySourceOf(state, { pageCount = 0, revisions = [], pictures = [] } = {}) {
   if (!pyTruthy(state) || !isDict(state)) return null;

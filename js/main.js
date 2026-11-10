@@ -869,9 +869,10 @@ async function goToPage(index, { version, view, chose: leftChose, from, settle: 
   const how = viewOf(index, view);
   // The last sheet's saved overlay comes down HERE, before anything below can
   // wait or return: a record on the next sheet that names nothing must leave
-  // nothing up (the desktop's revision branch returns first and leaves the
-  // last sheet's comparison over this one -- reported for 3.08). A 'keep' of
-  // the sheet he is on (a save's re-read) is the same visit and keeps it.
+  // nothing up (before 3.08 the desktop's revision branch returned first and
+  // left the last sheet's comparison over this one; 3.08 takes it down, and
+  // its strip with it). A 'keep' of the sheet he is on (a save's re-read) is
+  // the same visit and keeps it.
   savedOv.turn(index, how);
   // A re-read keeps its job: a turn made while it decodes is a turn.
   if (how === 'keep') landedJob = jobNow();
