@@ -25,10 +25,12 @@ import {
   classNameProblem, classificationPlan, existingSpelling, classLists, renameWhat, renameNotes,
   mergeQuestion, renameSaid, followRename, renameClassification, isClassRow, unfiledItems,
   sheetsOfGroups, assignWhat, assignOptions, assignSaid, assignClassification, applyClassTool,
-  pyTitle, pyCapitalize, classStrip, rowsNow,
+  pyTitle, pyCapitalize, classStrip, rowsNow, planCounts,
 } from '../core/classify.js';
 import { holdGesture } from './hold.js';
-import { inTakeoffList, WEB_TAKEOFF } from '../core/takeoff-lists.js';
+import {
+  inTakeoffList, WEB_TAKEOFF, hasOtherTakeoffs, takeoffListLabel,
+} from '../core/takeoff-lists.js';
 import { pyFixed } from '../core/pyformat.js';
 import { itemCost } from '../core/measure.js';
 
@@ -774,12 +776,24 @@ export class ItemsPanel extends EventTarget {
     return job === this._job && this._headerAct(meta) === act;
   }
 
+  /** The takeoff a heading's Rename and Set reach (desktop _takeoff_scope):
+   *  in a job with other takeoffs, the one the web is in -- Main this round
+   *  -- and its name as he reads it; null in a job with Main alone, whose
+   *  Rename and Set are the whole job's, every word as before. */
+  _takeoffScope() {
+    const md = this.project.metadata;
+    if (!hasOtherTakeoffs(md, this.project.measurements)) return null;
+    return { id: WEB_TAKEOFF, label: takeoffListLabel(md, WEB_TAKEOFF) };
+  }
+
   /**
    * Rename a floor level, category or sub-category from its heading (desktop
    * _rename_from_header). The whole job: renaming a heading is fixing a
-   * name, and a name is the same name everywhere in the job. A Group
-   * section's 'Only the items in the group' waits until the web lists Group
-   * sections (the user's decision 4).
+   * name, and a name is the same name everywhere in the job -- except in a
+   * job of several takeoffs, where a heading is the takeoff's the web is in
+   * (Main), and the other takeoffs' items keep the old name (decision 6). A
+   * Group section's 'Only the items in the group' waits until the web lists
+   * Group sections (the user's decision 4).
    */
   async renameFromHeader(meta) {
     const field = HDR_FIELD[meta.type];
@@ -793,13 +807,20 @@ export class ItemsPanel extends EventTarget {
     // under Walls and under Doors, and renaming one is not renaming the other.
     const base = {};
     if (field === 'sub_category') base.category = classStrip(meta.cat);
+    // Inside one takeoff of several, a heading is THAT takeoff's: its rename
+    // is Main's alone, and the other takeoffs' items keep their name. A job
+    // with only Main renames the whole job, as ever (no takeoff in the
+    // scope, the form or the sentence).
+    const tl = this._takeoffScope();
+    if (tl) base.takeoff = tl.id;
     const listed = this._listedIds;
-    const describe = opt => renameWhat(this.project.measurements, field, old, base, opt, listed);
+    const describe = opt => renameWhat(this.project.measurements, field, old, base, opt, listed,
+      tl ? tl.label : '');
     const presets = { floor_level: FLOOR_LEVEL_PRESETS, category: CATEGORY_PRESETS }[field] || [];
     const { own, rest } = classLists(this.project.measurements, field, base.category ?? null, presets);
     const got = await this.host.askClassification?.({
       title: `Rename ${pyTitle(what)}`,
-      label: `New name for the ${what} '${old}':`,
+      label: tl ? `New name for the ${what} '${old}' in ${tl.label}:` : `New name for the ${what} '${old}':`,
       current: old, own, rest, describe, options: null,
       notes: renameNotes(field, old), old,
     });
@@ -815,7 +836,15 @@ export class ItemsPanel extends EventTarget {
     }
     // A name the job already has, in any capitals or spacing: a merge into
     // the spelling that is there -- asked first, No the default.
-    const into = existingSpelling(this.project.measurements, field, nu, old, base.category ?? null);
+    let into = existingSpelling(this.project.measurements, field, nu, old, base.category ?? null);
+    if (into !== null && tl
+        && !planCounts(classificationPlan(this.project.measurements, field, into, base)).items) {
+      // The job spells it that way, in another takeoff: this one takes the
+      // job's spelling -- one floor, one name -- and nothing in it is
+      // merged, so there is nothing to ask.
+      nu = into;
+      into = null;
+    }
     if (into !== null) {
       const yes = await this.host.askYesNo?.(`Merge ${pyTitle(what)}`,
         mergeQuestion(this.project.measurements, field, plan, into, base));
@@ -832,7 +861,7 @@ export class ItemsPanel extends EventTarget {
     const counts = renameClassification(this.project, field, old, nu, scope,
       { followTool: this.host.followTool || null, also });
     if (!counts || !Object.keys(counts).length) return;
-    this._sayStep(renameSaid(field, old, nu, into !== null, counts));
+    this._sayStep(renameSaid(field, old, nu, into !== null, counts, tl ? tl.label : null));
   }
 
   /**
@@ -852,7 +881,11 @@ export class ItemsPanel extends EventTarget {
     const store = this.project.measurements;
     const listed = (rows || []).filter(isClassRow);
     if (!listed.length) { gone(); return; }
-    const unfiled = unfiledItems(store, field);
+    let unfiled = unfiledItems(store, field);
+    // 'Every item with no floor' is every item of the takeoff the web is in:
+    // the other takeoffs' are not on screen to be filed (decision 6).
+    const tl = this._takeoffScope();
+    if (tl) unfiled = unfiled.filter(this._inList());
     const sheets = sheetsOfGroups(store);
     const filtered = this._filtering() || this.sheetOnly();
     const describe = opt => assignWhat(field, opt === 'job' ? unfiled : listed,
@@ -862,7 +895,7 @@ export class ItemsPanel extends EventTarget {
     const got = await this.host.askClassification?.({
       title: `Set ${pyTitle(what)}`,
       label: `${pyCapitalize(what)} for these items:`,
-      current: '', own, rest, describe, options: assignOptions(field, listed, unfiled),
+      current: '', own, rest, describe, options: assignOptions(field, listed, unfiled, tl ? tl.label : null),
       notes: [], old: null,
     });
     if (!got || !this._stillAsked(job, meta, 'assign')) return;

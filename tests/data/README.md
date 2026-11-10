@@ -124,7 +124,12 @@ chains of steps across Ctrl+Z and Ctrl+Y; the one look-alike merge that
 goes the other way on a file the desktop wrote with its sheets out of page
 order (the declared divergence); and the desktop's `_class_norm` and
 `_class_sort_key` over every character its Python's Unicode table assigns,
-compactly. **No project is in it**: the fixture is
+compactly. Since desktop 3.08 it also holds the same headings in a job of
+two takeoffs (each heading's `takeoffs`: the Move / Copy submenus and the
+move-or-copy clause the web declares N/A), and under `rename` the plans and
+pin filings inside one takeoff and 15 flows in that job (`start.takeoffs`,
+fixture `tl`: Main renamed House, Deck beside it, the web in House) -- the
+3.07-era entries are unchanged. **No project is in it**: the fixture is
 the desktop test's own (generic names), written out in
 `tests/rename-python-truth.py`, so there is nothing to scrub.
 

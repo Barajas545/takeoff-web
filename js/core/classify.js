@@ -46,8 +46,17 @@
 //
 // Pure: no DOM. The store is handed in -- and for the two writes, the
 // Project (its transact, its undo level, its 'items-changed').
+//
+// Since 3.08 a plan can be asked inside one takeoff ({takeoff: id}): a
+// heading renamed in a job of several takeoffs is the takeoff's own
+// (decision 6). takeoff-lists.js and this module import each other: each
+// reads the other's names INSIDE its functions only, never while the module
+// itself is being evaluated, so the order the two load in does not matter.
+// Keep it that way (a top-level call across the pair would find the other
+// half not yet initialised).
 
 import { isTakeoffType } from './revisions.js';
+import { inTakeoffList } from './takeoff-lists.js';
 
 /** The three fields a heading can be (GLPageWidget.CLASS_FIELDS). */
 export const CLASS_FIELDS = Object.freeze(['floor_level', 'category', 'sub_category']);
@@ -381,7 +390,12 @@ const scopeCat = scope => {
  * `scope` narrows it: {category} keeps a sub-category to the one category it
  * sits under (the same 'Exterior' can be under Walls and under Doors),
  * {group} to the items in one Group container (kept so it stays
- * truth-checked; the web lists no Group section to ask it from yet).
+ * truth-checked; the web lists no Group section to ask it from yet),
+ * {takeoff} to the items of one takeoff ('' is Main; null or absent is no
+ * takeoff scope) -- a heading renamed inside a job of several takeoffs is
+ * that takeoff's (decision 6). The marks every takeoff shares (rulers,
+ * notes) are renamed with it only while no item of another takeoff keeps
+ * the old name: while one does, the name is still the job's.
  *
  * kind: 'item' (a row of the Items list -- a Group container too, which the
  * web does not list but renames), 'shape' (another shape of one), 'aid' (a
@@ -397,6 +411,9 @@ export function classificationPlan(store, field, old, scope = null) {
   const sc = scope || {};
   const sCat = scopeCat(sc);
   const sGrp = pyStr(sc.group);
+  // (the desktop's `None if s_tl is None else str(s_tl or "")`)
+  const sTl = sc.takeoff === undefined || sc.takeoff === null ? null : pyStr(sc.takeoff);
+  let outside = false;          // another takeoff's item keeps the old name
   const masters = new Map();
   for (const lst of Object.values(store || {})) {
     for (const m of listOf(lst)) {
@@ -419,6 +436,13 @@ export function classificationPlan(store, field, old, scope = null) {
       if (pyTrue(m.group_child)) own = masters.get(m.group_id) || m;
       if (sGrp && !(pyStr(own.in_group) === sGrp
           || (isGroupItem(own) && pyStr(own.group_item_id) === sGrp))) continue;
+      if (sTl !== null && !inTakeoffList(own, sTl)) {
+        if (!outside) {
+          outside = (classVal(m, field) === old && (sCat === null || classVal(own, 'category') === sCat))
+            || listOf(m.associated_items).some(ai => isDict(ai) && classVal(ai, field) === old);
+        }
+        continue;
+      }
       const ownCat = classVal(own, 'category');
       if (classVal(m, field) === old && (sCat === null || ownCat === sCat)) {
         take(m, pyTrue(m.group_child) ? 'shape' : isClassRow(m) ? 'item' : 'aid');
@@ -444,7 +468,8 @@ export function classificationPlan(store, field, old, scope = null) {
       }
     }
   }
-  return plan;
+  // A ruler or a note keeps the name while another takeoff still uses it.
+  return outside ? plan.filter(p => p[2] !== 'aid') : plan;
 }
 
 /** How many of each kind a plan holds (_plan_counts). */
@@ -577,10 +602,21 @@ export function setPinFiling(meta, kind, filing) {
  * category moves the kind filed under it. A floor rename moves none, and nor
  * does a rename for one Group's items. Returns the moves, as
  * [['pin', null, kind, was, now]].
+ *
+ * Inside one takeoff ({takeoff}, 3.08): where new pins go is the job's, not
+ * one takeoff's. A rename inside one takeoff moves it only when it leaves
+ * the old name on no item of any takeoff -- asked of `store` (the job's
+ * items) AFTER the rename's writes: while another takeoff still files its
+ * doors under the old trade, new doors go there too.
  */
-export function followPinFiling(meta, field, old, nu, scope = null) {
+export function followPinFiling(meta, field, old, nu, scope = null, store = null) {
   const sc = scope || {};
   if (!['category', 'sub_category'].includes(field) || pyTrue(sc.group)) return [];
+  if (sc.takeoff !== undefined && sc.takeoff !== null) {
+    const rest = { ...sc };
+    delete rest.takeoff;
+    if (classificationPlan(store, field, old, rest).some(([, , kind]) => kind !== 'aid')) return [];
+  }
   const sCat = scopeCat(sc);
   const moves = [];
   for (const kind of PIN_KINDS) {
@@ -828,8 +864,11 @@ export function classLists(store, field, category, presets) {
  * The rename form's sentence -- what will change, BEFORE OK, the items the
  * list's filters hide included (_rename_from_header's describe). `listed`
  * is the set of items the last build listed (the desktop's _listed_ids).
+ * With `base.takeoff` (a job of several takeoffs: the rename is that
+ * takeoff's), it says so, and how many items of the other takeoffs keep the
+ * old name; `takeoffName` is the takeoff as he reads it.
  */
-export function renameWhat(store, field, old, base, opt, listed) {
+export function renameWhat(store, field, old, base, opt, listed, takeoffName = '') {
   const sc = { ...(base || {}) };
   if (opt) sc.group = opt;
   const plan = classificationPlan(store, field, old, sc);
@@ -843,6 +882,13 @@ export function renameWhat(store, field, old, base, opt, listed) {
     txt += ` ${hid} of them ${be} hidden by the list's filters and ${be} renamed too.`;
   }
   if (n.aids) txt += ` Also on ${nOf(n.aids, 'note or ruler')}.`;
+  if (base && base.takeoff !== undefined && base.takeoff !== null) {
+    const all = { ...sc };
+    delete all.takeoff;
+    const out = planCounts(classificationPlan(store, field, old, all)).items - n.items;
+    txt += ` Only in the takeoff ${takeoffName}`
+      + (out > 0 ? ` — ${nOf(out, 'item')} in other takeoffs keep${out === 1 ? 's' : ''} '${old}'.` : '.');
+  }
   return txt;
 }
 
@@ -869,11 +915,12 @@ export function mergeQuestion(store, field, plan, into, base) {
  *  user's decision 1: the desktop says '— Ctrl+Z puts it back'). */
 export const UNDO_WORDS = '— Undo puts it back';
 
-/** The status line after a rename. */
-export function renameSaid(field, old, nu, merged, counts) {
+/** The status line after a rename; `takeoffName` (a job of several
+ *  takeoffs) the takeoff it was made in, null for the whole job. */
+export function renameSaid(field, old, nu, merged, counts, takeoffName = null) {
   const what = HDR_WHAT[field];
   return `${merged ? 'Merged' : 'Renamed'} ${what} '${old}' ${merged ? 'into' : 'to'} '${nu}' `
-    + `on ${amountWords(counts)} ${UNDO_WORDS}`;
+    + `on ${amountWords(counts)}${takeoffName === null ? '' : ` in the takeoff ${takeoffName}`} ${UNDO_WORDS}`;
 }
 
 /** {group_id: the sheets its shapes are on} (the items on no sheet are on
@@ -910,14 +957,17 @@ export function assignWhat(field, pick, filtered, sheetsOf) {
 }
 
 /** The Set form's choice, when the job has unfiled items the list is not
- *  showing; null when the two are the same items. */
-export function assignOptions(field, listed, job) {
+ *  showing; null when the two are the same items. `takeoffName` (a job of
+ *  several takeoffs): 'every item' is every item of that takeoff, and it
+ *  says so; null for the whole job. */
+export function assignOptions(field, listed, job, takeoffName = null) {
   const a = new Set(listed);
   const b = new Set(job);
   if (a.size === b.size && [...a].every(m => b.has(m))) return null;
   const hdr = field === 'floor_level' ? 'NO FLOOR LEVEL' : 'Uncategorized';
+  const every = takeoffName === null ? 'Every item in the job' : `Every item in ${takeoffName}`;
   return [[`The ${nOf(listed.length, 'item')} listed under ${hdr}`, 'listed'],
-    [`Every item in the job with no ${HDR_WHAT[field]} (${job.length})`, 'job']];
+    [`${every} with no ${HDR_WHAT[field]} (${job.length})`, 'job']];
 }
 
 /** The status line after a Set. */
@@ -957,7 +1007,9 @@ export function renameClassification(project, field, old, nu, scope = null,
   let pins = [];
   project.transact(`Rename ${HDR_WHAT[field]}`, () => {
     for (const [d, k] of plan) d[k] = nu;
-    pins = followPinFiling(project.metadata, field, old, nu, scope);
+    // (after the writes: inside one takeoff, whether any takeoff still
+    // files something under the old name is asked of the job as it is now)
+    pins = followPinFiling(project.metadata, field, old, nu, scope, project.measurements);
   });
   const moves = follow ? [...(follow(field, old, nu, scope) || [])] : [];
   // (a value that did not move is no move; a fold always moved)

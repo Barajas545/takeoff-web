@@ -55,7 +55,12 @@
 // holds what the entries then do); nothing to rename or set while the list
 // is read-only; the touch
 // layout says 'Tap' and 'Hold'; a datalist shows neither the desktop's
-// leading blank nor its separator.
+// leading blank nor its separator. And in a job of several takeoffs (3.08)
+// the web moves and copies nothing between takeoffs this round: the
+// desktop's 'Move / Copy these N items to takeoff' submenus and its
+// 'Right-click to move or copy them to another takeoff' clause are N/A --
+// declared, and checked to be exactly what the desktop adds to its
+// one-takeoff heading (section 1b).
 //
 // Run: node tests/heading-menu.mjs
 import { execFile } from 'node:child_process';
@@ -385,6 +390,68 @@ function checkWords(truth, where) {
   log(`   ${n} headings`);
 }
 
+/** The desktop's heading in a job of several takeoffs, its takeoff entries
+ *  taken out (declared N/A on the web this round): the Move / Copy
+ *  submenus and the separator the desktop puts after them. */
+const TAKEOFF_CLAUSE = 'Right-click to move or copy them to another takeoff';
+function dropTakeoffMenus(menu) {
+  const out = [];
+  for (let i = 0; i < menu.length; i += 1) {
+    const x = menu[i];
+    if (x && typeof x === 'object') {
+      if (menu[i + 1] === '-') i += 1;      // the separator after the last submenu
+      continue;
+    }
+    out.push(x);
+  }
+  return out;
+}
+const dropTakeoffClause = tip => tip.split('  •  ').filter(p => p !== TAKEOFF_CLAUSE).join('  •  ');
+
+/** A job of two takeoffs as a 3.08 file holds it (the truth's rows). */
+function takeoffJob(rows) {
+  const p = new Project();
+  p.loadFrom({ metadata: { page_labels: ['X1.0', 'X2.0', 'X3.0'], takeoff_main_label: rows[0][1],
+    takeoff_lists: rows.slice(1).map(([id, label]) => ({ list_id: id, label })) },
+  annotations: {}, measurements: {}, pageCount: 3 });
+  return p;
+}
+
+function checkTakeoffHeadings(truth, where) {
+  log(`\n-- 1b. a heading in a job of two takeoffs: the desktop's Move / Copy entries are N/A (${where}) --`);
+  const tl = truth.headers.filter(h => h.takeoffs);
+  ok(`${where}: the truth has every heading in a job of two takeoffs too`, tl.length === truth.headers.length
+    && tl.some(h => h.takeoffs.menu.some(x => x && typeof x === 'object'))
+    && tl.some(h => h.takeoffs.tip.includes(TAKEOFF_CLAUSE)));
+  const r = panelRig({ project: takeoffJob(tl[0] ? tl[0].takeoffs.rows : [['', 'Main']]) });
+  try {
+    for (const h of tl) {
+      const T = h.takeoffs;
+      const tag = `${where}: ${h.label} (${h.rows}), two takeoffs`;
+      eq(`${tag}: the desktop's act is the one-takeoff act`, T.act, h.act);
+      // The N/A is exactly the takeoff entries: without them the desktop's
+      // heading is its one-takeoff heading, entry for entry, word for word.
+      eq(`${tag}: the desktop's menu, its Move / Copy submenus taken out, is its one-takeoff menu`,
+        dropTakeoffMenus(T.menu), h.menu);
+      eq(`${tag}: ...and its tooltip, the move-or-copy clause taken out, is its one-takeoff tooltip`,
+        dropTakeoffClause(T.tip), h.tip);
+      for (const [k, f] of Object.entries(T.forced)) {
+        eq(`${tag}: act '${k}': the same, menu and tooltip`, [dropTakeoffMenus(f.menu), dropTakeoffClause(f.tip)],
+          [h.forced[k].menu, h.forced[k].tip]);
+      }
+      ok(`${tag}: ...the clause stands only where the heading has no right-click of its own`,
+        !T.tip.includes(TAKEOFF_CLAUSE) || !/Right-click to (rename|set a )/.test(T.tip), T.tip);
+      // The web's own, on the job's list: no takeoff entry, no takeoff clause.
+      r.panel._tree = webTree(truth.rows[h.rows]);
+      r.state.classify = true; r.state.readOnly = false;
+      eq(`${tag}: the web's menu: the desktop's without its takeoff entries`,
+        labels(r.panel._headerEntries(h.meta)), dropTakeoffMenus(T.menu));
+      eq(`${tag}: ...its tooltip: the desktop's without the clause (and no drag)`, r.panel._headerTitle(h.meta),
+        dropDrag(dropTakeoffClause(T.tip)));
+    }
+  } finally { r.restore(); }
+}
+
 function checkMenus(truth, where) {
   log(`\n-- 1. the heading menu ItemsPanel builds == _show_header_menu (${where}) --`);
   const r = panelRig();
@@ -575,6 +642,7 @@ function checkReveals(truth, where) {
 
 checkWords(SNAP, 'snapshot');
 checkMenus(SNAP, 'snapshot');
+checkTakeoffHeadings(SNAP, 'snapshot');
 checkChoices(SNAP, 'snapshot');
 checkValues(SNAP, 'snapshot');
 checkReveals(SNAP, 'snapshot');
@@ -2047,6 +2115,7 @@ if (!(await haveDesktopSource())) {
       + ` -- module names ${truth.lifted.module.join(', ')})`);
     checkWords(truth, 'live');
     checkMenus(truth, 'live');
+    checkTakeoffHeadings(truth, 'live');
     checkChoices(truth, 'live');
     checkValues(truth, 'live');
     checkReveals(truth, 'live');

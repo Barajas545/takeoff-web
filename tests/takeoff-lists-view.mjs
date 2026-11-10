@@ -33,6 +33,15 @@
 //       under "Not shown:", never in `filtered`; soloCount and the combos
 //       are Main's; a Main-only job lists, notes and words exactly as v31
 //       (v31's own modules, read out of this repository's history).
+//   T9  what the web WRITES reaches no item it hides: a heading's Rename in
+//       House leaves Deck's shapes and a shared note Deck still files under
+//       the name as they were, and takes the spelling only another takeoff
+//       has without a merge question; Set's 'every item' is every item of
+//       House, and Deck's blank ones stay blank; where new pins go moves only
+//       when no takeoff keeps the trade -- each through the real list, its
+//       heading menu and main.js's own router (the count guards are T3's,
+//       and the Delete sheet words U9's). A Main-only job renames and sets
+//       the whole job, in v31's words.
 //
 // Run: node tests/takeoff-lists-view.mjs
 import { execFileSync } from 'node:child_process';
@@ -640,6 +649,162 @@ log('\n-- T5: the SHEET chip says what another takeoff leaves out --');
     floors.includes('Level 1') && groups.includes('Concrete') && !floors.includes('Deck Level')
     && !groups.includes('Decking'), JSON.stringify([floors, groups]));
   rig.restore();
+}
+
+// ═══ T9: what the web writes reaches no item it hides ═══════════════════
+//
+// Through the real ItemsPanel: its heading menu's entry, main.js's own
+// router (classifyFromHeading, lifted by text) into renameFromHeader /
+// assignFromHeader, the form answered the way he answers it (its sentence
+// asked of the form's own describe), the job's own undo level.
+log('\n-- T9: a heading\'s Rename and Set write House\'s items only --');
+const ROUTER = (() => {
+  const a = MAIN.indexOf('\nfunction classifyFromHeading(');
+  return a < 0 ? null : MAIN.slice(a + 1, MAIN.indexOf('\n}\n', a) + 2);
+})();
+ok('main.js has classifyFromHeading', !!ROUTER);
+const CL = await import(pathToFileURL(path.join(ROOT, 'js/core/classify.js')).href);
+/** The list with renaming on, its menu's act run as main.js runs it. */
+function classifyRig(p, c, opts = {}) {
+  const rig = panelRig(p, c, opts);
+  const st = { forms: [], asked: [], said: [], answer: null, merge: true, pending: null };
+  // eslint-disable-next-line no-new-func
+  const route = new Function('itemsPanel', `${ROUTER}\nreturn classifyFromHeading;`)({
+    renameFromHeader: m => { st.pending = rig.panel.renameFromHeader(m); return st.pending; },
+    assignFromHeader: (m, r) => { st.pending = rig.panel.assignFromHeader(m, r); return st.pending; },
+  });
+  Object.assign(rig.panel.host, {
+    canClassifyFromHeadings: () => true,
+    classifyFromHeading: (act, meta, rows) => route(act, meta, rows),
+    askClassification: async o => {
+      st.forms.push({ label: o.label, options: (o.options || []).map(x => x[0]),
+        what: o.describe(o.options ? (st.answer.option ?? o.options[0][1]) : null) });
+      // (the choice he picks, when the form offers one; the first, as it opens, otherwise)
+      return st.answer && { name: st.answer.name, option: o.options ? (st.answer.option ?? o.options[0][1]) : null };
+    },
+    askYesNo: async (title, text) => { st.asked.push(text); return st.merge; },
+    say: t => st.said.push(t),
+  });
+  rig.panel.refresh();
+  const act = async (meta, answer) => {
+    st.answer = answer;
+    st.pending = null;
+    const e = rig.panel._headerEntries(meta).find(x => x !== '-' && !['Collapse all', 'Expand all'].includes(x.label));
+    if (!e) return false;
+    e.run();
+    await st.pending;
+    return true;
+  };
+  return { ...rig, st, act };
+}
+const shapesOf = (p, name) => [...p.allItems()].filter(([, m]) => m.name === name || m.text === name).map(([, m]) => m);
+const fieldOf = (p, name, field) => shapesOf(p, name).map(m => m[field] ?? '');
+const CAT = cat => ({ type: 'cat', fl: 'Level 1', cat, sub: null });
+{
+  // A shared note under the name Deck still uses: it keeps the name too.
+  const p = await fresh({ edit: o => { o.measurements[0].find(m => m.type === 'textnote').category = 'Framing'; } });
+  const { c } = ctlRig(p, 0);
+  const r = classifyRig(p, c);
+  const deck0 = JSON.stringify(shapesOf(p, 'Deck boards'));
+  eq('the fixture: Deck boards has 3 shapes under Framing, House\'s Wall M 2 and Joists 1',
+    [fieldOf(p, 'Deck boards', 'category'), fieldOf(p, 'Wall M', 'category'), fieldOf(p, 'Joists', 'category')],
+    [['Framing', 'Framing', 'Framing'], ['Framing', 'Framing'], ['Framing']]);
+  const lv = p._undo.length;
+  ok('the Level 1 / Framing heading offers Rename', await r.act(CAT('Framing'), { name: 'Carpentry' }));
+  eq('Rename in House: House\'s shapes renamed; Deck\'s 3 shapes and the shared note keep Framing',
+    [fieldOf(p, 'Wall M', 'category'), fieldOf(p, 'Joists', 'category'), fieldOf(p, 'Deck boards', 'category'),
+      fieldOf(p, 'check', 'category')],
+    [['Carpentry', 'Carpentry'], ['Carpentry'], ['Framing', 'Framing', 'Framing'], ['Framing']]);
+  ok('...Deck\'s item is byte for byte as it was', JSON.stringify(shapesOf(p, 'Deck boards')) === deck0);
+  eq('...the form asked it in House, and said what stays', [r.st.forms[0]?.label, r.st.forms[0]?.what],
+    ['New name for the category \'Framing\' in House:',
+      'Renames \'Framing\' on 2 items. Only in the takeoff House — 1 item in other takeoffs keeps \'Framing\'.']);
+  eq('...one undo level, the takeoff in its scope, and the line names the takeoff',
+    [p._undo.length - lv, p.undoTop.tool.rename[3], r.st.said],
+    [1, { takeoff: '' }, ['Renamed category \'Framing\' to \'Carpentry\' on 2 items in the takeoff House — Undo puts it back']]);
+  p.undo();
+  eq('...Undo: every name back', [fieldOf(p, 'Wall M', 'category'), fieldOf(p, 'Joists', 'category')],
+    [['Framing', 'Framing'], ['Framing']]);
+  r.restore();
+}
+{
+  // The spelling only Deck has is taken, with nothing to ask (no House item
+  // is under it, so nothing is merged).
+  const p = await fresh({ edit: o => {
+    for (const m of Object.values(o.measurements).flat()) if (m.name === 'Slab') m.category = 'Masonry';
+  } });
+  const { c } = ctlRig(p, 0);
+  const r = classifyRig(p, c);
+  await r.act(CAT('Masonry'), { name: 'railing' });
+  eq('a name only Deck spells ("Railing"): taken as Deck spells it, and no merge question',
+    [fieldOf(p, 'Slab', 'category'), r.st.asked, r.st.said],
+    [['Railing'], [], ['Renamed category \'Masonry\' to \'Railing\' on 1 item in the takeoff House — Undo puts it back']]);
+  r.restore();
+}
+{
+  // Set's 'every item': with the SHEET chip on X1.0 the list shows fewer
+  // than House has, so the form offers the whole of House -- never Deck's.
+  const p = await fresh();
+  const { c } = ctlRig(p, 0);
+  const deckBlank = [...p.allItems()].filter(([, m]) => isDeck(m) && CL.isClassRow(m) && !CL.classStrip(m.floor_level))
+    .map(([, m]) => m);
+  const houseBlank = [...p.allItems()].filter(([, m]) => !isDeck(m) && CL.isClassRow(m) && !CL.classStrip(m.floor_level))
+    .map(([, m]) => m);
+  eq('the fixture: Deck has 5 items with no floor level, House 4', [names(deckBlank), houseBlank.length],
+    [['count:Posts', 'group:Stairs', 'polyline:Ledger', 'standalone:Screws', 'window:Window 2'], 4]);
+  const deck0 = JSON.stringify(deckBlank);
+  const r = classifyRig(p, c, { view: own(0), chip: true });
+  await r.act({ type: 'floor', fl: '', cat: null, sub: null }, { name: 'Level 3', option: 'job' });
+  eq('Set on X1.0\'s NO FLOOR LEVEL: the form offers every item in House, not the job',
+    r.st.forms[0]?.options[1], `Every item in House with no floor level (${houseBlank.length})`);
+  eq('..."every item": House\'s 4 filed, Deck\'s 5 still blank and byte for byte as they were',
+    [houseBlank.map(m => m.floor_level), deckBlank.map(m => m.floor_level ?? ''), JSON.stringify(deckBlank) === deck0],
+    [houseBlank.map(() => 'Level 3'), ['', '', '', '', ''], true]);
+  r.restore();
+}
+{
+  // Where new pins go is the job's: it moves only when no takeoff keeps the
+  // trade (Deck's Window 2 is under Doors & Windows).
+  const meta = { type: 'cat', fl: '', cat: 'Doors & Windows', sub: null };
+  const p = await fresh();
+  const { c } = ctlRig(p, 0);
+  const r = classifyRig(p, c);
+  await r.act(meta, { name: 'Openings' });
+  eq('Rename Doors & Windows in House: Window 1 renamed, Deck\'s Window 2 keeps it -- and new pins still go there',
+    [fieldOf(p, 'Window 1', 'category'), fieldOf(p, 'Window 2', 'category'), p.metadata.pin_filing ?? null],
+    [['Openings'], ['Doors & Windows'], null]);
+  r.restore();
+  const p2 = await fresh({ edit: o => { for (const m of Object.values(o.measurements).flat()) if (m.name === 'Window 2') m.category = 'Glazing'; } });
+  const { c: c2 } = ctlRig(p2, 0);
+  const r2 = classifyRig(p2, c2);
+  await r2.act(meta, { name: 'Openings' });
+  eq('...no takeoff keeps it: new windows and doors follow the rename',
+    p2.metadata.pin_filing ?? null, { window: { category: 'Openings' }, door: { category: 'Openings' } });
+  p2.undo();
+  ok('...and its Undo takes that back', p2.metadata.pin_filing === undefined);
+  r2.restore();
+}
+{
+  // A job with only Main: the whole job, in v31's words.
+  const p = await fresh({ edit: o => { mainOnly(o); o.measurements[0].find(m => m.type === 'textnote').category = 'Framing'; } });
+  const { c } = ctlRig(p, 0);
+  const r = classifyRig(p, c);
+  await r.act(CAT('Framing'), { name: 'Carpentry' });
+  eq('Main-only: the whole job renamed, the note with it, and no takeoff in the form, the line or the scope',
+    [fieldOf(p, 'Deck boards', 'category'), fieldOf(p, 'check', 'category'), r.st.forms[0]?.label, r.st.forms[0]?.what,
+      r.st.said, p.undoTop.tool.rename[3]],
+    [['Carpentry', 'Carpentry', 'Carpentry'], ['Carpentry'], 'New name for the category \'Framing\':',
+      'Renames \'Framing\' on 3 items. Also on 1 note or ruler.',
+      ['Renamed category \'Framing\' to \'Carpentry\' on 3 items — Undo puts it back'], {}]);
+  r.restore();
+  const p2 = await fresh({ edit: mainOnly });
+  const { c: c2 } = ctlRig(p2, 0);
+  const r2 = classifyRig(p2, c2, { view: own(0), chip: true });
+  await r2.act({ type: 'floor', fl: '', cat: null, sub: null }, { name: 'Level 3', option: 'job' });
+  eq('Main-only: Set\'s other choice is every item in the job, and files all 9',
+    [r2.st.forms[0]?.options[1], [...p2.allItems()].filter(([, m]) => CL.isClassRow(m) && !CL.classStrip(m.floor_level)).length],
+    ['Every item in the job with no floor level (9)', 0]);
+  r2.restore();
 }
 
 // ═══ U9: Delete sheet, through main.js's own deleteCurrentPage ══════════

@@ -64,6 +64,16 @@
 // 11. The wiring, by text: main.js's host and router, the controller's pins,
 //     project.js's tag above tagBooking, run-all.
 // 12. Live: the desktop source as it is now, when it is here.
+// 3.08 (decision 6, spec section 6): the same sections in a job of two
+//     takeoffs, Main renamed House and Deck, the web in House -- the plan
+//     inside one takeoff (the shared marks kept while another takeoff keeps
+//     the name), where new pins go (moved only when no takeoff keeps the
+//     name), and the flows through the real list and form: the form's label
+//     and sentence ('Only in the takeoff House — N items in other takeoffs
+//     keep ...'), the spelling another takeoff has taken with no merge
+//     question, the merge question counting House's only, Set's 'Every item
+//     in House', the status line, the rename its undo level records, and the
+//     three takeoff keys exactly as the job opened, across Undo and Redo.
 //
 // The web's own, on purpose, each checked: the status line says '— Undo
 // puts it back' (decision 1); no Report preset sentence (decision 3); no
@@ -321,9 +331,10 @@ function oddStore(build) {
 function checkPlans(truth, where) {
   let n = 0;
   for (const c of truth.rename.plans) {
-    const store = c.odd ? oddStore(truth.rename.fixtures.build) : storeOf(truth.rename.fixtures.build);
+    const store = c.odd ? oddStore(truth.rename.fixtures.build) : storeOf(truth.rename.fixtures[c.fixture || 'build']);
     const plan = C.classificationPlan(store, c.field, c.old, c.scope);
-    const tag = `${where}: plan ${c.field} ${JSON.stringify(c.old)} ${JSON.stringify(c.scope)}${c.odd ? ' (odd store)' : ''}`;
+    const tag = `${where}: plan ${c.field} ${JSON.stringify(c.old)} ${JSON.stringify(c.scope)}${c.odd ? ' (odd store)' : ''}`
+      + `${c.fixture ? ` (${c.fixture})` : ''}`;
     if (!eq(`${tag}: the places`, planPaths(store, plan), c.plan)) continue;
     eq(`${tag}: the counts`, C.planCounts(plan), c.counts);
     n += 1;
@@ -340,6 +351,14 @@ const PICKS = {
   'the Group container, filed': s => [s['-1000'][1]],
   nothing: () => [],
 };
+/** The job's takeoffs (the truth's `takeoffs`: [[id, label]], Main first)
+ *  as a 3.08 file holds them: the registry and Main's name. */
+const TAKEOFF_KEYS = ['takeoff_lists', 'takeoff_list_active', 'takeoff_main_label'];
+const takeoffMeta = rows => (rows ? {
+  takeoff_lists: rows.slice(1).map(([id, label]) => ({ list_id: id, label })),
+  takeoff_main_label: rows[0][1],
+} : {});
+const takeoffKeysNow = p => JSON.stringify(TAKEOFF_KEYS.filter(k => k in p.metadata).map(k => [k, p.metadata[k]]));
 function jobOf(pairs, meta = {}) {
   const p = new Project();
   p.loadFrom({ metadata: { page_labels: ['X1.0', 'X2.0', 'X3.0'], ...clone(meta) }, annotations: {},
@@ -370,6 +389,18 @@ function checkAssign(truth, where) {
 // ═══ 4. pins ═════════════════════════════════════════════════════════════
 function checkPins(truth, where) {
   for (const c of truth.rename.pins) {
+    if (c.label.startsWith('takeoffs: ')) {
+      // 3.08: the scoped plan written, then where new pins go asked of the
+      // job as the writes left it (rename_classification's order).
+      const store = storeOf(c.store);
+      const meta = {};
+      const plan = C.classificationPlan(store, c.field, c.old, c.scope);
+      for (const [d, k] of plan) d[k] = c.new;
+      const moves = C.followPinFiling(meta, c.field, c.old, c.new, c.scope, store);
+      eq(`${where}: pins, ${c.label}: ${c.field} ${c.old} -> ${c.new} ${JSON.stringify(c.scope)}`,
+        [planPaths(store, plan), moves.map(mv => deskMove(mv)), meta], [c.written, c.moves, c.meta]);
+      continue;
+    }
     if (c.label === 'no window') {
       eq(`${where}: no job to keep it in: nothing recorded`, C.setPinFiling(null, 'window', ['X', null]), c.set);
       eq(`${where}: ...and stock is where pins go`, C.pinFiling(null, 'window'), c.filing);
@@ -557,9 +588,12 @@ async function checkFlows(truth, where) {
   for (const f of truth.rename.flows) {
     const tag = `${where}: ${f.label}`;
     const pairs = fixtures[f.start.fixture];
-    const r = rig({ pairs, meta: f.start.meta, panel: f.start.panel, tool: f.start.tool });
+    const r = rig({ pairs, meta: { ...f.start.meta, ...takeoffMeta(f.start.takeoffs) }, panel: f.start.panel,
+      tool: f.start.tool });
     const { p, ctl, panel, st } = r;
     const fixture = storeOf(pairs);
+    const keys0 = takeoffKeysNow(p);
+    if (f.start.takeoffs) ok(`${tag}: the job opens with its takeoffs`, keys0.includes('takeoff_lists'));
     eq(`${tag}: the web opens and saves the fixture changing nothing`, leafDiff(fixture, fileStore(p)), []);
     eq(`${tag}: the panel starts where the desktop's does`, panelNow(panel), {
       floor: f.start.panel.floor, group: f.start.panel.group, collapsed: f.start.panel.collapsed });
@@ -592,12 +626,20 @@ async function checkFlows(truth, where) {
     eq(`${tag}: where new pins go`, metaNow(p), f.after.meta);
     eq(`${tag}: the list`, panelNow(panel), f.after.panel);
     eq(`${tag}: the tool`, toolNow(ctl), f.after.tool);
+    if (f.tagged) {
+      eq(`${tag}: the rename its undo level records (its scope, the takeoff in it, a merge)`,
+        p._undo.length > levels0 && p.undoTop.tool && p.undoTop.tool.rename ? [p.undoTop.tool.rename] : [], f.tagged);
+    }
+    eq(`${tag}: the takeoffs' keys exactly as the job opened`, takeoffKeysNow(p), keys0);
     if (!f.levels) {
       eq(`${tag}: nothing written, nothing counted as a change`, p.changeCount, cc0);
       n += 1;
       continue;
     }
     ok(`${tag}: the change is counted (changeCount)`, p.changeCount > cc0);
+    // (the web wrote no level where the desktop wrote one: said above, and
+    // there is no Undo of it to follow)
+    if (p._undo.length === levels0) continue;
     const t = p.undoTop.tool || { moves: [], pins: [] };
     const webMoves = t.moves.filter(mv => mv[0] !== 'fold');
     const mine = mv => mv[1] === ctl || mv[0] === 'spec';
@@ -667,6 +709,7 @@ async function checkFlows(truth, where) {
     p.undo();
     eq(`${tag}: a second Undo, the same as the first`, [leafDiff(fixture, fileStore(p)), toolNow(ctl), metaNow(p)],
       [f.undone.changes, f.undone.tool, f.undone.meta]);
+    eq(`${tag}: ...and across Undo and Redo, the takeoffs' keys as the job opened`, takeoffKeysNow(p), keys0);
     n += 1;
   }
   log(`   ${n} of ${truth.rename.flows.length} flows the desktop's, step for step`);
@@ -776,6 +819,12 @@ function checkText(truth, where) {
 }
 
 function runSections(truth, where) {
+  ok(`${where}: the truth holds the 3.08 cases: plans and pins inside one takeoff, flows in a job of two`,
+    truth.rename.plans.filter(c => c.fixture === 'tl').length >= 100
+    && truth.rename.pins.filter(c => c.label.startsWith('takeoffs: ')).length >= 20
+    && truth.rename.flows.filter(f => f.start.takeoffs).length >= 12
+    && truth.rename.flows.some(f => f.start.takeoffs && f.asked.length === 0 && f.dialog[0]
+      && /in other takeoffs keeps? '/.test(f.dialog[0].what) && f.levels === 1));
   log(`\n-- 1. the words == the desktop's (${where}) --`);
   checkWords(truth, where);
   checkText(truth, where);

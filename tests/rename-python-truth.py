@@ -78,6 +78,20 @@ this Python's Unicode table assigns. tests/heading-menu.mjs replays every headin
 diffs it, from the committed tests/data/rename-truth.json on a fresh clone
 and live against this script when the desktop source is here.
 
+Desktop 3.08 (several takeoffs in one job; decision 6): a heading in a job
+of more than one takeoff is the takeoff he is in. Lifted with the rest:
+TakeoffItemsPanel._takeoff_rows / _many_takeoffs / _active_takeoff /
+_takeoff_label / _takeoff_scope / _takeoff_submenu and GLPageWidget's
+in_active_list / active_takeoff_list (the module's in_takeoff_list,
+takeoff_list_of and friends by the walk). Declared: the window's list of
+takeoffs the panel is handed (_takeoff_fn, takeoff_fn() below: None is a job
+with Main alone, as every 3.07-era case is), the two signals the Move / Copy
+submenus emit, and the canvas's takeoff, Main (the web's, always, this
+round). The 3.08 cases: every heading again in a job of two takeoffs (House,
+Deck), the plan and the pin filing inside one takeoff, and 15 flows on the
+fixture r7_tl(). It needs the 3.08 source: against 3.07 it stops with one
+line saying so.
+
 Usage:
   python -B tests/rename-python-truth.py [pdf_fast_viewer.py]          JSON to stdout
   python -B tests/rename-python-truth.py [pdf_fast_viewer.py] --write  rewrite the snapshot
@@ -111,7 +125,12 @@ PANEL_MEMBERS = ["_HDR_FIELD", "_HDR_WHAT", "_SOLO", "_MENU_CSS",
                  "_follow_rename", "_assign_from_header",
                  # ...and what one sheet lists (the SHEET chip): the rename
                  # form's 'hidden by the list's filters' counts from it
-                 "_NOT_ROWS", "_sheet_rows"]
+                 "_NOT_ROWS", "_sheet_rows",
+                 # 3.08: the job's takeoffs as the panel reads them, and the
+                 # one a heading's Rename / Set reach (decision 6). Fed by
+                 # _takeoff_fn (a stub): None is a job with Main alone.
+                 "_takeoff_rows", "_many_takeoffs", "_active_takeoff",
+                 "_takeoff_label", "_takeoff_scope", "_takeoff_submenu"]
 # The panel's data and the things its menu hands work to: the canvas, the
 # collapse set, the rebuild, the Group's form; what a selection on the
 # drawing lights (highlight_measurement, _apply_selection): the selected
@@ -125,7 +144,10 @@ PANEL_STUBS = {"_gl_widget", "_collapsed", "refresh", "item_properties_req",
                "_sel_m", "_row_meta", "_items_vbox", "ensureWidgetVisible",
                "_class_window", "_say", "_preset_notes", "_listed_ids",
                "_floor_filter", "_group_filter", "_cost_filter", "_sheet_on",
-               "window", "_waiting_why"}
+               "window", "_waiting_why",
+               # 3.08: the window's list of takeoffs (set_takeoff_fn) and the
+               # two signals the heading's Move / Copy submenus emit
+               "_takeoff_fn", "takeoff_move_req", "takeoff_copy_req"}
 GL_MEMBERS = ["CLASS_FIELDS", "_class_val", "project_values",
               # Round 7: the plan, the two writes, what follows a rename in
               # the tool, its undo, and where new pins are filed
@@ -134,7 +156,9 @@ GL_MEMBERS = ["CLASS_FIELDS", "_class_val", "project_values",
               "_follow_pin_filing", "_class_tool_now", "_class_tool_moved",
               "_undo_class_tool", "unfiled_items", "assign_classification",
               "_pin_filing", "_pin_stock", "_pin_files", "_set_pin_filing",
-              "_FRAMING_PIN_SPEC"]
+              "_FRAMING_PIN_SPEC",
+              # 3.08: the VIEW test of the takeoff he is in (the web: Main)
+              "in_active_list", "active_takeoff_list"]
 # ...and the canvas's own: the store, the window that holds the metadata,
 # the undo stack and its tags, the repaint, the item clipboard (the web has
 # none: _follow_classification_clip finds nothing, _class_clip_again is
@@ -143,7 +167,8 @@ GL_MEMBERS = ["CLASS_FIELDS", "_class_val", "project_values",
 GL_STUBS = {"_measurements", "all_group_items", "_main_window", "_push_undo",
             "measurement_changed", "update", "tag_undo_top",
             "_follow_classification_clip", "_class_clip_again",
-            "_last_category", "_current_page", "on_this_version"}
+            "_last_category", "_current_page", "on_this_version",
+            "_takeoff_list_active"}
 # ClassificationDialog: what its OK and its sentence do, lifted; the form
 # itself (Qt widgets) is a stand-in that records what it was given.
 DLG_MEMBERS = ["chosen_name", "chosen_option", "what_text", "_update_what",
@@ -197,11 +222,48 @@ class _QMenu:
     def addSeparator(self):
         self.items.append("-")
 
+    def addMenu(self, title):
+        """3.08: a sub-menu (the heading's Move / Copy ... to takeoff),
+        recorded in its place; its entries are never what a scenario picks
+        (the web has no takeoff to move them to: declared N/A)."""
+        sub = _SubMenu(title)
+        self.items.append(sub)
+        return sub
+
     def exec_(self, gpos):
         for a in self.items:
-            if a != "-" and a.text == _QMenu.pick:
+            if a != "-" and not isinstance(a, _SubMenu) and a.text == _QMenu.pick:
                 return a
         return None
+
+
+class _SubMenu:
+    """What a sub-menu was given, in order ('-' a separator)."""
+
+    def __init__(self, title):
+        self.text = title
+        self.items = []
+
+    def setStyleSheet(self, css):
+        pass
+
+    def addAction(self, text):
+        a = _Action(text)
+        self.items.append(a)
+        return a
+
+    def addSeparator(self):
+        self.items.append("-")
+
+
+def menu_entry(x):
+    """A menu's entry as the truth records it: '-', its text, or a sub-menu
+    as {"menu": title, "items": [...]}."""
+    if x == "-":
+        return x
+    if isinstance(x, _SubMenu):
+        return {"menu": x.text, "items": [menu_entry(y) for y in x.items]}
+    return x.text
 
 
 class _Row:
@@ -420,6 +482,21 @@ def framing_closure():
     return problems, lifted
 
 
+# The 3.07 hazard: the members above exist only in 3.08. One line, not a
+# list of closure breaks.
+NEEDS_308 = ([("TakeoffItemsPanel", n) for n in ("_takeoff_rows", "_many_takeoffs",
+                                                 "_takeoff_scope", "_takeoff_submenu")]
+             + [("GLPageWidget", n) for n in ("in_active_list", "active_takeoff_list")])
+_missing_308 = [
+    "%s.%s" % (c, n) for c, n in NEEDS_308
+    if not any(isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef))
+               and x.name == n for x in getattr(TOP.get(c), "body", []))]
+if _missing_308:
+    raise SystemExit(
+        "tests/rename-python-truth.py needs the desktop 3.08 source "
+        "(PTT_DESKTOP_SRC): %s has no takeoff lists (no %s)"
+        % (SRC, ", ".join(_missing_308)))
+
 PROBLEMS, MODNAMES = closure()
 FR_PROBLEMS, FRNAMES = framing_closure()
 if PROBLEMS or FR_PROBLEMS:
@@ -452,6 +529,9 @@ exec(compile(_cls_src("PanelBase", _class("TakeoffItemsPanel"), PANEL_MEMBERS),
              "<TakeoffItemsPanel.lifted>", "exec"), NS)
 exec(compile(_cls_src("GLBase", _class("GLPageWidget"), GL_MEMBERS),
              "<GLPageWidget.lifted>", "exec"), NS)
+# 3.08: the web is in Main, and (until it learns more) a job of one takeoff
+NS["GLBase"]._takeoff_list_active = ""
+NS["PanelBase"]._takeoff_fn = None
 exec(compile(_cls_src("DlgBase", _class("ClassificationDialog"), DLG_MEMBERS),
              "<ClassificationDialog.lifted>", "exec"), NS)
 FR = {}
@@ -471,10 +551,29 @@ class _Signal:
                                        for x in a])
 
 
+def takeoff_fn(rows):
+    """The window's list of takeoffs as set_takeoff_fn hands it to the panel
+    (PDFCacheViewer._takeoff_rows_for_panel: [(list_id, label)], Main
+    first) -- declared, not lifted: the window's registry is not here. The
+    truth records `rows`, and the web reads the same job from its metadata
+    (takeoff_lists + takeoff_main_label). None: a job with Main alone."""
+    if rows is None:
+        return None
+    rows = [tuple(r) for r in rows]
+    return lambda: list(rows)
+
+
+# The job of two takeoffs the 3.08 scenarios run in: Main renamed House, and
+# Deck. The web is in Main (House); the desktop's canvas is too.
+DECK = "tl-deck0001"
+TL_ROWS = [["", "House"], [DECK, "Deck"]]
+
+
 class GL(NS["GLBase"]):
     def __init__(self, store, groups=()):
         self._measurements = store
         self._groups = list(groups)
+        self._takeoff_list_active = ""      # the web is in Main
 
     def all_group_items(self):
         return list(self._groups)
@@ -485,12 +584,17 @@ class Panel(NS["PanelBase"]):
     desktop's own tooltip and menu for an act its heading would not have
     (the web's '' this round, every act for Round 7)."""
 
-    def __init__(self, gl=None, force=None, rows=()):
+    def __init__(self, gl=None, force=None, rows=(), takeoffs=None):
         self._gl_widget = gl
         self._collapsed = set()
         self.log = []
         self.item_properties_req = _Signal(self.log, "item_properties")
         self._force = force
+        # None: a job with Main alone; else the window's rows
+        # (_takeoff_rows_for_panel), Main first
+        self._takeoff_fn = takeoff_fn(takeoffs)
+        self.takeoff_move_req = _Signal(self.log, "takeoff_move")
+        self.takeoff_copy_req = _Signal(self.log, "takeoff_copy")
         self._rows = list(rows)
         self._target = None
         self._relist()
@@ -672,7 +776,7 @@ def menu_of(panel, meta, pick=None):
     n = len(_QMenu.seen)
     panel._show_header_menu(None, meta)
     items = _QMenu.seen[n] if len(_QMenu.seen) > n else []
-    return [x if x == "-" else x.text for x in items]
+    return [menu_entry(x) for x in items]
 
 
 def keys(collapsed):
@@ -694,6 +798,20 @@ def headers():
                 f = Panel(GL({}, GROUPS), force=act)
                 rec["forced"][act or "none"] = {"tip": f._header_tip(meta),
                                                 "menu": menu_of(f, meta)}
+            # 3.08: the same heading in a job of two takeoffs (House and
+            # Deck, he is in House). The desktop's heading offers Move / Copy
+            # these N items to takeoff, and a heading with no right-click of
+            # its own says "Right-click to move or copy them to another
+            # takeoff" -- both N/A on the web, which moves nothing between
+            # takeoffs this round (tests/heading-menu.mjs declares them).
+            t = Panel(GL({}, GROUPS), takeoffs=TL_ROWS)
+            rec["takeoffs"] = {"rows": TL_ROWS, "act": t._header_act(meta),
+                               "tip": t._header_tip(meta),
+                               "menu": menu_of(t, meta), "forced": {}}
+            for act in ("", "rename", "assign", "group"):
+                f = Panel(GL({}, GROUPS), force=act, takeoffs=TL_ROWS)
+                rec["takeoffs"]["forced"][act or "none"] = {
+                    "tip": f._header_tip(meta), "menu": menu_of(f, meta)}
             out.append(rec)
     return out
 
@@ -1034,6 +1152,7 @@ class FlowGL(NS["GLBase"]):
         self._measurements = store
         self._win = types.SimpleNamespace(metadata=meta)
         self.measurement_changed = _Emit()
+        self._takeoff_list_active = ""      # the web is in Main
         self.levels, self.redos = [], []
         self._last_floor = self._last_category = self._last_sub = ""
         self._count_spec = None
@@ -1090,17 +1209,21 @@ class FlowGL(NS["GLBase"]):
         self._step(self.redos, self.levels, "redo")
 
 
-def listed_ids(store, cost, floor, group):
+def listed_ids(gl, cost, floor, group):
     """What the desktop's refresh lists (TakeoffItemsPanel.refresh, Qt, so
-    declared: its loop up to _listed_ids, the chip off): every row the three
-    filters let through, a Group container among them."""
+    declared: its loop up to _listed_ids, the chip off): every row of the
+    takeoff he is in (3.08: "another takeoff's: hidden, as on the canvas" --
+    the lifted in_active_list) the three filters let through, a Group
+    container among them."""
     out = set()
-    for _pg, lst in store.items():
+    for _pg, lst in gl._measurements.items():
         for m in lst:
             if m.get("type") in ("distance", "textnote", "page_ref", "pitch",
                                  "ref_distance"):
                 continue
             if m.get("group_child"):
+                continue
+            if not gl.in_active_list(m):
                 continue
             fl = (m.get("floor_level") or "").strip()
             cat = (m.get("category") or "").strip()
@@ -1122,14 +1245,17 @@ def web_rows(store, ids):
             if id(m) in ids and m.get("type") != "group"]
 
 
-def filter_values(store):
+def filter_values(gl):
     """The values the desktop's refresh fills its floor and group filters
-    with (floors_all / cats_all: every row, the filters not applied)."""
+    with (floors_all / cats_all: every row of the takeoff he is in, the
+    filters not applied)."""
     floors, cats = set(), set()
-    for _pg, lst in store.items():
+    for _pg, lst in gl._measurements.items():
         for m in lst:
             if m.get("type") in ("distance", "textnote", "page_ref", "pitch",
                                  "ref_distance") or m.get("group_child"):
+                continue
+            if not gl.in_active_list(m):
                 continue
             floors.add((m.get("floor_level") or "").strip())
             cats.add((m.get("category") or "").strip())
@@ -1144,12 +1270,13 @@ class FlowPanel(NS["PanelBase"]):
     sheet), no Report presets (decision 3)."""
 
     def __init__(self, gl, cost="all", floor=None, group=None, collapsed=(),
-                 sheet=None):
+                 sheet=None, takeoffs=None):
         self._gl_widget = gl
         self._cost_filter, self._floor_filter, self._group_filter = cost, floor, group
         self._collapsed = {tuple(k) for k in collapsed}
         self.said = []
         self._sheet = sheet
+        self._takeoff_fn = takeoff_fn(takeoffs)
         if sheet is not None:
             gl._current_page = sheet
         self.relist()
@@ -1158,7 +1285,7 @@ class FlowPanel(NS["PanelBase"]):
         """The rows the desktop's refresh lists (_listed_ids), by the three
         filters as they stand; with the chip on, the lifted _sheet_rows'."""
         gl = self._gl_widget
-        self._listed_ids = listed_ids(gl._measurements, self._cost_filter,
+        self._listed_ids = listed_ids(gl, self._cost_filter,
                                       self._floor_filter, self._group_filter)
         self.sheet_rows = None
         if self._sheet is not None:
@@ -1193,7 +1320,7 @@ class FlowPanel(NS["PanelBase"]):
         value no row carries any more falls back to All (None), without a
         word."""
         self.relist()
-        floors, cats = filter_values(self._gl_widget._measurements)
+        floors, cats = filter_values(self._gl_widget)
         if self._floor_filter is not None and self._floor_filter not in floors:
             self._floor_filter = None
         if self._group_filter is not None and self._group_filter not in cats:
@@ -1396,6 +1523,34 @@ def r7_plans():
         plan = gl.classification_plan(field, old, None)
         out.append({"field": field, "old": old, "scope": None, "odd": True,
                     "plan": plan_paths(store, plan), "counts": gl._plan_counts(plan)})
+    out += r7_tl_plans()
+    return out
+
+
+# 3.08: the plan inside one takeoff ({"takeoff": id}, "" is Main), on the
+# two-takeoff fixture: a name Deck keeps leaves the shared marks out of it.
+# None is no takeoff scope at all (the desktop's `None if s_tl is None`).
+TL_SCOPES = [{"takeoff": ""}, {"takeoff": DECK}, {"takeoff": " " + DECK + " "},
+             {"takeoff": None}, {"takeoff": "tl-gone"}, {"takeoff": "", "category": "Walls"},
+             {"takeoff": DECK, "category": "Walls"}, {"takeoff": "", "group": "gi-garage"}]
+TL_PLANS = [
+    ("floor_level", ["Level 1", "Level 2", "level 2", "Upper Deck", ""]),
+    ("category", ["Walls", "Doors & Windows", "Roofing", "Hardware", "Framing", "Shade",
+                  "Wood Framing"]),
+    ("sub_category", ["Exterior", "Partitions"]),
+]
+
+
+def r7_tl_plans():
+    out = []
+    for field, olds in TL_PLANS:
+        for old in olds:
+            for scope in TL_SCOPES:
+                store = r7_tl()
+                gl = FlowGL(store, {})
+                plan = gl.classification_plan(field, old, scope)
+                out.append({"fixture": "tl", "field": field, "old": old, "scope": scope,
+                            "plan": plan_paths(store, plan), "counts": gl._plan_counts(plan)})
     return out
 
 
@@ -1484,6 +1639,62 @@ def r7_pin_cases():
     g4._win = None
     out.append({"label": "no window", "set": g4._set_pin_filing("window", ("X", None)),
                 "filing": g4._pin_filing("window")})
+    out += r7_tl_pins()
+    return out
+
+
+def r7_tl_pins():
+    """3.08: a rename inside one takeoff moves where new pins go only when it
+    leaves the old name on no item of any takeoff (the plan without the
+    takeoff, AFTER the writes, holds nothing but shared marks). Each case
+    writes the scoped plan the way rename_classification does, then asks
+    _follow_pin_filing -- on the two-takeoff fixture and on stores made to
+    leave the name on one shared mark, on one Deck material line, or nowhere."""
+    def tl_store():
+        return r7_tl()
+
+    def note_only():
+        return {0: [r7_pin("window", 1, "Level 1", "Doors & Windows", "", 100),
+                    {"type": "textnote", "points": [[5.0, 5.0]], "text": "glass",
+                     "category": "Doors & Windows", "visible": True}]}
+
+    def deck_line():
+        return {0: [r7_pin("window", 1, "Level 1", "Doors & Windows", "", 100),
+                    r7_item("area", "Deck skirt", "Level 1", "Trim", "", 100,
+                            takeoff_list=DECK,
+                            associated_items=[{"name": "Vent", "qty": 1.0,
+                                               "category": "Doors & Windows"}])]}
+
+    def deck_pin():
+        s = note_only()
+        s[0].append(dict(r7_pin("window", 2, "Level 1", "Doors & Windows", "", 140),
+                         takeoff_list=DECK))
+        return s
+
+    stores = {"the two-takeoff job": tl_store, "only a note keeps it": note_only,
+              "a Deck material line keeps it": deck_line, "a Deck window keeps it": deck_pin}
+    cases = [("category", "Doors & Windows", "Openings", {"takeoff": ""}),
+             ("category", "Doors & Windows", "Openings", {"takeoff": DECK}),
+             ("category", "Doors & Windows", "Openings", {"takeoff": None}),
+             ("category", "Wood Framing", "Framing Labor", {"takeoff": ""}),
+             ("sub_category", "Partitions", "Interior Walls",
+              {"takeoff": "", "category": "Wood Framing"}),
+             ("category", "Doors & Windows", "Openings", {"takeoff": "", "group": "gi-garage"}),
+             ("floor_level", "Level 1", "Level 2", {"takeoff": ""})]
+    out = []
+    for slabel, make in stores.items():
+        for field, old, new, scope in cases:
+            store = make()
+            gl = FlowGL(copy.deepcopy(store), {})
+            plan = gl.classification_plan(field, old, scope)
+            for d, k, _kind in plan:
+                d[k] = new
+            moves = gl._follow_pin_filing(field, old, new, scope)
+            out.append({"label": "takeoffs: " + slabel, "store": pairs(store),
+                        "field": field, "old": old, "new": new, "scope": scope,
+                        "written": plan_paths(gl._measurements, plan),
+                        "moves": [move_json(gl, None, mv) for mv in moves],
+                        "meta": gl._win.metadata})
     return out
 
 
@@ -1731,9 +1942,58 @@ def r7_bare():
     return s
 
 
+def r7_tl():
+    """3.08: the fixture in a job of two takeoffs, Main (renamed House) and
+    Deck. Main's items are r7_build()'s and r7_pins()'s, untagged, with one
+    more filed under a tag of one blank (Main). Deck's carry the same floors,
+    trades and sub-categories as Main's -- Level 1 / Walls / Exterior, a run
+    on another sheet, a material line under Level 2 -- and the names only Deck
+    has ('Upper Deck', 'Shade'); a blank-floor Deck item and a Deck Group with
+    nothing filed, which a Set in House must leave; a Deck window pin under
+    'Doors & Windows'; a padded tag. And shared marks: the ruler on Level 1
+    (r7_build's), a note under 'Roofing' (a name only House has) and a ruler
+    on Level 2 carrying a stray Deck tag (a shared mark is in every takeoff,
+    whatever it carries)."""
+    item = r7_item
+    s = r7_pins()
+    s[0] = s[0] + [
+        item("area", "Deck boards", "Level 1", "Walls", "Exterior", 1300, takeoff_list=DECK),
+        item("polyline", "Deck rail", "Level 1", "Walls", "", 1400, value=8.0,
+             group_id="g-deck", takeoff_list=DECK),
+        r7_pin("window", 3, "Level 1", "Doors & Windows", "", 180),
+    ]
+    s[0][-1]["takeoff_list"] = DECK
+    s[1] = s[1] + [
+        item("count", "Deck posts", "Level 2", "Concrete", "", 1500, value=2,
+             points=[[6.0, 6.0], [7.0, 7.0]], takeoff_list=DECK,
+             associated_items=[{"name": "Post base", "qty": 2.0, "unit": "each",
+                                "floor_level": "Level 2", "category": "Hardware"}]),
+        item("polyline", "Deck rail", "Level 1", "Walls", "", 1400, value=4.0,
+             group_id="g-deck", group_child=True, takeoff_list=DECK),
+        {"type": "distance", "points": [[0.0, 0.0], [30.0, 0.0]], "value": 3.0,
+         "floor_level": "Level 2", "visible": True, "takeoff_list": DECK},
+    ]
+    s[2] = s[2] + [
+        item("area", "Deck stairs", "", "", "", 1600, takeoff_list=DECK),
+        item("area", "Pergola", "Upper Deck", "Shade", "", 1700, takeoff_list=DECK),
+        item("area", "Deck joists", "Level 2", "Framing", "", 1750,
+             takeoff_list=" " + DECK + " "),
+        item("area", "Blocking", "Level 2", "Framing", "", 1900, takeoff_list=" "),
+        {"type": "textnote", "points": [[8.0, 8.0]], "text": "flashing",
+         "floor_level": "", "category": "Roofing", "visible": True},
+    ]
+    s[SA] = s[SA] + [
+        item("standalone", "Deck screws", "Level 1", "Hardware", "", 1800, qty=2.0,
+             unit="box", value=2.0, points=[], takeoff_list=DECK),
+        item("group", "Deck kit", "", "", "", 60, group_item_id="gi-deck", value=0,
+             points=[], takeoff_list=DECK),
+    ]
+    return s
+
+
 R7_FIXTURES = {"build": r7_build, "trim": r7_trim, "only": r7_only,
                "pins": r7_pins, "openings": r7_openings, "ws": r7_ws,
-               "order": r7_order, "bare": r7_bare}
+               "order": r7_order, "bare": r7_bare, "tl": r7_tl}
 
 
 def r7_state(gl, panel, start_store):
@@ -1750,13 +2010,16 @@ def r7_state(gl, panel, start_store):
 
 
 def r7_flow(label, fixture, act, *, meta=None, panel=None, tool=None, answer=None,
-            merge="No", between=None, store_fn=None):
+            merge="No", between=None, store_fn=None, takeoffs=None):
     """One heading's Rename or Set, the way he does it: the form answered,
     the question answered, then Ctrl+Z and Ctrl+Y -- each step followed by
     the desktop's refresh of the filters (FlowPanel.refreshed). `panel` may
     put the SHEET chip on ("sheet": the sheet on screen). `store_fn` gives
     the store in an order of its own (r7_page_order) instead of the
-    fixture's."""
+    fixture's. `takeoffs` (3.08): the job's takeoffs as the window hands
+    them to the panel, Main first -- he is in Main, and a heading's Rename
+    and Set reach Main's items only (decision 6). Recorded in `start` only
+    when given: a job with Main alone is recorded exactly as before."""
     store = (store_fn or R7_FIXTURES[fixture])()
     meta = copy.deepcopy(meta or {})
     panel = dict(panel or {})
@@ -1768,6 +2031,8 @@ def r7_flow(label, fixture, act, *, meta=None, panel=None, tool=None, answer=Non
                        "group": panel.get("group"),
                        "collapsed": sorted(web_key(k) for k in panel.get("collapsed", ()))},
              "tool": tool}
+    if takeoffs is not None:
+        start["takeoffs"] = takeoffs
     if sheet is not None:
         start["panel"]["sheet"] = sheet
         if any(m.get("rev_id") for m in store.get(sheet) or []):
@@ -1778,7 +2043,7 @@ def r7_flow(label, fixture, act, *, meta=None, panel=None, tool=None, answer=Non
     gl._count_spec = copy.deepcopy(tool.get("spec"))
     p = FlowPanel(gl, cost=panel.get("cost", "all"), floor=panel.get("floor"),
                   group=panel.get("group"), collapsed=panel.get("collapsed", ()),
-                  sheet=sheet)
+                  sheet=sheet, takeoffs=takeoffs)
     DLG.update(name=answer.get("name"), opt=answer.get("opt", ANY))
     DLG["seen"] = []
     _QMessageBox.asked = []
@@ -1808,6 +2073,10 @@ def r7_flow(label, fixture, act, *, meta=None, panel=None, tool=None, answer=Non
     rec["after"] = r7_state(gl, p, store)
     tags = gl.levels[-1][1] if gl.levels else []
     rec["moves"] = [move_json(gl, p, mv) for t in tags for mv in t.get("moves", [])]
+    if takeoffs is not None:
+        # The rename the level records -- its scope, the takeoff in it, and
+        # whether it was a merge -- as the desktop's tag holds it.
+        rec["tagged"] = [list(t["rename"]) for t in tags if t.get("rename")]
     if gl.levels:
         if between:
             if "floor" in between:
@@ -1958,6 +2227,60 @@ def r7_flows():
     out.append(r7_flow("SHEET on: the whole job's", "build",
                        {"kind": "assign", "type": "cat", "fl": "", "cat": ""},
                        panel={"sheet": 0}, answer={"name": "Sitework", "opt": "job"}))
+    out += r7_tl_flows()
+    return out
+
+
+def r7_tl_flows():
+    """3.08 (decision 6): inside one takeoff of several, a heading is THAT
+    takeoff's. He is in House (Main), with Deck beside it."""
+    out = []
+    tl = dict(takeoffs=TL_ROWS)
+    out.append(r7_flow("Takeoffs: Rename a floor in House: Deck's keep 'Level 1', and so does the "
+                       "shared ruler", "tl", {"kind": "rename", "type": "floor", "fl": "Level 1"},
+                       panel={"floor": "Level 1"}, tool={"floor": "Level 1"},
+                       answer={"name": "1st Floor"}, **tl))
+    out.append(r7_flow("Takeoffs: Rename a category in House", "tl",
+                       {"kind": "rename", "type": "cat", "fl": "Level 1", "cat": "Walls"},
+                       panel={"group": "Walls"}, answer={"name": "Partitions"}, **tl))
+    out.append(r7_flow("Takeoffs: Rename a sub-category in House, under its category", "tl",
+                       {"kind": "rename", "type": "sub", "fl": "Level 1", "cat": "Walls",
+                        "sub": "Exterior"}, answer={"name": "Outside"}, **tl))
+    out.append(r7_flow("Takeoffs: a name no other takeoff has: the note goes with it", "tl",
+                       {"kind": "rename", "type": "cat", "fl": "", "cat": "Roofing"},
+                       answer={"name": "Roof covering"}, **tl))
+    out.append(r7_flow("Takeoffs: the job spells it so in another takeoff: taken, nothing asked",
+                       "tl", {"kind": "rename", "type": "floor", "fl": "Level 2"},
+                       answer={"name": "upper deck"}, **tl))
+    out.append(r7_flow("Takeoffs: a merge inside House counts House's only", "tl",
+                       {"kind": "rename", "type": "floor", "fl": "level 2"},
+                       answer={"name": "LEVEL  2 "}, merge="Yes", **tl))
+    out.append(r7_flow("Takeoffs: a merge inside House, No", "tl",
+                       {"kind": "rename", "type": "floor", "fl": "level 2"},
+                       answer={"name": "LEVEL  2 "}, merge="No", **tl))
+    out.append(r7_flow("Takeoffs: Deck still files its windows under the trade: new pins stay",
+                       "tl", {"kind": "rename", "type": "cat", "fl": "Level 1",
+                              "cat": "Doors & Windows"}, answer={"name": "Openings"}, **tl))
+    out.append(r7_flow("Takeoffs: a trade only House has: new pins follow it", "tl",
+                       {"kind": "rename", "type": "cat", "fl": "Level 1", "cat": "Wood Framing"},
+                       answer={"name": "Framing Labor"}, **tl))
+    out.append(r7_flow("Takeoffs: a sub-category only House has: its pin kind follows", "tl",
+                       {"kind": "rename", "type": "sub", "fl": "Level 1", "cat": "Wood Framing",
+                        "sub": "Partitions"}, answer={"name": "Interior Walls"}, **tl))
+    for opt in ("listed", "job"):
+        out.append(r7_flow("Takeoffs: Set floor level under NO FLOOR LEVEL in House (%s)" % opt,
+                           "tl", {"kind": "assign", "type": "floor", "fl": ""},
+                           panel={"cost": "material"}, answer={"name": "Level 3", "opt": opt},
+                           **tl))
+    out.append(r7_flow("Takeoffs: Set category for House's Uncategorized, every item in House",
+                       "tl", {"kind": "assign", "type": "cat", "fl": "", "cat": ""},
+                       panel={"group": ""}, answer={"name": "Sitework", "opt": "job"}, **tl))
+    out.append(r7_flow("Takeoffs: SHEET on: a rename in House counts what this sheet hides",
+                       "tl", {"kind": "rename", "type": "floor", "fl": "Level 1"},
+                       panel={"sheet": 2}, answer={"name": "Ground"}, **tl))
+    out.append(r7_flow("Takeoffs: Rename refused: the same name", "tl",
+                       {"kind": "rename", "type": "floor", "fl": "Level 1"},
+                       answer={"name": "Level 1"}, **tl))
     return out
 
 
