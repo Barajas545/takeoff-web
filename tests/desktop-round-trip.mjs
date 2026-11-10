@@ -33,6 +33,15 @@
 //      fixture; the DESKTOP reads the same names, files its new pins where
 //      the web recorded (metadata pin_filing), and its framing engine's
 //      merge rule leaves the renamed lines where the web filed them.
+//   7. TWO TAKEOFFS (desktop 3.08): the DESKTOP makes a job of House and
+//      Deck with its own takeoff tools (New Takeoff, Main renamed, Move to
+//      Takeoff, left in Deck); THIS APP edits House through every door it
+//      has that writes the job (21, each through its own producer) and saves
+//      it twice -- the same bytes; the DESKTOP reopens it with the same
+//      registry, takeoff and Main name, every item in its takeoff (the
+//      promoted heirs in their masters'), every stored total its own, Deck's
+//      included, and an open that put nothing right and said nothing (a
+//      hand-split copy shows the heal is heard when it speaks).
 //
 // Needs the desktop source and its Python (PyQt5, PIL); SKIPS otherwise.
 // Nothing it writes is kept: a temp folder, removed at the end.
@@ -44,16 +53,23 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openProject, writeProject } from '../js/core/takeoff-file.js';
+import zlib from 'node:zlib';
+import { openProject, writeProject, STANDALONE_PAGE } from '../js/core/takeoff-file.js';
 import { recompute } from '../js/core/measure.js';
 import { stringifyPyJson } from '../js/core/py-json.js';
-import { Project } from '../js/core/project.js';
+import { Project, resyncGroups, takeoffFingerprint } from '../js/core/project.js';
 import { PageStore } from '../js/core/page-store.js';
 import { ToolController } from '../js/tools/controller.js';
-import { CountingModel } from '../js/core/counting.js';
-import { newestVersionOf } from '../js/core/revisions.js';
+import {
+  CountingModel, applyBooking, isTakeoffItem, takeoffQuantityWords, takeoffMoveWords, hiddenTakeoffsWords,
+  takeoffNaming, setTakeoffNaming,
+} from '../js/core/counting.js';
+import { newestVersionOf, itemRevId } from '../js/core/revisions.js';
 import { collectItems } from '../js/ui/reports.js';
-import { renameClassification, projectValues, pinFiling, PIN_KINDS, CLASS_FIELDS } from '../js/core/classify.js';
+import {
+  renameClassification, projectValues, pinFiling, PIN_KINDS, CLASS_FIELDS, unfiledItems, assignClassification,
+} from '../js/core/classify.js';
+import { takeoffListOf, inTakeoffList, takeoffNamingOf, WEB_TAKEOFF } from '../js/core/takeoff-lists.js';
 import { DESKTOP_SRC, haveDesktopSource, skip } from './config.mjs';
 
 const run = promisify(execFile);
@@ -178,6 +194,27 @@ function webSummary(project) {
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
   return { labels: labs, origin, book, counted, sums, estimate, marks, tiles, newest, groups,
     overlays: byLabel, revisions: model.revs.map(r => model.revName(r.id)), pitch };
+}
+
+/** A white sheet as PNG bytes (Add Blank Sheet's page: main.js draws it on a canvas). */
+function blankPng(w, h) {
+  const crcT = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = b => { let c = 0xffffffff; for (const x of b) c = crcT[(c ^ x) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => {
+    const out = Buffer.alloc(12 + data.length);
+    out.writeUInt32BE(data.length, 0); out.write(type, 4, 'ascii'); Buffer.from(data).copy(out, 8);
+    out.writeUInt32BE(crc(out.subarray(4, 8 + data.length)), 8 + data.length);
+    return out;
+  };
+  const raw = Buffer.alloc((w * 3 + 1) * h, 255);
+  for (let y = 0; y < h; y++) raw[y * (w * 3 + 1)] = 0;
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return new Uint8Array(Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr),
+    chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]));
 }
 
 const SAME = ['labels', 'origin', 'book', 'counted', 'sums', 'estimate', 'marks', 'tiles',
@@ -411,6 +448,302 @@ try {
       [['e1', 'Wood Framing', '1st Floor'], ['e2', 'Wood Framing', ''], ['e3', 'Wood Framing', '1st Floor']]);
   }
   eq('opening the renamed job asked nothing', d6.asked, []);
+
+  // ── 7. two takeoffs (desktop 3.08), through every door this app has ──
+  // The desktop makes the job with its own takeoff tools (make-two: New
+  // Takeoff with its name asked, Main renamed House, Move to Takeoff, the
+  // job left in Deck). This app opens it and edits House through EVERY door
+  // that writes the job -- the doors are js/'s callers of the Project's
+  // writers (addItem, updateItem, removeItems, dropShapes, setVisible,
+  // transact, pushUndo, setPageScale, restampPage, notePagesInserted,
+  // notePageRemoved, setPageLabel, setPageName, addAnnotation, the booking,
+  // undo and redo): each is driven through the producer the app's button
+  // drives (ToolController's pointer events and keys, main.js's own
+  // countThisVersion / askCountAfterTakeoff / deleteCurrentPage lifted by
+  // text, classify.js's rename and Set with the scope the Items list builds).
+  // Saved by the real writer, twice: the same bytes. The DESKTOP then
+  // reopens it: the same registry, the same takeoff it was left in, Main's
+  // name, every item in the takeoff this app saved it in (the promoted heirs
+  // in their masters'), every stored total its own (Deck's included), and an
+  // open that put NOTHING right and said nothing. A hand-split copy is
+  // reopened too, to show the desktop's heal is heard when it speaks.
+  // (No Add Shape and no Duplicate Page door exists here: nothing in js/
+  // appends a shape to an item or copies a sheet.)
+  console.log('\n-- 7. two takeoffs: the desktop makes them, this app edits through every door, the desktop reopens --');
+  const TAGK = 'takeoff_list';
+  const TL_KEYS = ['takeoff_lists', 'takeoff_list_active', 'takeoff_main_label'];
+  const madeTwo = path.join(dir, 'two.takeoff');
+  const t1 = await desktop('make-two', madeTwo);
+  const deck = t1.deck;
+  ok('the desktop made Deck by New Takeoff, renamed Main House, and left the job in Deck',
+    /^tl-/.test(deck) && JSON.stringify(t1.lists) === JSON.stringify([{ list_id: deck, label: 'Deck' }])
+    && t1.active === deck && t1.main === 'House' && !t1.asked.length, JSON.stringify(t1));
+  const ft = await openProject(new Blob([await readFile(madeTwo)]));
+  const keys0 = TL_KEYS.map(k => JSON.stringify(ft.metadata[k]));
+  const pt = new Project();
+  pt.loadFrom({ metadata: ft.metadata, annotations: ft.annotations, measurements: ft.measurements,
+    pageCount: ft.pageCount, revisionCounts: ft.revisions.map(s => s.length) });
+  const st = new PageStore();
+  st.setFromProject(ft);
+  const idxT = l => Array.from({ length: pt.pageCount }, (_, i) => pt.pageLabel(i)).indexOf(l);
+  const isDeck = m => takeoffListOf(m) === deck;
+  const shapeOf = (name, l, child = false) => (pt.measurements[idxT(l)] || [])
+    .find(m => m.name === name && !!m.group_child === child);
+  const deckItems = () => [...pt.allItems()].filter(([, m]) => isDeck(m));
+  const deck0 = deckItems().length;
+  ok('the job holds Deck\'s work: Deck boards (X1.0 + X2.0 + X3.0), Beam (X4.0 + X3.0), Rail (moved), Posts, Window 2, '
+    + 'Ledger in Stairs, Screws', deck0 === 11 && isDeck(shapeOf('Rail', 'X4.0')) && isDeck(shapeOf('Beam', 'X4.0')),
+  JSON.stringify(deckItems().map(([, m]) => m.name)));
+  let pgT = 0;
+  let countAnswer = null;
+  const onT = {};
+  const ct = new ToolController({
+    canvas: { addEventListener: (t, f) => { onT[t] = f; }, setPointerCapture() {}, releasePointerCapture() {}, style: {},
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 1000, height: 800 }) },
+    viewport: { zoom: 1, toPage: q => q, eventToPage: ev => [ev.clientX, ev.clientY], toScreen: (x, y) => [x, y],
+      panBy() {}, ensureVisible() {} },
+    project: pt, currentPage: () => pgT,
+    host: { askCountItem: async () => (countAnswer ? structuredClone(countAnswer) : null) } });
+  const ptr = (type, x, y) => ({ pointerId: 1, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1,
+    clientX: x, clientY: y, type, shiftKey: false, ctrlKey: false, metaKey: false, altKey: false,
+    preventDefault() {}, stopPropagation() {} });
+  const dragT = async (x0, y0, x1, y1) => {
+    onT.pointerdown(ptr('pointerdown', x0, y0));
+    for (let k = 1; k <= 6; k += 1) onT.pointermove(ptr('pointermove', x0 + (x1 - x0) * k / 6, y0 + (y1 - y0) * k / 6));
+    onT.pointerup(ptr('pointerup', x1, y1));
+    for (let i = 0; i < 4; i += 1) await new Promise(r => setImmediate(r));
+  };
+  // main.js's own doors, lifted by text and run with the real counting functions
+  const MAIN = await readFile(new URL('../js/main.js', import.meta.url), 'utf-8');
+  const MAIN_FNS = ['countThisVersion', 'askCountAfterTakeoff', 'stillOn', 'deleteCurrentPage'];
+  const mainText = n => {
+    const at = [`\nasync function ${n}(`, `\nfunction ${n}(`].map(h => MAIN.indexOf(h)).find(i => i >= 0);
+    return at === undefined ? null : MAIN.slice(at + 1, MAIN.indexOf('\n}\n', at) + 2);
+  };
+  const texts = MAIN_FNS.map(mainText);
+  ok(`main.js has ${MAIN_FNS.join(', ')}`, texts.every(Boolean));
+  const said = [];
+  const mainRun = async (fnName, page, revId, ...args) => {
+    const env = {
+      app: { project: pt, currentPage: page, editing: true, pages: st },
+      versionView: { revId },
+      countingModel: () => new CountingModel({ metadata: pt.metadata, measurements: pt.measurements, pageCount: pt.pageCount }),
+      D: { confirmDialog: async (t, m) => { said.push(['asked', m]); return true; }, alertDialog: async (t, m) => said.push(['alert', m]) },
+      countAsked: new Set(), setStatus: t => said.push(['status', t]),
+      sayPrice: t => said.push(['price', typeof t === 'function' ? t() : t]), afterBookChange() {},
+      applyBooking, resyncGroups, itemRevId, takeoffFingerprint, isTakeoffItem, takeoffQuantityWords, takeoffMoveWords,
+      hiddenTakeoffsWords, takeoffNaming, pageFinalLabel: i => pt.pageLabel(i), leftByChoice: () => false,
+      calloutPreview: { clearCache() {} }, thumbs: { refresh() {} }, pageImage: null, goToPage: async () => {},
+    };
+    const body = MAIN_FNS.map((n, i) => `const ${n} = (${texts[i]});`).join('\n');
+    // eslint-disable-next-line no-new-func
+    const f = new Function('env', `with (env) { ${body}\nreturn ${fnName}; }`)(env);
+    setTakeoffNaming(() => takeoffNamingOf(pt.metadata, pt.measurements, WEB_TAKEOFF));
+    try { return await f(...args); } finally { setTakeoffNaming(null); }
+  };
+  const doors = [];
+  const door = (name, cond, detail = '') => { doors.push(name); ok(`door: ${name}`, cond, detail); };
+  const tagOf = m => (m && TAGK in m ? m[TAGK] : null);
+
+  // + Add item (runAction 'add-standalone' -> Project.addItem, the form's shape)
+  const glue = pt.addItem(STANDALONE_PAGE, { type: 'standalone', name: 'Glue', label: 'Glue', qty: 2, value: 2,
+    unit: 'ea', floor_level: '', category: '', sub_category: '', cost_type: 'material', unit_cost: 1.5 }, { label: 'Add item' });
+  door('+ Add item: filed in House (no tag)', tagOf(glue) === null);
+  // a tool's takeoff (ToolController._commit -> _file)
+  pgT = idxT('X1.0');
+  ct.setVersionView('', null);
+  ct._commit({ type: 'area', name: 'Patio', label: 'Patio', value: 12, ppf: 10, visible: true,
+    points: [[400, 400], [460, 400], [460, 440], [400, 440]], floor_level: 'Level 1', category: 'Concrete' }, 'Area');
+  door('a tool\'s takeoff on X1.0: filed in House', !!shapeOf('Patio', 'X1.0') && tagOf(shapeOf('Patio', 'X1.0')) === null);
+  // count taps by the Item box's name, on a sheet where Deck has its own
+  // Posts: the Count tool armed from its form, "Posts" typed, two clicks
+  countAnswer = { spec: { name: 'Outlets', label: 'Outlets', category: 'Electrical', floor_level: '',
+    cost_type: 'material', unit_cost: 0, color: [0.5, 0.5, 0.5, 0.35] } };
+  await ct.setMode('count');
+  countAnswer = null;
+  ct.options.pendingName = 'Posts';
+  for (const [x, y] of [[600, 500], [640, 500]]) {
+    onT.pointerdown(ptr('pointerdown', x, y));
+    onT.pointerup(ptr('pointerup', x, y));
+    for (let i = 0; i < 4; i += 1) await new Promise(r => setImmediate(r));
+  }
+  const postsX1 = (pt.measurements[idxT('X1.0')] || []).filter(m => m.type === 'count' && m.name === 'Posts');
+  door('two count taps "Posts" on X1.0: a new House Posts of 2, Deck\'s Posts still 2 and Deck\'s',
+    JSON.stringify(postsX1.map(m => [tagOf(m), m.points.length]).sort()) === JSON.stringify([[deck, 2], [null, 2]].sort()),
+    JSON.stringify(postsX1.map(m => [tagOf(m), m.points.length])));
+  ct.setMode('pan');
+  // a heading's Rename, inside House (the scope ItemsPanel.renameFromHeader builds in a job of several)
+  const deckFraming = () => deckItems().filter(([, m]) => m.category === 'Framing').length;
+  const df0 = deckFraming();
+  const rn = renameClassification(pt, 'category', 'Framing', 'Carpentry', { takeoff: WEB_TAKEOFF });
+  door('a heading\'s Rename Framing -> Carpentry in House: House\'s renamed, Deck\'s keep Framing',
+    !!rn && rn.items > 0 && df0 > 0 && deckFraming() === df0
+    && ![...pt.allItems()].some(([, m]) => !isDeck(m) && m.category === 'Framing'), JSON.stringify([rn, df0, deckFraming()]));
+  // Set floor level for the blank items (ItemsPanel.assignFromHeader's every-item targets: House's)
+  const unfiledT = unfiledItems(pt.measurements, 'floor_level').filter(m => inTakeoffList(m, WEB_TAKEOFF));
+  const deckBlank = unfiledItems(pt.measurements, 'floor_level').filter(isDeck);
+  const asg = assignClassification(pt, 'floor_level', 'Level 2', unfiledT);
+  door('Set floor level of House\'s blank items: Deck\'s blank ones stay blank',
+    !!asg && asg.items > 0 && deckBlank.length > 0 && deckBlank.every(m => !String(m.floor_level || '').trim()),
+    JSON.stringify([asg, deckBlank.length]));
+  // the Properties dialog's writes (main.js: updateItem, an 'Edit item' level, Materials)
+  const slab = shapeOf('Slab', 'X1.0');
+  pt.updateItem(slab._uid, { notes: 'poured in two pours' });
+  pt.transact('Edit item', () => { Object.assign(slab, { name: 'Slab A', label: 'Slab A', unit_cost: 2 }); recompute(slab); });
+  pt.updateItem(slab._uid, { associated_items: [{ name: 'Rebar', qty: 2, qty_mode: 'total', unit_cost: 3 }] },
+    { label: 'Materials' });
+  door('Properties: notes, name, price and materials of House\'s Slab', slab.name === 'Slab A'
+    && (slab.associated_items || []).length === 1 && tagOf(slab) === null);
+  // Hide (the item menu's and the list's eye)
+  const outlets = shapeOf('Outlets', 'X1.0');
+  pt.setVisible([outlets._uid], false);
+  door('Hide House\'s Outlets', outlets.visible === false);
+  // the arrow keys (a Nudge level) and a corner dragged (a Reshape level), by the controller's own handlers
+  ct.select([slab._uid]);
+  const x0 = slab.points[0][0];
+  const nudged = ct.handleKey({ key: 'ArrowRight', shiftKey: true, ctrlKey: false, metaKey: false, altKey: false,
+    preventDefault() {}, stopPropagation() {} });
+  door('Shift+Right Arrow nudges House\'s Slab 10 px', nudged && slab.points[0][0] === x0 + 10);
+  ct.select([]);
+  // (its lower-left corner: nudged, its right edge sits on Wall M's left one)
+  const [cx, cy] = slab.points[3];
+  await dragT(cx, cy, cx - 10, cy + 10);
+  door('a corner of House\'s Slab dragged', slab.points[3][0] === cx - 10 && slab.points[3][1] === cy + 10,
+    JSON.stringify(slab.points));
+  // a box highlight (markup: an annotation, through the controller's own press and release)
+  const ann0 = (pt.annotations[idxT('X1.0')] || []).length;
+  ct.setMode('highlight_rect');
+  await dragT(700, 100, 760, 160);
+  ct.setMode('pan');
+  door('a box highlight on X1.0 (markup)', (pt.annotations[idxT('X1.0')] || []).length === ann0 + 1);
+  // the canvas's Delete of a run, and of a main shape (its run takes the item over)
+  pgT = idxT('X2.0');
+  const wallRun = shapeOf('Wall M', 'X2.0', true);
+  ct.select([wallRun._uid]);
+  door('the canvas\'s Delete of House\'s Wall M run on X2.0', ct.deleteSelected() === 1 && !shapeOf('Wall M', 'X2.0', true));
+  const fence = shapeOf('Fence', 'X2.0');
+  ct.select([fence._uid]);
+  const n1 = ct.deleteSelected();
+  const fenceHeir = shapeOf('Fence', 'X3.0');
+  door('the canvas\'s Delete of House\'s Fence main shape on X2.0: its X3.0 run is the item now, still House\'s',
+    n1 === 1 && !!fenceHeir && !fenceHeir.group_child && tagOf(fenceHeir) === null, JSON.stringify(fenceHeir));
+  // the list's Delete of a whole item (deleteWholeItem -> removeItems)
+  const joists = shapeOf('Joists', 'X2.0');
+  pt.removeItems([joists._uid]);
+  door('the Items list\'s Delete of House\'s Joists', !shapeOf('Joists', 'X2.0'));
+  // a booking: a takeoff on Rev B of X2.0, "Count Rev B?" Yes (it rides the level), Undo, Redo
+  ct.setVersionView('r2', 0);
+  ct._commit({ type: 'area', name: 'Rail B', label: 'Rail B', value: 6, ppf: 10, visible: true,
+    points: [[100, 100], [160, 100], [160, 140]], floor_level: 'Level 1', category: 'Railing' }, 'Area');
+  const railB = (pt.measurements[pgT] || []).find(m => m.name === 'Rail B');
+  await mainRun('askCountAfterTakeoff', pgT, 'r2', pgT, railB, pt.undoTop, 'k');
+  const working = () => new CountingModel({ metadata: pt.metadata, measurements: pt.measurements, pageCount: pt.pageCount })
+    .workingVersionOf(pgT);
+  door('a takeoff on Rev B of X2.0, and Yes to counting it: the booking rides its level',
+    working() === 'r2' && !!pt.undoTop.booking && tagOf(railB) === null);
+  pt.undo();
+  door('...Undo: the takeoff and the booking go back', working() === '' && !(pt.measurements[pgT] || []).some(m => m.name === 'Rail B'));
+  pt.redo();
+  door('...Redo: both come back', working() === 'r2' && (pt.measurements[pgT] || []).some(m => m.name === 'Rail B'));
+  ct.setVersionView('', null);
+  await mainRun('countThisVersion', pgT, '');
+  door('Count this version: X2.0 counts from its own drawing again (Deck boards\' run there counts again)', working() === '');
+  // the scale: Keep existing work on X1.0, Re-value everything on X3.0 (Deck's runs there too: the scale is the sheet's)
+  pt.setPageScale(idxT('X1.0'), 20);
+  const beamRun = shapeOf('Beam', 'X3.0', true);
+  pt.restampPage(idxT('X3.0'), 12.5);
+  door('the scale: X1.0 kept, X3.0 restamped -- Deck\'s Beam run there with it (the scale is the sheet\'s)',
+    pt.pagePpf(idxT('X1.0')) === 20 && pt.pagePpf(idxT('X3.0')) === 12.5 && beamRun.ppf === 12.5,
+    JSON.stringify([pt.pagePpf(idxT('X1.0')), beamRun.ppf]));
+  // Add Blank Sheet after X2.0 (main.js: PageStore.addPage, notePagesInserted, its label and title)
+  const at = idxT('X2.0') + 1;
+  st.addPage({ kind: 'png', data: blankPng(800, 600), width: 800, height: 600 }, at);
+  pt.notePagesInserted(at, 1);
+  pt.setPageLabel(at, 'X2.5');
+  pt.setPageName(at, 'Inserted sheet');
+  door('Add Blank Sheet after X2.0: every sheet after it moves up one', pt.pageCount === 5 && st.pageCount === 5
+    && idxT('X3.0') === at + 1 && isDeck(shapeOf('Deck boards', 'X3.0', true)));
+  // Delete Sheet of X4.0, which holds Deck's Beam main shape (main.js deleteCurrentPage)
+  pgT = idxT('X4.0');
+  said.length = 0;
+  await mainRun('deleteCurrentPage', pgT, '');
+  const beamHeir = shapeOf('Beam', 'X3.0');
+  door('Delete Sheet X4.0, holding Deck\'s Beam main shape: its X3.0 run is the item now, in Deck',
+    pt.pageCount === 4 && st.pageCount === 4 && idxT('X4.0') < 0 && !!beamHeir && !beamHeir.group_child && isDeck(beamHeir),
+    JSON.stringify([pt.pageCount, beamHeir]));
+  ok('...and the question said what of Deck went with it', said.some(([k, t]) => k === 'asked' && /takeoff Deck/.test(t)),
+    JSON.stringify(said));
+  // the sheet's name and number (Sheets: Rename) and Project Info
+  pt.setPageLabel(idxT('X2.5'), 'X2.6');
+  pt.transact('Project info', () => Object.assign(pt.metadata, { project_notes: 'Synthetic job.' }));
+  door('a sheet renamed, and Project Info', idxT('X2.6') >= 0 && pt.metadata.project_notes === 'Synthetic job.');
+  eq('the doors driven', doors.length, 21);
+  eq('after every door, the three takeoff keys are as the desktop wrote them', TL_KEYS.map(k => JSON.stringify(pt.metadata[k])),
+    keys0);
+  eq('...and Deck still holds its 11 items, less the one that went with X4.0 (Rail) and the Beam shape there',
+    deckItems().length, deck0 - 2);
+
+  // saved by the real writer, twice: the same bytes (the stamp is to the minute -- a minute turning between
+  // the two saves is the clock's, not the writer's, and they are made again)
+  const saveT = async () => new Uint8Array(await (await writeProject({ metadata: pt.buildSaveMetadata(),
+    pageSources: st.saveSources(), revisionSources: st.saveRevisionSources() })).arrayBuffer());
+  let sa = null;
+  let sb = null;
+  for (let tries = 0; tries < 3; tries += 1) {
+    const m0 = new Date().getMinutes();
+    sa = await saveT();
+    sb = await saveT();
+    if (new Date().getMinutes() === m0) break;
+  }
+  ok('saving the same project twice gives the same bytes', sa.length === sb.length && sa.every((x, i) => x === sb[i]),
+    `${sa.length} vs ${sb.length} bytes`);
+  const savedTwo = path.join(dir, 'two-web.takeoff');
+  await writeFile(savedTwo, sa);
+  // this app's own reading of what it saved
+  const fs2 = await openProject(new Blob([sa]));
+  const ps2 = new Project();
+  const rawItems = structuredClone(fs2.measurements);
+  ps2.loadFrom({ metadata: fs2.metadata, annotations: fs2.annotations, measurements: fs2.measurements,
+    pageCount: fs2.pageCount, revisionCounts: fs2.revisions.map(s => s.length) });
+  const labOf = k => (Number(k) === STANDALONE_PAGE ? 'standalone' : ps2.pageLabel(Number(k)));
+  const webItems = Object.keys(rawItems).sort((a, b) => Number(a) - Number(b)).flatMap(k => (rawItems[k] || []).map(m =>
+    [labOf(k), m.type, m.name || m.text || m.label || '', TAGK in m ? m[TAGK] : null, !!m.group_child,
+      m.in_group !== undefined && m.in_group !== null && m.in_group !== '']));
+  const w7 = webSummary(ps2);
+  const d7 = await desktop('check-two', savedTwo);
+  const two = d7.two || {};
+  eq('the desktop reads the takeoffs as the desktop wrote them: the registry, the takeoff it was left in, Main\'s name',
+    [two.lists, two.active, two.main], [t1.lists, t1.active, t1.main]);
+  eq('...and opens it in Deck, Main called House', [two.registry, two.in, two.mainName], [t1.lists, deck, 'House']);
+  eq('every item in the takeoff this app saved it in, the promoted heirs in their masters\' (the desktop\'s reading)',
+    two.items, webItems);
+  ok('opening it put NOTHING right: not marked unsaved, each open-time check said nothing',
+    two.unsaved === false && Array.isArray(two.heard) && two.heard.some(([n]) => n === '_heal_takeoff_lists')
+    && two.heard.some(([n]) => n === '_heal_item_groups') && two.heard.every(([, t]) => t === ''), JSON.stringify(two.heard));
+  eq('...no heal words, and nothing left for the heal to do', [two.healWords, two.healAgain, d7.asked], [[], '', []]);
+  for (const k of ['labels', 'book', 'counted', 'sums', 'groups']) eq(`reopened on the desktop: ${k}`, d7[k], w7[k]);
+  const deckTotals = rows => rows.filter(r => ['Deck boards', 'Beam'].includes(r[1]));
+  ok('...Deck\'s stored totals are the ones this app saved: no total re-added on opening',
+    deckTotals(w7.groups).length === 2 && JSON.stringify(deckTotals(d7.groups)) === JSON.stringify(deckTotals(w7.groups)),
+    JSON.stringify([deckTotals(d7.groups), deckTotals(w7.groups)]));
+
+  // ...and the probe hears a heal when there is one: the same save with one
+  // of Deck boards' runs hand-split into House (the desktop puts it back, and says so)
+  const fsx = await openProject(new Blob([sa]));
+  const split = Object.values(fsx.measurements).flat().find(m => m.name === 'Deck boards' && m.group_child);
+  delete split[TAGK];
+  const px = new Project();
+  px.loadFrom({ metadata: fsx.metadata, annotations: fsx.annotations, measurements: fsx.measurements,
+    pageCount: fsx.pageCount, revisionCounts: fsx.revisions.map(s => s.length) });
+  const stx = new PageStore();
+  stx.setFromProject(fsx);
+  const splitPath = path.join(dir, 'two-split.takeoff');
+  await writeFile(splitPath, new Uint8Array(await (await writeProject({ metadata: px.buildSaveMetadata(),
+    pageSources: stx.saveSources(), revisionSources: stx.saveRevisionSources() })).arrayBuffer()));
+  const dx = await desktop('check-two', splitPath);
+  ok('a hand-split item: the desktop\'s heal is heard (marked unsaved, its words said) -- the check above can hear one',
+    dx.two && dx.two.unsaved === true && dx.two.heard.some(([n, t]) => n === '_heal_item_groups' && t),
+    JSON.stringify(dx.two && dx.two.heard));
 } finally {
   await rm(dir, { recursive: true, force: true });
 }

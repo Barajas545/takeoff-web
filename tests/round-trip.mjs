@@ -1,12 +1,27 @@
 // Open a real project, write it back with the web writer, re-open the result,
-// and prove nothing moved: same pages, same bytes per page, same item values.
+// and prove nothing moved: same pages, same bytes per page, same item values
+// -- and every item's KEYS. Each job is handed what desktop 3.08 writes into
+// a job of several takeoffs before it is opened (its three metadata keys, a
+// takeoff_list tag on every other item that belongs to a takeoff) and a key
+// no build of this app knows on every item: each must come back exactly as
+// it went in. Per item, the key set comes back whole but for the runtime keys
+// this app never writes (RUNTIME, project.js RUNTIME_KEYS: the desktop's ppf
+// among them) and the `visible: true` it adds where a file had none (spec
+// G10: both predate takeoff lists, and the desktop reads them the same way).
 import { readFile } from 'node:fs/promises';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { openProject, writeProject } from '../js/core/takeoff-file.js';
 import { Project } from '../js/core/project.js';
 import { PageStore } from '../js/core/page-store.js';
+import { takeoffListScoped } from '../js/core/takeoff-lists.js';
 import { LIBRARY, haveLibrary, skip } from './config.mjs';
+
+const RUNTIME = new Set(['_uid', 'ppf', 'ppf_recovered', 'scale_label', 'self_intersects']);
+const TAG = 'takeoff_list';
+const FUTURE = 'zz_round_trip_future_key';
+const TL_META = { takeoff_lists: [{ list_id: 'tl-rt000001', label: 'Deck' }],
+  takeoff_list_active: 'tl-rt000001', takeoff_main_label: 'House' };
 
 const ROOT = LIBRARY;
 // This one runs against the real project library. Without one it SKIPS rather
@@ -33,6 +48,20 @@ for await (const p of walk(ROOT)) {
   if (!buf || buf.length > MAX_MB * 1048576) continue;
 
   const before = await openProject(new Blob([buf]));
+  // A job of several takeoffs, as desktop 3.08 writes one (a key the file
+  // already has is kept as it is), and a key from the future on every item.
+  for (const [k, v] of Object.entries(TL_META)) if (!(k in before.metadata)) before.metadata[k] = structuredClone(v);
+  let nth = 0;
+  for (const lst of Object.values(before.measurements)) {
+    for (const m of lst || []) {
+      m[FUTURE] = { n: nth };
+      if (takeoffListScoped(m) && nth % 2 && !(TAG in m)) m[TAG] = 'tl-rt000001';
+      nth += 1;
+    }
+  }
+  // ...as it went in: the items and keys before this app touches them.
+  const sent = { meta: Object.fromEntries(Object.keys(TL_META).map(k => [k, JSON.stringify(before.metadata[k])])),
+    items: structuredClone(before.measurements) };
   const project = new Project();
   project.loadFrom({
     metadata: before.metadata, annotations: before.annotations,
@@ -48,6 +77,8 @@ for await (const p of walk(ROOT)) {
   });
   const outBuf = new Uint8Array(await blob.arrayBuffer());
   const after = await openProject(new Blob([outBuf]));
+  // ...as the file holds it, before a loadFrom below fills in what this app keeps at runtime
+  const cameBack = structuredClone(after.measurements || {});
 
   const problems = [];
   if (after.pageCount !== before.pageCount) problems.push('page count');
@@ -83,6 +114,29 @@ for await (const p of walk(ROOT)) {
   else for (let i = 0; i < va.length; i++) {
     if (va[i] !== vb[i]) { problems.push(`item ${va[i]} -> ${vb[i]}`); break; }
   }
+
+  // Desktop 3.08's takeoffs and the key from the future, item by item.
+  for (const [k, v] of Object.entries(sent.meta)) {
+    if (JSON.stringify(after.metadata[k]) !== v) problems.push(`metadata ${k} ${v} -> ${JSON.stringify(after.metadata[k])}`);
+  }
+  let keyed = 0;
+  for (const [pg, lst] of Object.entries(sent.items)) {
+    if (!Array.isArray(lst) || !lst.length) continue;
+    const back = cameBack[pg] || [];
+    if (back.length !== lst.length) { problems.push(`page ${pg}: ${lst.length} items -> ${back.length}`); continue; }
+    for (let i = 0; i < lst.length; i++) {
+      const a = lst[i], b = back[i];
+      const want = Object.keys(a).filter(k => !RUNTIME.has(k)).sort().join();
+      const got = Object.keys(b).filter(k => !(k === 'visible' && !('visible' in a))).sort().join();
+      if (got !== want) { problems.push(`page ${pg} item ${i}: keys ${want} -> ${got}`); break; }
+      if (JSON.stringify(b[TAG]) !== JSON.stringify(a[TAG]) || JSON.stringify(b[FUTURE]) !== JSON.stringify(a[FUTURE])) {
+        problems.push(`page ${pg} item ${i}: ${TAG} ${a[TAG]} -> ${b[TAG]}, ${FUTURE} ${JSON.stringify(a[FUTURE])} -> ${JSON.stringify(b[FUTURE])}`);
+        break;
+      }
+      keyed += 1;
+    }
+  }
+  if (keyed !== nth) problems.push(`${nth} items sent, ${keyed} came back with every key`);
 
   const written = JSON.stringify(project.buildSaveMetadata());
   for (const k of ['"_uid"', '"ppf"', '"ppf_recovered"', '"scale_label"']) {

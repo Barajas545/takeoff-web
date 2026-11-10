@@ -157,8 +157,8 @@ a record's look (3.05 records, pictures, bad cut-offs); and what
 job of sheets of different sizes, a revision set and pictures -- the source,
 `overlay_rect`, the tint, the fade, the look, the texture, the fader's label,
 and for every record a file can hold that names nothing, whether the last
-sheet's overlay was taken down (its revision branch leaves it up: the 3.08
-residual). Plus page-pixel rects for a 5400x3600 sheet over a 2592x1728 one,
+sheet's overlay was taken down (before 3.08 its revision branch left it up;
+the snapshot is the 3.08 desktop's, which takes it down there too). Plus page-pixel rects for a 5400x3600 sheet over a 2592x1728 one,
 and `_cad_image_rect`, `_pts_pair`, `overlay_picture`, the sheet and picture
 names and base64 reads. And `decode`: small PNGs of every shape a PIL read
 and a browser read can disagree on -- semi-transparent RGBA, grey with alpha,

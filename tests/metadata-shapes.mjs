@@ -4,6 +4,12 @@
 //   page_labels         LIST   (detected, by index)
 //   page_labels_custom  DICT   {str(idx): label}
 //   page_names          DICT   {str(idx): name}
+// ...and desktop 3.08's takeoffs, which THIS APP WRITES NONE OF (it keeps
+// them as the file had them, byte for byte; js/core/takeoff-lists.js):
+//   takeoff_lists       LIST   [{list_id: str, label: str}], written only when
+//                              the job has a takeoff besides Main
+//   takeoff_list_active STR    the takeoff the desktop left the job in (absent: Main)
+//   takeoff_main_label  STR    Main's own name (absent: 'Main')
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { openProject, writeProject } from '../js/core/takeoff-file.js';
@@ -31,6 +37,22 @@ async function* walk(dir, d = 0) {
 
 const isDict = v => v && typeof v === 'object' && !Array.isArray(v);
 let checked = 0;
+const TL_KEYS = ['takeoff_lists', 'takeoff_list_active', 'takeoff_main_label'];
+/** The shapes desktop 3.08 writes the three in, '' when right. */
+function takeoffShapes(m) {
+  const out = [];
+  if ('takeoff_lists' in m) {
+    const l = m.takeoff_lists;
+    if (!Array.isArray(l) || !l.length) out.push(`takeoff_lists is ${JSON.stringify(l)}, want a non-empty list`);
+    else if (!l.every(r => isDict(r) && typeof r.list_id === 'string' && typeof r.label === 'string')) {
+      out.push('takeoff_lists holds a record that is not {list_id: str, label: str}');
+    }
+  }
+  for (const k of ['takeoff_list_active', 'takeoff_main_label']) {
+    if (k in m && typeof m[k] !== 'string') out.push(`${k} is ${typeof m[k]}, want a str`);
+  }
+  return out.join('; ');
+}
 
 for await (const f of walk(ROOT)) {
   const buf = await readFile(f).catch(() => null);
@@ -38,6 +60,9 @@ for await (const f of walk(ROOT)) {
   checked++;
 
   const before = await openProject(new Blob([buf]));
+  // what the file says of takeoffs, as it was (none, in a job made before 3.08)
+  const hadTl = Object.fromEntries(TL_KEYS.filter(k => k in before.metadata)
+    .map(k => [k, JSON.stringify(before.metadata[k])]));
   const project = new Project();
   project.loadFrom({
     metadata: before.metadata, annotations: before.annotations,
@@ -70,6 +95,19 @@ for await (const f of walk(ROOT)) {
   if (m.page_names !== undefined && !isDict(m.page_names)) {
     bad(`${name}: page_names is ${Array.isArray(m.page_names) ? 'a LIST — desktop dict() would throw' : typeof m.page_names}, want a dict`);
   }
+  // The takeoffs: this app writes none of the three -- each is the file's own, or absent.
+  for (const k of TL_KEYS) {
+    const now = k in m ? JSON.stringify(m[k]) : undefined;
+    if (now !== hadTl[k]) bad(`${name}: ${k} ${hadTl[k] ?? '(absent)'} -> ${now ?? '(absent)'}: this app writes none of the takeoff keys`);
+  }
+  if (takeoffShapes(m)) bad(`${name}: ${takeoffShapes(m)}`);
+  for (const lst of Object.values(after.measurements || {})) {
+    for (const it of lst || []) {
+      if ('takeoff_list' in it && (typeof it.takeoff_list !== 'string' || !it.takeoff_list.trim())) {
+        bad(`${name}: an item's takeoff_list is ${JSON.stringify(it.takeoff_list)}, want an id (a non-empty str)`);
+      }
+    }
+  }
   if (before.pageCount) {
     if (m.page_labels_custom?.['0'] !== 'S9.99') bad(`${name}: renamed label did not survive`);
     if (m.page_names?.['0'] !== 'Test Sheet') bad(`${name}: sheet title did not survive`);
@@ -94,6 +132,33 @@ for await (const f of walk(ROOT)) {
   if (p.pageLabel(0) !== 'A1') bad(`detected label lost: ${p.pageLabel(0)}`);
 }
 
+// Desktop 3.08's takeoffs: a job of two keeps its three keys in their shapes,
+// as they were, through an edit and a save; a job with only Main, and a new
+// one, gain none of them.
+{
+  const md = { page_labels: ['X1.0'], takeoff_lists: [{ list_id: 'tl-0000beef', label: 'Deck' }],
+    takeoff_list_active: 'tl-0000beef', takeoff_main_label: 'House' };
+  const p = new Project();
+  p.loadFrom({ metadata: structuredClone(md), annotations: {},
+    measurements: { 0: [{ type: 'area', name: 'Deck boards', points: [[0, 0], [10, 0], [10, 10]], value: 1, takeoff_list: 'tl-0000beef' }] },
+    pageCount: 1 });
+  p.setPageLabel(0, 'X1.1');
+  const out = p.buildSaveMetadata();
+  for (const k of TL_KEYS) {
+    if (JSON.stringify(out[k]) !== JSON.stringify(md[k])) bad(`a job of two takeoffs: ${k} ${JSON.stringify(md[k])} -> ${JSON.stringify(out[k])}`);
+  }
+  if (takeoffShapes(out)) bad(`a job of two takeoffs: ${takeoffShapes(out)}`);
+  if (out.measurements['0'][0].takeoff_list !== 'tl-0000beef') bad('a job of two takeoffs: the item lost its takeoff');
+  const one = new Project();
+  one.loadFrom({ metadata: { page_labels: ['X1.0'] }, annotations: {}, measurements: {}, pageCount: 1 });
+  one.setPageLabel(0, 'X1.1');
+  const fresh = new Project();
+  for (const [what, o] of [['a job with only Main', one.buildSaveMetadata()], ['a new job', fresh.buildSaveMetadata()]]) {
+    const got = TL_KEYS.filter(k => k in o);
+    if (got.length) bad(`${what} gained ${got.join(', ')}: this app writes none of the takeoff keys`);
+  }
+}
+
 // Index-keyed dicts must move with an insert.
 {
   const p = new Project();
@@ -113,5 +178,5 @@ for await (const f of walk(ROOT)) {
 
 console.log(fails
   ? `\n${fails} SHAPE CHECK(S) FAILED across ${checked} projects`
-  : `\nMetadata shapes correct across ${checked} projects, plus the legacy and insert cases`);
+  : `\nMetadata shapes correct across ${checked} projects (none gained a takeoff key), plus the legacy, takeoff and insert cases`);
 process.exit(fails ? 1 : 0);

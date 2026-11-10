@@ -10,9 +10,10 @@
 //
 //   turn(page, how)   goToPage's first word. The LAST sheet's overlay comes
 //                     down here, always, before anything can be restored --
-//                     never behind an early return (the desktop's revision
-//                     branch returns without it, and leaves the last sheet's
-//                     comparison up over this one: reported for 3.08). A
+//                     never behind an early return (before 3.08 the
+//                     desktop's revision branch returned without it, and
+//                     left the last sheet's comparison up over this one;
+//                     3.08 takes it down there too). A
 //                     'keep' of the sheet he is on (a save's re-read), and
 //                     its own card tapped again, are the same visit and
 //                     keep it (the card asks again for one whose read

@@ -3,6 +3,8 @@
     python desktop-round-trip.py make  <out.takeoff>
     python desktop-round-trip.py check <file.takeoff>
     python desktop-round-trip.py delete-rev <file.takeoff> <revision name>
+    python desktop-round-trip.py make-two <out.takeoff>
+    python desktop-round-trip.py check-two <file.takeoff>
 
 `make` builds a job the way he builds one -- an original set, a revision
 that reissues sheets and ADDS one in the middle, a second that reissues and
@@ -22,6 +24,20 @@ Delete Revision would remove, and every saved overlay -- its record, its
 picture's flag, and the look it comes up in on arriving at its sheet.
 
 `delete-rev` runs Delete Revision on that file and reports what it removed.
+
+`make-two` builds a job of TWO TAKEOFFS (desktop 3.08) with the desktop's own
+takeoff tools: work drawn in Main, a takeoff made with New Takeoff (its name
+asked, as the + asks it), Main renamed "House", items drawn in Deck --
+multi-sheet items in both, one of Deck's with its main shape on X4.0, a Deck
+Group, same-name counts, window pins, standalones -- an item drawn in House
+moved to Deck with Move to Takeoff, a revision of X2.0, and the job left in
+Deck. Saved.
+
+`check-two` opens such a file -- the one the WEB edited and saved -- and
+reports, BEFORE anything else reads it, whether opening it changed anything
+(the open-time heal marks the job unsaved and says what it put right) and
+what the status line says; then the takeoffs as the file holds them and as
+the desktop reads them, every item's takeoff tag, and the summary below.
 
 `classes` opens a file the web RENAMED floors and trades in (Round 7) and
 reports what the desktop reads off it: the job's own names, where each kind
@@ -424,6 +440,203 @@ def classes():
             "metaPinFiling": win.metadata.get("pin_filing")}
 
 
+def make_two(out):
+    """A job of two takeoffs, made with the desktop's own tools (synthetic:
+    sheet labels X1.0-X4.0, no client, no job number)."""
+    W2, H2, PPF = 800, 600, 10.0
+    labs = ("X1.0", "X2.0", "X3.0", "X4.0")
+    win.images = [Image.new("RGB", (W2, H2), (255, 255, 255)) for _ in labs]
+    gl._images = list(win.images)
+    gl._page_sizes = {i: (W2, H2) for i in range(len(labs))}
+    win.metadata = {"page_labels": list(labs), "page_labels_custom": {},
+                    "page_names": {}, "dpi": 150, "pixels_per_foot": PPF,
+                    "project_name": "Two Takeoffs", "project_id": 4343}
+    win._revisions = []
+    win._vision_callouts = {}
+    win._page_moves_waiting = []
+    win._sheet_made = {}
+    win._file_pages = None
+    win._file_stamp = None
+    gl._pixels_per_foot = PPF
+    gl._zoom = 1.0
+    gl._page_origin = lambda: (0.0, 0.0)
+    gl.set_measurements({})
+    gl.set_annotations({})
+    gl.clear_undo_history()
+    gl.clear_page_preview(update=False)
+    gl._current_page = 0
+    gl.set_active_takeoff_list("")
+    gl._append_target = None
+    gl.forget_armed_count()
+    gl._pending_item_name = ""
+    win.thumb_panel.populate(win.images, list(labs), {}, {})
+    win._unsaved = False
+    # name, notes, color, floor, category, sub, cost type, unit cost
+    dlg = ["Item", "", (1, 0, 0), "", "", "", "material", 0.0]
+    gl._show_item_dialog = lambda *a, **k: tuple(dlg)
+
+    def on(page, rev=None):
+        gl._current_page = page
+        gl._preview_key = rev
+
+    def rect(x, y, w=40, h=30):
+        return [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
+
+    def area(name, x, y, floor="Level 1", cat="Framing"):
+        dlg[0], dlg[3], dlg[4] = name, floor, cat
+        gl._finalize_area(rect(x, y))
+        return gl._measurements[gl._current_page][-1]
+
+    def run(item, page, x, y):
+        gl._append_target = item
+        on(page)
+        gl._finalize_area(rect(x, y))
+        gl._append_target = None
+
+    def line(name, pts_ft, floor="Level 1", cat="Framing"):
+        dlg[0], dlg[3], dlg[4] = name, floor, cat
+        gl._finalize_polyline([(a * PPF, b * PPF) for a, b in pts_ft])
+        return gl._measurements[gl._current_page][-1]
+
+    def count(name, pts):
+        for q in pts:
+            gl._pending_item_name = name
+            gl._add_count_point(list(q))
+        gl._pending_item_name = ""
+        gl.forget_armed_count()
+
+    # ---- Main ----
+    on(0)
+    area("Slab", 10, 10, cat="Concrete")
+    wall = area("Wall M", 60, 10)
+    run(wall, 1, 10, 200)                       # a House run on X2.0
+    on(0)
+    count("Outlets", [(400, 50), (420, 50)])
+    gl._add_window_pin([150.0, 300.0])
+    gl._finalize_distance([(10.0, 500.0), (110.0, 500.0)])
+    gl._add_measurement({"type": "textnote", "points": [[1, 1], [5, 5]],
+                         "text": "check"})
+    gl._add_measurement({"type": "page_ref", "points": [[400, 400]],
+                         "ref_page": 1, "label": "X2.0"})
+    on(1)
+    line("Joists", [(0, 5), (20, 5)])
+    count("Posts", [(500, 500), (520, 500)])    # House's Posts on X2.0
+    fence = area("Fence", 600, 100)
+    run(fence, 2, 600, 100)                     # its run on X3.0
+    on(3)
+    area("Porch", 10, 10, cat="Concrete")
+    rail = area("Rail", 300, 300, cat="Railing")   # drawn in House: moved below
+    gl.add_standalone({"name": "Nails", "qty": 2, "unit": "box"})
+    # ---- Deck: named as the + names it (the form answered "Deck") ----
+    win._ask_takeoff_name = lambda *a, **k: "Deck"
+    deck = win.new_takeoff()
+    assert deck and gl.active_takeoff_list() == deck, deck
+    assert win.rename_takeoff("", "House")
+    on(0)
+    boards = area("Deck boards", 200, 200)
+    run(boards, 1, 300, 300)
+    run(boards, 2, 300, 300)
+    on(0)
+    count("Posts", [(300, 300), (320, 300)])    # Deck's Posts on X1.0
+    gl._add_window_pin([600.0, 50.0])
+    on(2)
+    ledger = line("Ledger", [(0, 20), (30, 20)], floor="", cat="")
+    gl.add_standalone({"name": "Screws", "qty": 3, "unit": "box"})
+    stairs = gl.add_group_item({"name": "Stairs"})
+    assert gl.set_item_group(ledger, stairs["group_item_id"]) is True
+    on(3)
+    beam = area("Beam", 500, 400)               # Deck's main shape on X4.0
+    run(beam, 2, 500, 400)                      # ...its run on X3.0
+    assert win.move_to_takeoff([rail], deck) == 1
+    # ---- Rev B reissues X2.0 (nothing traced on it: the web takes off there) ----
+    win._revisions = [{
+        "id": "r2", "date": "08/01/2026", "description": "Rev B",
+        "visible": True, "archived": False,
+        "page_labels": ["X2.0"], "match": {"1": 0}, "extra": {},
+        "images": [Image.new("RGB", (W2, H2), (250, 250, 250))]}]
+    on(0)
+    settle()
+    assert gl.active_takeoff_list() == deck     # the job is left in Deck
+    save(out)
+    return {"deck": deck, "lists": win.metadata.get("takeoff_lists"),
+            "active": win.metadata.get("takeoff_list_active"),
+            "main": win.metadata.get("takeoff_main_label")}
+
+
+# What opening a job SAYS it put right, recorded as it is said (the status
+# line alone cannot be read for it: the library note replaces it on open).
+HEARD = []
+
+
+def listen_for_heals():
+    """Record what each open-time check returns and every price sentence
+    announced -- the words the user would be shown -- without changing any
+    of them."""
+    def rec(name, fn):
+        def wrapped(*a, **k):
+            r = fn(*a, **k)
+            HEARD.append([name, r if isinstance(r, str) else repr(r)[:400]])
+            return r
+        return wrapped
+    win._heal_takeoff_lists = rec("_heal_takeoff_lists", win._heal_takeoff_lists)
+    win._heal_item_groups = rec("_heal_item_groups", win._heal_item_groups)
+    _ann = win._announce_price
+
+    def announce(text, *a, **k):
+        if callable(text):
+            # words worded when they are said: recorded then, as said
+            fn = text
+
+            def text():
+                got = fn()
+                HEARD.append(["_announce_price", str(got or "")])
+                return got
+        else:
+            HEARD.append(["_announce_price", str(text)])
+        return _ann(text, *a, **k)
+    win._announce_price = announce
+
+
+HEAL_WORDS = ("Recovered takeoff", "no record of", "apart from the rest",
+              "the whole item is in", "carried a takeoff of", "re-added from",
+              "more than one main shape", "which was deleted")
+
+
+def check_two():
+    """What opening a job of two takeoffs did (read FIRST, before any other
+    reader), and what the desktop finds in it."""
+    unsaved = bool(win._unsaved)
+    status = win.status_label.text()
+    labs = labels()
+    meas = gl._measurements or {}
+
+    def lab(pg):
+        return labs[pg] if isinstance(pg, int) and 0 <= pg < len(labs) else (
+            "standalone" if pg == V.STANDALONE_PAGE else "page %s" % pg)
+
+    items = []
+    for pg in sorted(meas, key=V.page_sort_key):
+        for m in meas.get(pg) or []:
+            items.append([lab(pg), m.get("type"),
+                          m.get("name") or m.get("text") or m.get("label") or "",
+                          m.get("takeoff_list"), bool(m.get("group_child")),
+                          m.get("in_group") is not None and m.get("in_group") != ""])
+    md = win.metadata
+    heard = list(HEARD)
+    two = {"unsaved": unsaved, "status": status, "heard": heard,
+           "healWords": sorted({w for w in HEAL_WORDS
+                                for t in [status] + [h[1] for h in heard] if w in t}),
+           "lists": md.get("takeoff_lists"), "active": md.get("takeoff_list_active"),
+           "main": md.get("takeoff_main_label"),
+           "registry": win.takeoff_lists(), "in": gl.active_takeoff_list(),
+           "mainName": win.takeoff_list_label(""), "items": items}
+    out = summary()
+    # ...and nothing is left for the heal to put right: asked again, it says nothing
+    two["healAgain"] = win._heal_takeoff_lists()
+    out["two"] = two
+    return out
+
+
 def main():
     cmd, path = sys.argv[1], sys.argv[2]
     if cmd == "make":
@@ -443,6 +656,13 @@ def main():
                        gl._overlay_mode, bool(gl._overlay_invert),
                        gl._overlay_cutoff]
         out["overlayUp"] = up
+    elif cmd == "make-two":
+        out = make_two(path)
+    elif cmd == "check-two":
+        ANSWER["default"] = V.QMessageBox.No      # opening must ask nothing
+        listen_for_heals()
+        load(path)
+        out = check_two()
     elif cmd == "classes":
         ANSWER["default"] = V.QMessageBox.No      # opening must ask nothing
         load(path)

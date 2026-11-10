@@ -20,10 +20,11 @@
 //     desktop's _restore_overlay_for_page, run whole on stand-ins, on a job of
 //     sheets of different sizes, a revision set and pictures: what goes up,
 //     where, in what tint, fade and look, the texture, the fade label -- and
-//     for every record that names nothing, nothing. The desktop's revision
-//     branch leaves the LAST sheet's overlay up ('return # revision gone',
-//     reported for 3.08); the web takes it down -- asserted both ways, so a
-//     fixed desktop shows here.
+//     for every record that names nothing, nothing. Before 3.08 the desktop's
+//     revision branch left the LAST sheet's overlay up ('return # revision
+//     gone'); 3.08 takes it down (R3-12 c), as the web always has -- so a
+//     record naming a revision that is gone is 'nothing' on both, and the
+//     old residual coming back is a FAIL.
 //  4. SIZES: a 5400x3600 sheet over a 2592x1728 sheet, a 3600x2400 revision
 //     page, a picture box -- page pixels, never stretched to the sheet.
 //  5. The small ones: _cad_image_rect, _pts_pair, overlay_picture (found by
@@ -207,8 +208,10 @@ function checkArrivals(T, tag) {
       continue;
     }
     if (what === 'residual') {
-      ok(`${a.name}: the DESKTOP leaves the last sheet's overlay up (its revision branch's 'return', reported for 3.08) `
-        + '-- the web shows nothing (the caller has taken the last one down first)', src === null,
+      // 3.08 (R3-12 c) takes the last sheet's overlay down here, as the web
+      // always has (saved-overlay.js turn()): a residual is the old bug back.
+      ok(`${a.name}: the desktop leaves the last sheet's overlay up again (its revision branch's 'return', fixed in 3.08) `
+        + '-- the web shows nothing here (the caller has taken the last one down first)', false,
       src && src.kind);
       continue;
     }
@@ -246,8 +249,8 @@ function checkArrivals(T, tag) {
       `cutoff ${out.cutoff}; ${firstDiff(out.data, bytes(a.texture))}`);
   }
   log(`   (desktop outcomes: ${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ')})`);
-  ok('the fixture reaches every outcome: shown, nothing, the residual and a raise',
-    counts.shown >= 9 && counts.nothing >= 15 && counts.residual >= 5 && counts.raised >= 1, counts);
+  ok('the fixture reaches every outcome: shown, nothing and a raise; the desktop no longer leaves the last sheet\'s '
+    + 'overlay up', counts.shown >= 9 && counts.nothing >= 20 && !counts.residual && counts.raised >= 1, counts);
 }
 
 function checkSizes(T, tag) {
