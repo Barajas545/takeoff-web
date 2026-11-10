@@ -226,7 +226,7 @@ export function cell(v, s = 'plain', span = 0) {
   return { v, s, span };
 }
 
-function sheetXml(rows, { cols = [], freeze = 0 } = {}) {
+function sheetXml(rows, { cols = [], freeze = 0, header = null } = {}) {
   const merges = [];
   const body = rows.map((row, r) => {
     const cells = [];
@@ -264,24 +264,38 @@ function sheetXml(rows, { cols = [], freeze = 0 } = {}) {
   const paneXml = freeze
     ? `<sheetView workbookViewId="0"><pane ySplit="${freeze}" topLeftCell="A${freeze + 1}" activePane="bottomLeft" state="frozen"/></sheetView>`
     : '<sheetView workbookViewId="0"/>';
+  // The printed header's centre section (Page Layout, and paper): '&C' opens
+  // it, and a '&' of the text itself is Excel's header code, so it is doubled
+  // (the desktop's oddHeader.center.text = text.replace("&", "&&")). After
+  // <mergeCells>, where the schema orders it. None: the sheet as before.
+  const headerXml = header
+    ? `<headerFooter><oddHeader>${esc(`&C${String(header).replace(/&/g, '&&')}`)}</oddHeader></headerFooter>`
+    : '';
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <sheetViews>${paneXml}</sheetViews>
 ${colsXml}
 <sheetData>${body.join('')}</sheetData>
-${merges.length ? `<mergeCells count="${merges.length}">${merges.join('')}</mergeCells>` : ''}
+${merges.length ? `<mergeCells count="${merges.length}">${merges.join('')}</mergeCells>` : ''}${headerXml}
 </worksheet>`;
 }
 
 /**
  * Build a workbook.
  * @param {Array<{name:string, rows:Array<Array>, cols?:number[], freeze?:number}>} sheets
+ * @param {{title?:string, header?:string}|null} [opts] what the workbook says
+ *   it is of, beside its cells (desktop 3.08, a job of several takeoffs: "Takeoff:
+ *   Deck"): `title` is the workbook's own title (docProps/core.xml dc:title,
+ *   File > Info), `header` every sheet's printed header, centred. No cell, row
+ *   or column moves. Without them the bytes are exactly as they always were.
  * @returns {Blob}
  */
-export function writeWorkbook(sheets) {
+export function writeWorkbook(sheets, opts = null) {
   const files = [];
   const push = (name, text) => files.push({ name, data: te.encode(text) });
+  const title = opts && opts.title ? String(opts.title) : '';
+  const header = opts && opts.header ? String(opts.header) : '';
 
   push('[Content_Types].xml',
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -291,13 +305,13 @@ export function writeWorkbook(sheets) {
 <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
 ${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}
 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-</Types>`);
+${title ? '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>\n' : ''}</Types>`);
 
   push('_rels/.rels',
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>`);
+${title ? '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>\n' : ''}</Relationships>`);
 
   push('xl/workbook.xml',
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -316,8 +330,18 @@ ${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
 
   push('xl/styles.xml', buildStyles());
   sheets.forEach((s, i) => {
-    push(`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s.rows, { cols: s.cols, freeze: s.freeze }));
+    push(`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s.rows, { cols: s.cols, freeze: s.freeze, header }));
   });
+  if (title) {
+    // No date in it: the same workbook writes the same bytes.
+    push('docProps/core.xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+ xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/"
+ xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<dc:title>${esc(title)}</dc:title>
+</cp:coreProperties>`);
+  }
 
   return zip(files);
 }

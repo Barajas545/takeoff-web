@@ -227,8 +227,11 @@ const CSV_COLUMNS = (() => {
   return new Function(`return ${REPORTS.slice(a + 'const CSV_COLUMNS = '.length, b + 1)};`)();
 })();
 const WB_LIFTED = ['round4', 'gNumber', 'takeoffQtyCell', 'exportWorkbook'];
+// (reportTakeoff, nothingWords and fileName name the takeoff a job of
+// several is reported in -- tests/takeoff-lists-outputs.mjs holds them; here
+// the real reportTakeoff, and the name and the empty words stand in)
 const WB_SCOPE = ['collectItems', 'collectRows', 'D', 'cell', 'writeWorkbook', 'download', 'baseName',
-  'pyRound', 'pyG', 'CSV_COLUMNS'];
+  'pyRound', 'pyG', 'CSV_COLUMNS', 'reportTakeoff', 'nothingWords', 'fileName'];
 const WB_TEXT = WB_LIFTED.map(n => fnText(REPORTS, n)).join('\n');
 {
   const builtins = new Set(['Number', 'String', 'Boolean', 'Object', 'Array', 'Math', 'Blob', 'if', 'for',
@@ -244,7 +247,8 @@ async function workbookOf(project) {
   // eslint-disable-next-line no-new-func
   const exportWorkbook = new Function(...WB_SCOPE, `${WB_TEXT}\nreturn exportWorkbook;`)(
     Reports.collectItems, Reports.collectRows, { alertDialog: async () => {} }, xlsxCell,
-    s => { sheets = s; return null; }, () => {}, () => 'job', P.pyRound, P.pyG, CSV_COLUMNS);
+    s => { sheets = s; return null; }, () => {}, () => 'job', P.pyRound, P.pyG, CSV_COLUMNS,
+    Reports.reportTakeoff, () => 'No measurements found.', () => 'job.xlsx');
   await exportWorkbook(project, i => `X${i + 1}.0`);
   return sheets;
 }

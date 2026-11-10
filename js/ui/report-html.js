@@ -118,10 +118,18 @@ export function totalString(entries, { costs, materials }) {
   return s || '—';
 }
 
-export function docHeader(md, title, subtitle) {
+/**
+ * A report's letterhead. `takeoffName` (a job of several takeoffs, desktop
+ * 3.08): the takeoff the report is of, the FIRST piece of the meta line, as
+ * the desktop's filter line leads "Takeoff: Deck   ·   ..." -- null in a job
+ * with Main alone, whose header is as it always was. The <p class="meta">
+ * stays: the Report Center hangs its versions line after it.
+ */
+export function docHeader(md, title, subtitle, takeoffName = null) {
   const pieces = [md.internal_id_number, md.client_name, md.project_address]
     .filter(Boolean).join('   ·   ');
   const meta = [
+    takeoffName ? `Takeoff: ${takeoffName}` : '',
     md.estimator_name ? `Estimator: ${md.estimator_name}` : '',
     md.bid_date ? `Bid date: ${md.bid_date}` : '',
     `Printed ${new Date().toLocaleDateString('en-US')}`,
@@ -331,9 +339,11 @@ export function scheduleHtml(items, kind) {
 
 /**
  * The yard sheet: banded by floor and room, in FIRST-SEEN order rather than
- * sorted, so it reads in the order the estimator worked.
+ * sorted, so it reads in the order the estimator worked. `takeoffName` (a
+ * job of several takeoffs): the takeoff it lists, after the project's name in
+ * its title -- the desktop's band "Project - Deck"; null with Main alone.
  */
-export function matListHtml(md, items, options) {
+export function matListHtml(md, items, options, takeoffName = null) {
   // The caller has already promoted every material to a row of its own, so
   // these ARE the lines — flattening again here would drop the parents that
   // carry no materials.
@@ -353,12 +363,14 @@ export function matListHtml(md, items, options) {
     .filter(Boolean).join('   ·   ');
   const out = [`${PRINT_CSS}<div class="rpt">`];
   if (co) out.push(`<p class="sub" style="font-weight:700">${esc(co)}</p>`);
-  out.push(`<h1>${esc(md.project_name || 'Material List')}</h1>`);
+  const h1 = md.project_name || 'Material List';
+  out.push(`<h1>${esc(takeoffName ? `${h1} - ${takeoffName}` : h1)}</h1>`);
   out.push(`<p class="meta">${esc([md.project_address, md.internal_id_number]
     .filter(Boolean).join('   ·   '))}   ·   Printed ${new Date().toLocaleDateString('en-US')}</p>`);
 
   if (!groups.length) {
-    out.push('<p style="color:#6a7480"><i>No matching items.</i></p></div>');
+    out.push(`<p style="color:#6a7480"><i>${takeoffName ? `No matching items in ${esc(takeoffName)}.`
+      : 'No matching items.'}</i></p></div>`);
     return out.join('');
   }
 

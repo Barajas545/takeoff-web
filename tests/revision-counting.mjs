@@ -515,8 +515,16 @@ function checkScenarioNamed(input, truth, label, { words = true, reopen = null, 
 
   // ...and the REPORT this app prints and exports adds up to the same: the
   // Report Center as it opens (dimensions not included, as on the desktop),
-  // the printed rows and the CSV/Excel rows both.
+  // the printed rows and the CSV/Excel rows both. In a job of several
+  // takeoffs the reports are of the takeoff the web is in (Main): the
+  // desktop's counted items of that takeoff, read by the item's own tag (the
+  // totals above stay the whole job's).
   {
+    const inReport = (pg, i) => inTakeoffList((input.measurements[String(pg)] || [])[i], WEB_TAKEOFF);
+    const reportSums = {};
+    for (const [pg, i, q, u] of truth.counted) {
+      if (inReport(pg, i)) reportSums[u] = pyRound((reportSums[u] || 0) + q, 6);
+    }
     const p = new Project();
     p.loadFrom({ metadata: structuredClone(model.md), annotations: {},
       measurements: structuredClone(input.measurements || {}), pageCount: n,
@@ -526,7 +534,7 @@ function checkScenarioNamed(input, truth, label, { words = true, reopen = null, 
     for (const e of collectItems(p, lbl, { includeDims: false })) {
       fromItems[e.unit] = pyRound((fromItems[e.unit] || 0) + e.qty, 6);
     }
-    eq(`${label} · the printed report adds up to the desktop's totals`, sortObj(fromItems), sortObj(truth.sums));
+    eq(`${label} · the printed report adds up to the desktop's totals`, sortObj(fromItems), sortObj(reportSums));
     // The flat rows carry no unit column, only which column the quantity
     // is in; the job's own sheets are compared (the standalone bucket's
     // units are whatever was typed, and it always counts).
@@ -542,8 +550,8 @@ function checkScenarioNamed(input, truth, label, { words = true, reopen = null, 
       nRows += 1;
     }
     const onSheets = {};
-    for (const [pg, , q, u] of truth.counted) {
-      if (pg >= 0) onSheets[u] = (onSheets[u] || 0) + q;
+    for (const [pg, i, q, u] of truth.counted) {
+      if (pg >= 0 && inReport(pg, i)) onSheets[u] = (onSheets[u] || 0) + q;
     }
     const tol = 5e-5 * nRows + 1e-9;
     const units = [...new Set([...Object.keys(fromRows), ...Object.keys(onSheets)])].sort();

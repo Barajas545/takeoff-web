@@ -8,6 +8,17 @@
 // The column names, the type labels and the number formats below are the
 // desktop app's, character for character. A takeoff exported from the web and
 // one exported from the desktop have to line up in the same spreadsheet.
+//
+// A JOB OF SEVERAL TAKEOFFS (desktop 3.08) is reported one takeoff at a time:
+// every report, table, export and closing band here is of the takeoff the web
+// is in -- Main, this round (REPORT_TAKEOFF). That is THE seam (the desktop's
+// _open_report): the rows are filtered (mainKeep, the reports' listsRow, the
+// combos' values), never the counting model, which stays the whole job's --
+// which drawing a sheet counts from, and a multi-sheet item's total, are
+// every takeoff's. And every report says which takeoff it is of: its header,
+// the Material List's title, the Report Center's title and note, the file
+// names, the workbook's title and printed header. A job with only Main reads,
+// names and writes exactly as before: no word, no name part, no byte.
 
 import * as D from './dialogs.js';
 import {
@@ -19,6 +30,9 @@ import { CountingModel, valueLine } from '../core/counting.js';
 import * as H from './report-html.js';
 import { pyG, pyIntStr, pyRound, pyStrFloat } from '../core/pyformat.js';
 import { itemCost, finiteOrZero } from '../core/measure.js';
+import {
+  WEB_TAKEOFF, inTakeoffList, hasOtherTakeoffs, takeoffListLabel, otherTakeoffs, otherTakeoffsWords,
+} from '../core/takeoff-lists.js';
 
 export const REPORTS = [
   ['estimate', 'Estimate Summary',
@@ -85,7 +99,54 @@ const listsDims = filters => filters.includeDims !== false;
 // programs: what is left out is listed at the end of the report, by sheet,
 // drawing and quantity, and never silently dropped.
 
-/** The counting rule, asked of this project as it stands. */
+// ── which takeoff ─────────────────────────────────────────────────────────
+
+/** The takeoff the reports are of: the one the web is in (Main, always,
+ *  this round). */
+const REPORT_TAKEOFF = WEB_TAKEOFF;
+
+/**
+ * counted_filter's keep(page, m) with the takeoff composed in (desktop
+ * _takeoff_keep) -- for the report rows only. Its book, run and waiting are
+ * handed on as they are: they answer WHY a piece of takeoff is not counted.
+ * Composed here and nowhere else: folded into countedFilter itself, every
+ * "not counted" reader would list another takeoff's work as takeoff on other
+ * versions, and every total would lose it.
+ */
+function mainKeep(k) {
+  return Object.assign((pg, m) => inTakeoffList(m, REPORT_TAKEOFF) && k(pg, m),
+    { book: k.book, run: k.run, waiting: k.waiting });
+}
+
+/**
+ * The takeoff the reports are of, in a job with other takeoffs: its name
+ * (`label`), the others (`others`, otherTakeoffs) and their words; null in a
+ * job with Main alone -- every title, name and sentence then as it always
+ * was. Read once per entry (one store scan).
+ */
+export function reportTakeoff(project) {
+  const md = project.metadata;
+  if (!hasOtherTakeoffs(md, project.measurements)) return null;
+  const others = otherTakeoffs(md, project.measurements, REPORT_TAKEOFF);
+  return { label: takeoffListLabel(md, REPORT_TAKEOFF), others, words: otherTakeoffsWords(others) };
+}
+
+/** A file's name: the job's, then the takeoff's (the desktop's pattern
+ *  "<base> - <takeoff>"), each made safe for a file name. */
+function fileName(project, tl, ext) {
+  return `${baseName(project)}${tl ? ` - ${safeName(tl.label)}` : ''}.${ext}`;
+}
+
+/** What an export with no rows says. */
+function nothingWords(tl) {
+  return tl
+    ? `No measurements found in ${tl.label}. This job's other takeoffs — ${tl.words} — are worked on in the desktop app.`
+    : 'No measurements found.';
+}
+
+/** The counting rule, asked of this project as it stands. JOB-WIDE: the
+ *  whole store, every takeoff's -- never a Main-only store (only the rows
+ *  the reports list are filtered). */
 export function countingOf(project) {
   return new CountingModel({ metadata: project.metadata,
     measurements: project.measurements, pageCount: project.pageCount });
@@ -174,7 +235,8 @@ export function collectRows(project, pageLabel, filters = {}) {
   const rows = [];
   const keys = Object.keys(project.measurements).sort(comparePageKeys);
   const model = countingOf(project);
-  const keep = model.countedFilter();
+  // (the takeoff the reports are of, composed into the rows' test only)
+  const keep = mainKeep(model.countedFilter());
 
   for (const key of keys) {
     const pageIdx = Number(key);
@@ -370,7 +432,7 @@ export function collectItems(project, pageLabel, filters = {}) {
   const out = [];
   const keys = Object.keys(project.measurements).sort(comparePageKeys);
   const model = countingOf(project);
-  const keep = model.countedFilter();
+  const keep = mainKeep(model.countedFilter());
 
   for (const key of keys) {
     const pageIdx = Number(key);
@@ -484,12 +546,15 @@ export function buildCsv(rows) {
 
 export function exportCsv(project, pageLabel, filters = {}) {
   const rows = collectRows(project, pageLabel, filters);
+  // The cells are the same whatever the takeoff, and there is no title line
+  // (desktop R3-11): only the file's name says which takeoff it is.
+  const tl = reportTakeoff(project);
   if (!rows.length) {
-    D.alertDialog('Nothing to export', 'No measurements found.');
+    D.alertDialog('Nothing to export', nothingWords(tl));
     return;
   }
   download(new Blob([buildCsv(rows)], { type: 'text/csv;charset=utf-8' }),
-    `${baseName(project)}.csv`);
+    fileName(project, tl, 'csv'));
 }
 
 // ── Excel ─────────────────────────────────────────────────────────────────
@@ -497,8 +562,9 @@ export function exportCsv(project, pageLabel, filters = {}) {
 export async function exportWorkbook(project, pageLabel, filters = {}) {
   const items = collectItems(project, pageLabel, filters);
   const rows = collectRows(project, pageLabel, filters);
+  const tl = reportTakeoff(project);
   if (!items.length && !rows.length) {
-    await D.alertDialog('Nothing to export', 'No measurements found.');
+    await D.alertDialog('Nothing to export', nothingWords(tl));
     return;
   }
   const md = project.metadata;
@@ -595,12 +661,15 @@ export async function exportWorkbook(project, pageLabel, filters = {}) {
     }));
   }
 
+  // The takeoff it is of, in the workbook's own title and every sheet's
+  // printed header (the desktop's wb.properties.title and oddHeader): no
+  // cell, row or column is added, so nothing pointed at the cells shifts.
   const blob = writeWorkbook([
     { name: 'Takeoff', rows: s1, cols: [34, 12, 14, 18, 12, 11, 8, 11, 12, 40], freeze: 4 },
     { name: 'Materials', rows: s2, cols: [30, 30, 14, 18, 16, 11, 8, 11, 12, 34], freeze: 1 },
     { name: 'All Items', rows: s3, cols: [30, 40, 14, 12, 18, 16, 11, 11, 11, 11, 11, 11, 12], freeze: 1 },
-  ]);
-  download(blob, `${baseName(project)}.xlsx`);
+  ], tl ? { title: `Takeoff: ${tl.label}`, header: `Takeoff: ${tl.label}` } : null);
+  download(blob, fileName(project, tl, 'xlsx'));
 }
 
 // ── the Report Center ─────────────────────────────────────────────────────
@@ -608,6 +677,7 @@ export async function exportWorkbook(project, pageLabel, filters = {}) {
 export async function openReportCenter(project, pageLabel) {
   const floors = distinct(project, 'floor_level');
   const cats = distinct(project, 'category');
+  const tl = reportTakeoff(project);
 
   await D.showDialog(close => {
     const body = D.el('div');
@@ -675,6 +745,16 @@ export async function openReportCenter(project, pageLabel) {
     for (const s of [floorSel, tradeSel, groupSel]) s.addEventListener('change', preview);
     right.appendChild(opts);
 
+    if (tl) {
+      // Which takeoff these reports are of, above the preview: the others
+      // are in none of them.
+      const note = D.el('div', 'takeoff-note', `This is the takeoff ${tl.label}. This job also has `
+        + `${tl.words}, worked on in the desktop app — ${tl.others.length === 1 ? 'it is' : 'they are'} `
+        + 'in none of these reports.');
+      note.style.cssText = 'font-size:11.5px;line-height:1.4;color:#bdbdbd;overflow-wrap:anywhere';
+      right.appendChild(note);
+    }
+
     const frame = D.el('div');
     frame.style.cssText =
       'flex:1;overflow:auto;background:#fff;color:#111;border-radius:6px;padding:18px;min-height:0';
@@ -705,12 +785,18 @@ export async function openReportCenter(project, pageLabel) {
     rebuildList();
     preview();
 
+    // The print window's title is the name the browser's Save as PDF offers
+    // (the desktop's _export_pdf: "<job> - <takeoff> - <report>.pdf").
+    const printTitle = () => (tl
+      ? `${baseName(project)} - ${safeName(tl.label)} - `
+        + `${(REPORTS.find(r => r[0] === selected) || [])[1] || 'Report'}`
+      : 'Takeoff Report');
     return D.dlg({
-      title: 'Report Center',
+      title: tl ? `Report Center — ${tl.label}` : 'Report Center',
       wide: true,
       body,
       buttons: [
-        D.button('Print / PDF', '', () => printHtml(lastHtml)),
+        D.button('Print / PDF', '', () => printHtml(lastHtml, printTitle())),
         D.button('Export CSV', '', () => exportCsv(project, pageLabel,
           { includeDims: checks.dims.checked })),
         D.button('Export Excel', '', () => exportWorkbook(project, pageLabel,
@@ -725,6 +811,8 @@ function distinct(project, field) {
   const seen = new Set();
   for (const [, m] of project.allItems()) {
     if (m.group_child) continue;
+    // the floors and trades of the takeoff the reports are of
+    if (!inTakeoffList(m, REPORT_TAKEOFF)) continue;
     seen.add(String(m[field] || '').trim());
   }
   return [...seen].sort((a, b) => (a === '') - (b === '') || a.localeCompare(b));
@@ -767,7 +855,10 @@ function flattenFor(items, wantType) {
 export function buildReportHtml(project, pageLabel, key, filters, options) {
   const html = buildReportBody(project, pageLabel, key, filters, options);
   const model = countingOf(project);
-  const listsRow = m => m.type !== DIMENSION_TYPE || listsDims(filters || {});
+  // The takeoff the reports are of, in the closing band and tables too:
+  // another takeoff's work on another version is not this report's to list.
+  const listsRow = m => inTakeoffList(m, REPORT_TAKEOFF)
+    && (m.type !== DIMENSION_TYPE || listsDims(filters || {}));
   const band = versionsLine(model, pageLabel, listsRow);
   const tail = notCountedHtml(model, pageLabel, listsRow);
   let out = html;
@@ -856,22 +947,26 @@ export function notCountedHtml(model, pageLabel, listsRow = () => true) {
 function buildReportBody(project, pageLabel, key, filters, options) {
   const md = project.metadata;
   const title = (REPORTS.find(r => r[0] === key) || [])[1] || 'Report';
+  const tl = reportTakeoff(project);
+  const takeoffName = tl ? tl.label : null;
 
   // Always collect everything; the cost split happens after the materials have
   // been promoted, never before.
   const all = collectItems(project, pageLabel, { ...filters, costType: 'all' });
 
   if (key === 'matlist') {
-    return H.matListHtml(md, flattenFor(all, 'material'), options);
+    return H.matListHtml(md, flattenFor(all, 'material'), options, takeoffName);
   }
 
-  const head = H.docHeader(md, title, SUBTITLES[key]);
+  const head = H.docHeader(md, title, SUBTITLES[key], takeoffName);
   const items = key === 'mto' ? flattenFor(all, 'material')
     : key === 'labor' ? flattenFor(all, 'labor')
     : all;
 
   if (!items.length) {
-    return head + '<p style="color:#6a7480"><i>Nothing matches the current filters.</i></p></div>';
+    return `${head}<p style="color:#6a7480"><i>${takeoffName
+      ? `Nothing in ${H.esc(takeoffName)} matches the current filters.`
+      : 'Nothing matches the current filters.'}</i></p></div>`;
   }
   if (key === 'windows') return head + H.scheduleHtml(items, 'window');
   if (key === 'doors') return head + H.scheduleHtml(items, 'door');
@@ -883,7 +978,7 @@ function buildReportBody(project, pageLabel, key, filters, options) {
   return head + H.groupedHtml(items, opts);
 }
 
-function printHtml(html) {
+function printHtml(html, title = 'Takeoff Report') {
   const w = window.open('', '_blank');
   if (!w) {
     D.alertDialog('Popup blocked',
@@ -891,7 +986,7 @@ function printHtml(html) {
     return;
   }
   w.document.write('<!doctype html><html><head><meta charset="utf-8">' +
-    '<title>Takeoff Report</title></head><body>' + html + '</body></html>');
+    `<title>${H.esc(title)}</title></head><body>` + html + '</body></html>');
   w.document.close();
   // Give the styles a beat to apply before the print dialog measures the page.
   w.addEventListener('load', () => setTimeout(() => w.print(), 120));
@@ -901,7 +996,12 @@ function printHtml(html) {
 
 function baseName(project) {
   const n = (project.metadata.project_name || '').trim() || 'Takeoff';
-  return n.replace(/[<>:"/\\|?*]+/g, '_');
+  return safeName(n);
+}
+
+/** A name made safe for a file name: what Windows refuses, as one '_'. */
+function safeName(n) {
+  return String(n).replace(/[<>:"/\\|?*]+/g, '_');
 }
 
 function download(blob, name) {
