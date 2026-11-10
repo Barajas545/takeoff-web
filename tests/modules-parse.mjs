@@ -94,6 +94,8 @@ const IMPORTABLE = [
   'core/revisions.js',
   'core/scratch.js',
   'core/classify.js',
+  // Which takeoff an item is in (desktop 3.08's takeoff lists).
+  'core/takeoff-lists.js',
   // The saved overlay's look and its rules (the strip and the mask are main.js's).
   'core/overlay-look.js', 'core/saved-overlay.js',
   'render/viewport.js', 'render/theme.js', 'render/markers.js', 'render/callouts.js',

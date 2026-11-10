@@ -84,7 +84,9 @@ const cherokeeCap = c => {
   const cp = c.charCodeAt(0);
   return String.fromCharCode(cp >= 0xAB70 ? cp - 0xAB70 + 0x13A0 : cp - 8);
 };
-const pyCasefold = s => s.split('ı').map(p => p.toUpperCase().toLowerCase()).join('ı')
+// (Exported for takeoff-lists.js: the desktop compares takeoff names
+// stripped and casefolded, their inner spaces as they are.)
+export const pyCasefold = s => s.split('ı').map(p => p.toUpperCase().toLowerCase()).join('ı')
   .replace(/ς/g, 'σ').replace(/ß/g, 'ss').replace(CHEROKEE_SMALL, cherokeeCap);
 
 /** A name as it is COMPARED: "Level 2", "level 2" and "Level  2 " are one
@@ -115,7 +117,7 @@ export function classSortKey(s) {
 
 /** Python's order of two strings: by code point (JS's < goes by UTF-16
  *  unit, and puts a character past U+FFFF before U+E000-U+FFFF). */
-function cmpCodePoints(a, b) {
+export function cmpCodePoints(a, b) {
   if (a === b) return 0;
   const x = [...a];
   const y = [...b];

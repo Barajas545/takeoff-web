@@ -69,6 +69,7 @@ const PROGRAM = [
   'js/core/saved-overlay.js',
   'js/core/scratch.js',
   'js/core/takeoff-file.js',
+  'js/core/takeoff-lists.js',
   'js/core/units.js',
   'js/core/xlsx.js',
   'js/core/zlib.js',
