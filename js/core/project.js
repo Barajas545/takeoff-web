@@ -30,6 +30,7 @@ import {
   remapPageIndices, insertMapper, deleteMapper, isTakeoffType, itemRevId,
 } from './revisions.js';
 import { CountingModel, pySum } from './counting.js';
+import { setTakeoffList, takeoffListOf, WEB_TAKEOFF } from './takeoff-lists.js';
 
 export { STANDALONE_PAGE };
 
@@ -96,6 +97,8 @@ export function newId(prefix = 'i') {
 // wrote the line back without its ppf and the next open read a detail traced
 // at 1" = 1 ft against the 1/4" plan it sits on. See the ref_distance case
 // in recoverPpf, which is what makes stripping it safe here.
+// Never `takeoff_list` (desktop 3.08: the takeoff an item is filed in) nor
+// anything named like it: that tag is file data, kept byte for byte.
 const RUNTIME_KEYS = ['_uid', 'ppf', 'ppf_recovered', 'scale_label', 'self_intersects'];
 
 /** Deep copy of a store with every runtime-only key removed. */
@@ -151,6 +154,12 @@ export class Project extends EventTarget {
       pixels_per_foot: DEFAULT_PPF,
       last_viewed_page: 0,
       revisions: [],
+      // NO default for takeoff_lists, takeoff_list_active or
+      // takeoff_main_label (desktop 3.08's takeoffs): the desktop writes
+      // them only for a job of several takeoffs, and a default here would
+      // put them into every job this app saves -- which the desktop would
+      // then open as a job with takeoffs. They pass through loadFrom and
+      // buildSaveMetadata untouched (js/core/takeoff-lists.js reads them).
     };
     this.measurements = {};       // pageKey -> item[]
     this.annotations = {};        // pageKey -> annot[]
@@ -467,6 +476,10 @@ export class Project extends EventTarget {
       };
       // A caller that passed ppf keeps it; one that did not gets the page's.
       created.ppf = ppf;
+      // New work is filed in the takeoff the web is in -- Main, which is no
+      // tag at all (desktop _add_measurement stamping the active takeoff). A
+      // dict copied from another takeoff's item does not carry it in.
+      setTakeoffList(created, WEB_TAKEOFF);
       created._uid = created._uid || newId('m');
       list.push(created);
     });
@@ -1246,17 +1259,27 @@ function sortedObj(o) {
 
 // ── multi-shape items across a page delete (desktop GLPageWidget) ────────
 
-// The desktop's _PROMOTE_KEYS, exactly. `in_group` (the Group container an
-// item is filed under) is NOT among them there, so a main shape's heir drops
-// out of its Group on the desktop too; it is left out here on purpose, so
-// the two programs write the same store. Add it in both, or in neither.
+// The desktop's _PROMOTE_KEYS since 3.08, in_group included (the Group
+// container the item is filed under: a run added with Add Shape is born
+// without it, so a main shape's heir fell out of its Group). The two
+// programs write the same store, and tests/revision-counting.mjs compares
+// the heirs: change it in both or in neither.
 const PROMOTE_KEYS = ['name', 'label', 'notes', 'floor_level', 'category', 'layer',
   'sub_category', 'cost_type', 'sort_order', 'associated_items', 'color', 'visible',
-  'pitch', 'purpose', 'catalog_code', 'catalog_unit', 'framing', 'framing_suppressed'];
+  'pitch', 'purpose', 'catalog_code', 'catalog_unit', 'framing', 'framing_suppressed',
+  'in_group'];
 
 /** desktop _promote_child: a run takes over the item from its master. */
 function promoteChild(doomed, heir) {
   for (const k of PROMOTE_KEYS) if (k in doomed) heir[k] = doomed[k];
+  // The item's TAKEOFF goes with the item -- set or popped, never through
+  // the loop above: `if k in doomed` cannot hand on Main, which is no key at
+  // all, so a run carrying a stray tag kept it and half the item changed
+  // takeoff. An empty `doomed` (resyncGroups giving a group with no main
+  // shape its first) hands on nothing: the shape keeps its own tag.
+  if (doomed && typeof doomed === 'object' && Object.keys(doomed).length) {
+    setTakeoffList(heir, takeoffListOf(doomed));
+  }
   delete heir.group_child;
   // new_master.get("value", 0): a value that is there is taken as it is
   heir.own_value = 'value' in heir ? heir.value : 0;

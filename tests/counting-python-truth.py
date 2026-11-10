@@ -123,6 +123,9 @@ WIN_STUBS = {
     "_shape_cycle_gid", "_shape_cycle_idx", "go_to_item",
     "_edit_group_item", "_edit_standalone_item", "_update_page_label",
     "update_zoom_label",
+    # 3.08: the takeoff a Ctrl+Z is to follow, forgotten on a job switch
+    # (a view switch the web never makes: it is always in Main)
+    "_undo_takeoff_to",
 }
 
 # GLPageWidget: the item's drawing, and the multi-shape arithmetic.
@@ -140,7 +143,14 @@ GL_METHODS = ["item_rev_id", "_measurement_group", "_sync_group",
               # one question, asked of the revision up (_preview_key) --
               # and of the drawing a pin or a note is shown on.
               "on_this_version", "viewing_rev_id", "_mark_drawing",
-              "preview_key"]
+              "preview_key",
+              # 3.08: the takeoff he is in -- the VIEW test (the SHEET
+              # chip's rows, the solo form, refresh's walk). Lifted, not a
+              # True stub: a Deck item then answers False, as it does on
+              # the desktop. The web is in Main, always: the stand-in
+              # starts at "".
+              "in_active_list", "active_takeoff_list",
+              "set_active_takeoff_list"]
 # Class-level names lifted with the methods (assignments, not defs).
 GL_ATTRS = ["_PROMOTE_KEYS"]
 GL_STUBS = {"_measurements", "_current_page", "_main_window", "_undo_stack",
@@ -164,7 +174,9 @@ GL_STUBS = {"_measurements", "_current_page", "_main_window", "_undo_stack",
             "_mode", "_pending_item_name", "set_detail_zones",
             "_count_target", "_count_spec", "_count_answers",
             "_count_category", "_count_named", "_count_left",
-            "_last_floor", "_last_category", "_last_sub", "_last_cost_type"}
+            "_last_floor", "_last_category", "_last_sub", "_last_cost_type",
+            # 3.08: the takeoff he is in ("" = Main; the web's, always)
+            "_takeoff_list_active"}
 
 # TakeoffItemsPanel: the SHEET chip (3.06) -- which rows a list on one sheet
 # shows, what it says is left out, its title, a row's words (this sheet's
@@ -399,6 +411,22 @@ def _method(cls, name):
                 and n.name == name:
             return n
     raise SystemExit("could not find %s.%s in %s" % (cls.name, name, SRC))
+
+
+# Desktop 3.08 (takeoff lists) is the source this harness lifts: against an
+# older one it stops here with one line, not with "could not find".
+NEEDS_308 = [("GLPageWidget", n) for n in ("in_active_list",
+                                           "active_takeoff_list",
+                                           "set_active_takeoff_list")]
+_missing_308 = [
+    "%s.%s" % (c, n) for c, n in NEEDS_308
+    if not any(isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef))
+               and x.name == n for x in getattr(TOP.get(c), "body", []))]
+if _missing_308:
+    raise SystemExit(
+        "tests/counting-python-truth.py needs the desktop 3.08 source "
+        "(PTT_DESKTOP_SRC): %s has no takeoff lists (no %s)"
+        % (SRC, ", ".join(_missing_308)))
 
 
 def _attr(cls, name):
@@ -780,6 +808,8 @@ class Canvas(NS["GL"]):
         self._count_left = []
         self._last_floor = self._last_category = self._last_sub = ""
         self._last_cost_type = "material"
+        # the takeoff he is in: Main, as the web always is
+        self._takeoff_list_active = ""
         # The drawing on screen: None is the sheet's own, (rev_id, rev_page)
         # a revision of it (set_preview_texture's key); and the sheets.
         self._preview_key = None
@@ -2281,7 +2311,11 @@ def reopen(req):
 if __name__ == "__main__":
     args = sys.argv[1:]
     if args == ["--reopen"]:
-        print(json.dumps(reopen(json.loads(sys.stdin.read()))))
+        # The browser's JSON is UTF-8. sys.stdin decodes with the console's
+        # code page (cp1252 here), which read a tag padded with U+00A0 as
+        # "...\xc2\xa0" -- a padding strip() then could not take off.
+        print(json.dumps(reopen(json.loads(
+            sys.stdin.buffer.read().decode("utf-8")))))
         sys.stdout.flush()
         sys.exit(0)
     if args == ["--scenarios"]:

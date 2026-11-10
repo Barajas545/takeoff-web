@@ -59,6 +59,11 @@ PTT_DESKTOP_SRC=<path to pdf_fast_viewer.py> \
     python tests/counting-python-truth.py --scenarios > tests/data/counting-truth.json
 ```
 
+(On Windows, Python writes that redirect with CRLF line ends; the committed
+file is LF -- strip the CRs.) Since takeoff lists, it needs the **3.08**
+desktop source: the canvas's view test (`in_active_list`) is lifted, and an
+older source is refused in one line.
+
 That script lifts PDFCacheViewer's and GLPageWidget's counting METHODS (and
 every module-level name they reach) out of `pdf_fast_viewer.py` through `ast`,
 and **refuses to run unless the lifted set is a closure**: a name reached and
@@ -272,3 +277,46 @@ python -B tests/py-json-python-truth.py <path to pdf_fast_viewer.py> --write
 the desktop source is here: Python then reads back every text this app
 writes, and the web's save of a desktop job; and the desktop's lifted canvas
 words draw this app's save of an edited zero-length line as this app does.
+
+## takeoff-lists-truth.json
+
+The desktop 3.08's own answers about **takeoff lists**: which takeoff an item
+is in (`takeoff_list_scoped`, `takeoff_list_of`, `in_takeoff_list` and the
+canvas's `in_active_list`, over every type and tags padded with every
+character Python and JavaScript part on -- `\x1c`, NBSP, U+0085, U+FEFF --
+falsy and number tags), the one writer of the tag (`_set_takeoff_list`), a
+takeoff's name (`clean_takeoff_name`, `free_takeoff_name`: over 60 code
+points, astral characters, a name with no letter or number, casefolds), the
+job's takeoffs as the window reads them (`takeoff_lists`,
+`takeoff_list_label`, `has_takeoff_lists`, `_takeoff_naming_now`: the list
+form and the dict form, repeated and blank ids, blank labels, a label equal
+to Main's in other capitals) and how many items each holds
+(`_takeoff_items`); and the money words' `takeoff_where_words` and
+`takeoff_others_moved_words`. **No project is in it**: every case is written
+out in `tests/takeoff-lists-python-truth.py`.
+
+Regenerate it when the desktop's takeoff lists change (it needs the 3.08
+source, and says so in one line on an older one):
+
+```
+python -B tests/takeoff-lists-python-truth.py <path to pdf_fast_viewer.py> --write
+```
+
+`tests/takeoff-lists-parity.mjs` holds `js/core/takeoff-lists.js` to it
+anywhere, and live when the desktop source is here.
+
+## two-takeoffs.takeoff
+
+A job of two takeoffs made by the desktop 3.08's **own producers** -- its
+tools, its + Add item and Group, its New takeoff / rename / switch, and its
+writer -- from synthetic data only: "Two Takeoffs", sheets X1.0-X3.0, Main
+renamed House, a second takeoff Deck, the job left in Deck, a revision Rev B
+of X2.0 with work traced on it in both takeoffs (not counted). The web's
+takeoff-list tests open it with the web's own reader. Remake it with
+
+```
+python -B tests/make-two-takeoffs.py <desktop 3.08 program folder> --write
+```
+
+(ids come from a seeded generator, so a rerun makes the same items with the
+same ids; tests read the ids from the file all the same).

@@ -9,12 +9,14 @@
   "REPORT_UNIT_BY_TYPE",
   "REV_NAME_MAX",
   "STANDALONE_PAGE",
+  "TAKEOFF_LIST_KEY",
   "TILE_PATTERNS",
   "WALL_PIN_TYPES",
   "_ORIGINAL_RANK",
   "_OWN_KEY",
   "_REV_DATE_RE",
   "_REV_NUMBER_NAME_RE",
+  "_TAKEOFF_NAMING",
   "_ai_total",
   "_flow_words",
   "_html_escape",
@@ -27,10 +29,12 @@
   "_rev_name",
   "_rev_page_label",
   "_round6",
+  "_set_takeoff_list",
   "_takeoff_identity",
   "_takeoff_lineage",
   "_tile_pattern_label",
   "group_members",
+  "in_takeoff_list",
   "is_group",
   "is_standalone",
   "is_takeoff_item",
@@ -42,14 +46,19 @@
   "revision_rank",
   "revision_short_name",
   "shape_own",
+  "takeoff_list_of",
+  "takeoff_list_scoped",
   "takeoff_materials",
   "takeoff_move_words",
+  "takeoff_naming",
+  "takeoff_others_moved_words",
   "takeoff_qty",
   "takeoff_qty_text",
   "takeoff_quantity_entries",
   "takeoff_quantity_words",
   "takeoff_shape_qty",
-  "takeoff_sum_text"
+  "takeoff_sum_text",
+  "takeoff_where_words"
  ],
  "scenarios": [
   {
@@ -84474,6 +84483,7 @@
            "unit": "EA"
           }
          ],
+         "in_group": "grp-1",
          "own_value": 20.0,
          "own_perimeter": 12.0,
          "group_count": 4,
@@ -85810,6 +85820,7 @@
          "group_id": "g-r",
          "perimeter": 10.0,
          "flat_area": 44.6,
+         "in_group": "grp-1",
          "own_value": 50.0,
          "own_perimeter": 10.0,
          "own_flat": 44.6,
@@ -87109,6 +87120,7 @@
            "unit": "EA"
           }
          ],
+         "in_group": "grp-1",
          "own_value": 15.0,
          "own_perimeter": 10.0
         }
@@ -88141,6 +88153,7 @@
          "group_id": "g-r",
          "perimeter": 10.0,
          "flat_area": 44.6,
+         "in_group": "grp-1",
          "own_value": 50.0,
          "own_perimeter": 10.0,
          "own_flat": 44.6,
@@ -91985,6 +91998,7 @@
             "unit": "EA"
            }
           ],
+          "in_group": "grp-1",
           "own_value": 20.0,
           "own_perimeter": 12.0,
           "group_count": 4,
@@ -93014,6 +93028,7 @@
           "group_id": "g-r",
           "perimeter": 10.0,
           "flat_area": 44.6,
+          "in_group": "grp-1",
           "own_value": 50.0,
           "own_perimeter": 10.0,
           "own_flat": 44.6,
@@ -95324,6 +95339,7 @@
            "unit": "EA"
           }
          ],
+         "in_group": "grp-1",
          "own_value": 20.0,
          "own_perimeter": 12.0,
          "group_count": 4,
@@ -96660,6 +96676,7 @@
          "group_id": "g-r",
          "perimeter": 10.0,
          "flat_area": 44.6,
+         "in_group": "grp-1",
          "own_value": 50.0,
          "own_perimeter": 10.0,
          "own_flat": 44.6,
@@ -97959,6 +97976,7 @@
            "unit": "EA"
           }
          ],
+         "in_group": "grp-1",
          "own_value": 15.0,
          "own_perimeter": 10.0
         }
@@ -102548,6 +102566,7 @@
             "unit": "EA"
            }
           ],
+          "in_group": "grp-1",
           "own_value": 20.0,
           "own_perimeter": 12.0,
           "group_count": 4,
@@ -103577,6 +103596,7 @@
           "group_id": "g-r",
           "perimeter": 10.0,
           "flat_area": 44.6,
+          "in_group": "grp-1",
           "own_value": 50.0,
           "own_perimeter": 10.0,
           "own_flat": 44.6,

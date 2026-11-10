@@ -35,6 +35,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.takeoff
+# ...except the one synthetic job made by the desktop's own producers
+# (tests/make-two-takeoffs.py): two takeoffs, sheets X1.0-X3.0, no client.
+!tests/data/two-takeoffs.takeoff
 *.pdfcache
 
 # the internal build notes stay local

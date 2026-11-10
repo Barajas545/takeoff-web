@@ -121,6 +121,12 @@ export async function readHeader(blob) {
 // itself carries every annotation in the job and runs to 53 MB on the
 // estimator's largest file. Scrape the fields out of a bounded prefix instead
 // of parsing the block.
+//
+// The prefix scrape matches a key by its NAME anywhere in that prefix. A
+// future field of the takeoff registry (metadata takeoff_lists, desktop
+// 3.08) must therefore never be named like one of these, nor `project_id`:
+// a record {"project_name": ...} inside takeoff_lists would be read as the
+// job's own.
 export const PROJECT_SUMMARY_KEYS = [
   'project_name', 'internal_id_number', 'client_name', 'project_address',
   'estimator_name', 'bid_date', 'project_type', 'project_status',

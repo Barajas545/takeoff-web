@@ -57,6 +57,7 @@ const PORTABLE = [
   'save-route',         // where Save sends a file with no handle, and only a confirmed save drops the draft
   'embedded',           // inside the portal: only in a frame of its own site, the portal's ways, a page with no inline script
   'takeoff-lists-parity', // which takeoff an item is in, and what a takeoff is called == the desktop 3.08's own functions
+  'takeoff-lists-persist', // a web edit and save keeps every takeoff's tags and keys; new work is Main's; Main-only saves as v31
 ];
 
 // NEEDS THE LIBRARY: these read the estimator's real projects, which is the

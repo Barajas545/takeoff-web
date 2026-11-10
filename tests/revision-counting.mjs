@@ -379,10 +379,22 @@ function savedGroups(input, p, gids, tag) {
  */
 function desktopReopens(saved, sums = [], promote = []) {
   const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'counting-python-truth.py');
-  const out = execFileSync('python', [script, '--reopen'], {
-    input: stringifyPyJson({ jobs: saved.map(s => s.job), sums, promote }),
-    env: { ...process.env, PTT_DESKTOP_SRC: DESKTOP_SRC },
-    maxBuffer: 1 << 28, windowsHide: true, encoding: 'utf-8' });
+  let out;
+  try {
+    out = execFileSync('python', [script, '--reopen'], {
+      input: stringifyPyJson({ jobs: saved.map(s => s.job), sums, promote }),
+      env: { ...process.env, PTT_DESKTOP_SRC: DESKTOP_SRC },
+      maxBuffer: 1 << 28, windowsHide: true, encoding: 'utf-8' });
+  } catch (err) {
+    // A closure break (or a desktop source this harness cannot lift) is a
+    // FAIL with the harness's own words -- not a crash whose last line is
+    // only "Node.js v...", which is all run-all.mjs would show.
+    checks += 1;
+    fails += 1;
+    console.log('FAIL the desktop could not reopen what this app saved (counting-python-truth.py --reopen):\n  '
+      + String(err.stderr || err.message).trim().split('\n').join('\n  '));
+    return { moved: saved.map(() => []), sums: [], heirs: [] };
+  }
   return parsePyJson(out);
 }
 
@@ -2460,9 +2472,9 @@ if (!(await haveDesktopSource())) {
     eq(`pySum is Python's sum() of ${sums.length} lists as this app writes them`,
       off.slice(0, 3), []);
     // What a main shape's heir takes over from it: the desktop's
-    // _PROMOTE_KEYS, exactly. `in_group` (its Group container) is not among
-    // them there, so the heir leaves the Group on the desktop too, and here
-    // it does the same -- if the desktop ever adds it, this says so.
+    // _PROMOTE_KEYS, exactly. Since 3.08 `in_group` (its Group container) is
+    // among them on both sides, so the heir stays in the item's Group; if
+    // either side ever drops or adds a key, this says so.
     const doomed = { type: 'area', name: 'M', label: 'M', notes: 'n', floor_level: 'L1',
       category: 'C', layer: 'Lay', sub_category: 'S', cost_type: 'labor', sort_order: 7,
       associated_items: [{ name: 'Studs', qty: 1 }], color: [1, 0, 0, 1], visible: true,
@@ -2471,8 +2483,8 @@ if (!(await haveDesktopSource())) {
       scale: '1/4"', group_id: 'gp', own_value: 10, value: 15, points: [[1, 1], [9, 1], [9, 9]] };
     const heir = { type: 'area', name: 'R', label: 'R', visible: false, cost_type: 'material',
       unit_cost: 9, group_id: 'gp', group_child: true, value: 5, points: [[2, 2], [8, 2], [8, 8]] };
-    const took = h => Object.keys(doomed).filter(k => k !== 'value'
-      && JSON.stringify(h[k]) === JSON.stringify(doomed[k])).sort();
+    const took = h => (h ? Object.keys(doomed).filter(k => k !== 'value'
+      && JSON.stringify(h[k]) === JSON.stringify(doomed[k])).sort() : null);
     const pp = new Project();
     pp.loadFrom({ metadata: {}, annotations: {}, pageCount: 2,
       measurements: { 0: [structuredClone(doomed)], 1: [structuredClone(heir)] } });
@@ -2480,6 +2492,43 @@ if (!(await haveDesktopSource())) {
     const [deskHeir] = desktopReopens([], [], [[structuredClone(doomed), structuredClone(heir)]]).heirs;
     eq('a main shape\'s heir takes over what the desktop\'s heir takes, and no more',
       took(pp.measurements[1][0]), took(deskHeir));
+    // ...and the item's TAKEOFF goes with it (desktop 3.08 _promote_child ->
+    // _set_takeoff_list), never through the key loop: SET from a Deck main
+    // shape onto an untagged run (a split 3.07 left), read trimmed; POPPED
+    // off a Deck-tagged run when the main shape is Main's (`took` reads only
+    // doomed's keys, so the tag is asked apart); and an EMPTY doomed -- a
+    // group with no main shape given its first by resyncGroups(layout) --
+    // hands on nothing, so the run keeps its own tag.
+    const DECK = 'tl-0000dec0';
+    const tagCases = [
+      ['a Deck main shape\'s heir is filed in Deck',
+        { ...structuredClone(doomed), takeoff_list: DECK }, structuredClone(heir)],
+      ['a padded tag is handed on as the desktop reads it',
+        { ...structuredClone(doomed), takeoff_list: ` ${DECK} ` }, structuredClone(heir)],
+      ['a Main main shape\'s heir loses the stray Deck tag it had',
+        structuredClone(doomed), { ...structuredClone(heir), takeoff_list: DECK }],
+    ];
+    const deskTag = desktopReopens([], [], tagCases.map(([, d, h]) => [structuredClone(d), structuredClone(h)]))
+      .heirs.map(h => (h ? h.takeoff_list ?? null : 'no answer'));
+    tagCases.forEach(([label, d, h], k) => {
+      const q = new Project();
+      q.loadFrom({ metadata: {}, annotations: {}, pageCount: 2,
+        measurements: { 0: [structuredClone(d)], 1: [structuredClone(h)] } });
+      q.dropShapes([q.measurements[0][0]._uid]);
+      eq(`${label}, as the desktop's heir is`, q.measurements[1][0].takeoff_list ?? null,
+        k < deskTag.length ? deskTag[k] : 'no answer');
+    });
+    {
+      const lone = { ...structuredClone(heir), takeoff_list: DECK };
+      const q = new Project();
+      q.loadFrom({ metadata: {}, annotations: {}, pageCount: 2,
+        measurements: { 0: [structuredClone(lone)], 1: [{ ...structuredClone(heir), name: 'R2' }] } });
+      resyncGroups(q, { layout: true });
+      const [deskLone] = desktopReopens([], [], [[{}, structuredClone(lone)]]).heirs;
+      eq('a group with no main shape: its first run, promoted with nothing to take, keeps its own takeoff',
+        [q.measurements[0][0].group_child ?? null, q.measurements[0][0].takeoff_list ?? null],
+        [deskLone ? deskLone.group_child ?? null : 'no answer', deskLone ? deskLone.takeoff_list ?? null : 'no answer']);
+    }
   }
 }
 
